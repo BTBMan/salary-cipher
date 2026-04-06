@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "WebFetch(domain:docs.zama.org)",
+      "WebSearch",
+      "WebFetch(domain:blog.quicknode.com)"
+    ]
+  }
+}
