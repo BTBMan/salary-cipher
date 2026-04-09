@@ -1,0 +1,36 @@
+# fhevm
+fhevmTemp
+
+# directories
+node_modules
+.coverage_artifacts
+.coverage_cache
+.coverage_contracts
+ignition/deployments
+artifacts
+build
+cache
+coverage
+dist
+node_modules
+types
+deployments
+tmp
+typechain
+typechain-types
+.vercel
+.next
+out
+
+# files
+*.tsbuildinfo
+next-env.d.ts
+coverage.json
+*.local
+.DS_Store
+*.pem
+.pnp.*
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*

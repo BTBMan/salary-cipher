@@ -1,0 +1,73 @@
+{
+  "name": "salary-cipher",
+  "packageManager": "pnpm@8.15.6",
+  "description": "Salary Cipher is a project that allows you to encrypt your salary data using FHEVM.",
+  "license": "MIT",
+  "homepage": "https://github.com/BTBMan/salary-cipher/README.md",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/BTBMan/salary-cipher.git"
+  },
+  "keywords": [
+    "fhevm",
+    "zama",
+    "salary",
+    "cipher"
+  ],
+  "engines": {
+    "node": ">=22.15.0",
+    "pnpm": ">=8.15.6"
+  },
+  "scripts": {
+    "chain": "hardhat node --network hardhat",
+    "compile": "hardhat compile",
+    "test": "hardhat test",
+    "coverage": "cross-env SOLIDITY_COVERAGE=true hardhat coverage",
+    "deploy:local": "hardhat --network localhost ignition deploy",
+    "deploy:sepolia": "hardhat --network sepolia ignition deploy",
+    "verify:sepolia": "hardhat verify --network sepolia",
+    "lint": "eslint",
+    "lint:fix": "eslint --fix"
+  },
+  "dependencies": {
+    "@fhevm/mock-utils": "^0.4.2",
+    "@fhevm/solidity": "^0.11.1",
+    "encrypted-types": "^0.0.4",
+    "ethers": "^6.16.0",
+    "viem": "^2.43.0"
+  },
+  "devDependencies": {
+    "@antfu/eslint-config": "^8.0.0",
+    "@eslint-react/eslint-plugin": "^3.0.0",
+    "@fhevm/hardhat-plugin": "^0.4.2",
+    "@next/eslint-plugin-next": "^16.2.2",
+    "@nomicfoundation/hardhat-ignition": "^0.15.0",
+    "@nomicfoundation/hardhat-ignition-viem": "^0.15.0",
+    "@nomicfoundation/hardhat-network-helpers": "^1.0.0",
+    "@nomicfoundation/hardhat-toolbox-viem": "^4.1.0",
+    "@nomicfoundation/hardhat-verify": "^2.0.0",
+    "@nomicfoundation/hardhat-viem": "^2.0.0",
+    "@types/chai": "^4.2.0",
+    "@types/chai-as-promised": "^7.1.6",
+    "@types/mocha": ">=9.1.0",
+    "@types/node": ">=22.0.0",
+    "chai": "^4.2.0",
+    "cross-env": "^10.1.0",
+    "dotenv": "^17.4.1",
+    "eslint": "^10.2.0",
+    "eslint-plugin-react-refresh": "^0.5.2",
+    "hardhat": "^2.14.0",
+    "hardhat-gas-reporter": "^2.3.0",
+    "solidity-coverage": "^0.8.0",
+    "ts-node": ">=8.0.0",
+    "typescript": "~5.0.4"
+  },
+  "pnpm": {
+    "peerDependencyRules": {
+      "ignoreMissing": [],
+      "allowedVersions": {
+        "typescript": "*"
+      }
+    }
+  }
+}
