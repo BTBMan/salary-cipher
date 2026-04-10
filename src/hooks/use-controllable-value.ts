@@ -1,4 +1,4 @@
-import type React from 'react'
+import type * as React from 'react'
 import { useEffect, useRef, useState } from 'react'
 import { isFunction, isNullable } from '@/utils'
 import usePrevious from './use-previous'
@@ -28,9 +28,10 @@ export function useControllableValue<T>(props?: Props<T>): [T, React.Dispatch<Re
       return
     }
     if (!isControlled && prevValue !== value) {
+      // eslint-disable-next-line react/set-state-in-effect
       setStateValue(value ?? DEFAULT_VALUE)
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+  // eslint-disable-next-line react/exhaustive-deps
   }, [value])
 
   // avoid re-render when value is controlled

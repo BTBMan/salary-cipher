@@ -1,35 +1,35 @@
 import type { Metadata } from 'next'
-import Header from '@/components/Header'
-import Providers from '@/components/Providers'
-import { Toaster } from '@/components/ui/sonner'
+import { Inter } from 'next/font/google'
+// import Header from '@/components/Header'
+import Providers from '@/components/providers'
+import { cn } from '@/utils'
+// import { Toaster } from '@/components/ui/sonner'
 import '../styles/globals.css'
-import { Inter } from "next/font/google";
-import { cn } from "@/lib/utils";
 
-const inter = Inter({subsets:['latin'],variable:'--font-sans'});
+const inter = Inter({ subsets: ['latin'], variable: '--font-sans' })
 
 export const metadata: Metadata = {
-  title: 'Minimal DEX',
-  description: 'Minimal implementation of Uniswap V3',
+  title: 'Salary Cipher',
+  description: 'Managing employee salaries and related financial operations',
 }
 
 export default function RootLayout({
   children,
-}: PagePropsWithChildren) {
+}: LayoutProps<'/'>) {
   return (
-    <html lang="en" suppressHydrationWarning className={cn("font-sans", inter.variable)}>
+    <html lang="en" suppressHydrationWarning className={cn('font-sans', inter.variable)}>
       <body className="">
         <Providers>
           <div className="app">
-            <Header />
+            {/* <Header /> */}
             <main>
-              <div className="w-[var(--main-min-width)] mx-auto">
+              <div className="mx-auto">
                 {children}
               </div>
             </main>
           </div>
         </Providers>
-        <Toaster richColors />
+        {/* <Toaster richColors /> */}
       </body>
     </html>
   )

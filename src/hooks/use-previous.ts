@@ -1,4 +1,4 @@
-import type React from 'react'
+import type * as React from 'react'
 import { useEffect, useRef } from 'react'
 
 export default function usePrevious<T>(value: T | React.ComponentState) {
