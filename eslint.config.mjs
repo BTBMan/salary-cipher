@@ -2,7 +2,7 @@ import antfu from '@antfu/eslint-config'
 
 export default antfu(
   {
-    ignores: [],
+    ignores: ['src/components/ui', 'src/contract-data', 'contracts'],
     vue: false,
     typescript: {
       overrides: {
