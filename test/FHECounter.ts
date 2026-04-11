@@ -46,7 +46,7 @@ describe('FHECounter', () => {
       )
       await publicClient.waitForTransactionReceipt({ hash: incrementTx })
 
-      const encryptedCountAfterInc = await fheCounter.read.getCount()
+      const encryptedCountAfterInc = await fheCounter.read.getCount() as string
       const clearCountAfterInc = await fhevm.userDecryptEuint(
         FhevmType.euint32,
         encryptedCountAfterInc,
@@ -81,7 +81,7 @@ describe('FHECounter', () => {
       )
       await publicClient.waitForTransactionReceipt({ hash: decrementTx })
 
-      const encryptedCountAfterDec = await fheCounter.read.getCount()
+      const encryptedCountAfterDec = await fheCounter.read.getCount() as string
       const clearCountAfterDec = await fhevm.userDecryptEuint(
         FhevmType.euint32,
         encryptedCountAfterDec,

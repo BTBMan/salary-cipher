@@ -1,0 +1,17 @@
+{
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    // "composite": true,
+    "lib": ["esnext"],
+    "module": "commonjs",
+    "moduleResolution": "node10",
+    "types": ["node", "mocha"]
+  },
+  "include": [
+    "hardhat.config.ts",
+    "ignition/**/*.ts",
+    "test/**/*.ts",
+    "utils/**/*.ts"
+  ],
+  "exclude": ["node_modules"]
+}

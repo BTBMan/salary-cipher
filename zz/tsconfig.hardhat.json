@@ -1,0 +1,13 @@
+{
+  "compilerOptions": {
+    "composite": true,
+    "module": "commonjs",
+    "moduleResolution": "node10",
+    "paths": {},
+    "plugins": []
+  },
+  "include": [
+    "./test/**/*.ts"
+  ],
+  "exclude": ["node_modules"]
+}

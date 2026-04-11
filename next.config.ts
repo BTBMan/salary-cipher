@@ -6,6 +6,9 @@ const nextConfig: NextConfig = {
   images: {
     remotePatterns: [],
   },
+  typescript: {
+    tsconfigPath: './tsconfig.app.json',
+  },
 }
 
 export default nextConfig
