@@ -3,21 +3,6 @@ import type { NextConfig } from 'next'
 const nextConfig: NextConfig = {
   reactStrictMode: false,
   redirects: async () => [],
-  headers: async () => [
-    {
-      source: '/(.*)',
-      headers: [
-        {
-          key: 'Cross-Origin-Opener-Policy',
-          value: 'same-origin',
-        },
-        {
-          key: 'Cross-Origin-Embedder-Policy',
-          value: 'require-corp',
-        },
-      ],
-    },
-  ],
   images: {
     remotePatterns: [],
   },
@@ -26,11 +11,12 @@ const nextConfig: NextConfig = {
   },
   turbopack: {
     resolveAlias: {
-      fs: './empty-module.js',
-      net: './empty-module.js',
-      tls: './empty-module.js',
-      child_process: './empty-module.js',
-      worker_threads: './empty-module.js',
+      fs: './module-resolvers/empty-module.js',
+      util: './module-resolvers/util-browser.js',
+      net: './module-resolvers/empty-module.js',
+      tls: './module-resolvers/empty-module.js',
+      child_process: './module-resolvers/empty-module.js',
+      worker_threads: './module-resolvers/empty-module.js',
     },
   },
 }
