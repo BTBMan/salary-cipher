@@ -49,7 +49,9 @@
     "postcss"
   ],
 
-  "cSpell.words": [],
+  "cSpell.words": [
+    "liyincode"
+  ],
 
   "prettier.documentSelectors": ["**/*.sol"],
 

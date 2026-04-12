@@ -1,9 +1,9 @@
 'use client'
 
-import { ConnectButton } from '@rainbow-me/rainbowkit'
+import { AppKitButton } from '@reown/appkit/react'
 
 export default function WalletConnection() {
   return (
-    <ConnectButton />
+    <AppKitButton />
   )
 }

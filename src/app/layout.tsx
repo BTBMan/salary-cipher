@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import { Inter } from 'next/font/google'
+// import Script from 'next/script'
 // import Header from '@/components/Header'
 import Providers from '@/components/providers'
 import { cn } from '@/utils'
@@ -19,6 +20,7 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning className={cn('font-sans', inter.variable)}>
       <body className="">
+        {/* <Script src="https://cdn.zama.org/relayer-sdk-js/0.4.1/relayer-sdk-js.umd.cjs" strategy="beforeInteractive" /> */}
         <Providers>
           <div className="app">
             {/* <Header /> */}
