@@ -1,8 +1,8 @@
 import type { GenericStringStorage } from '@/libs/fhevm'
 import { createContext } from 'react'
 
-export interface FhevmContextState {
+export interface FHEContextState {
   storage: GenericStringStorage
 }
 
-export const FhevmContext = createContext<FhevmContextState | undefined>(undefined)
+export const FHEContext = createContext<FHEContextState | undefined>(undefined)

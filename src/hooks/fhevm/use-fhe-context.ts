@@ -1,8 +1,8 @@
 import { use } from 'react'
-import { FhevmContext } from '@/contexts'
+import { FHEContext } from '@/contexts'
 
-export function useFhevmContext() {
-  const context = use(FhevmContext)
+export function useFHEContext() {
+  const context = use(FHEContext)
   if (!context) {
     throw new Error('useFhevmContext must be used within a FhevmContext')
   }

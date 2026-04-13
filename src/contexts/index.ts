@@ -1,1 +1,1 @@
-export * from './fhevm-context'
+export * from './fhe-context'

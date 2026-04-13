@@ -7,7 +7,7 @@ import { toHex, zeroAddress } from 'viem'
 import { useChainId, useConnection, useReadContract, useWalletClient, useWriteContractSync } from 'wagmi'
 import { Button } from '@/components/ui/button'
 import { FheCounter as FheCounterData } from '@/contract-data/fhe-counter'
-import { useFHEDecrypt, useFHEEncryption, useFhevm } from '@/hooks/fhevm'
+import { useFHEDecrypt, useFHEEncrypt, useFHEInstance } from '@/hooks/fhevm'
 import { toEthersSigner } from '@/utils'
 
 export default function FheCounter() {
@@ -33,14 +33,14 @@ export default function FheCounter() {
     return toEthersSigner(walletClient.data as WalletClient)
   }, [walletClient.data])
 
-  const { instance, status, error } = useFhevm({
+  const { instance, status, error } = useFHEInstance({
     provider,
     chainId,
     enabled: Boolean(provider && chainId && isConnected),
     initialMockChains,
   })
 
-  const { canEncrypt, encryptWith } = useFHEEncryption({
+  const { canEncrypt, encryptWith } = useFHEEncrypt({
     instance,
     ethersSigner: signer,
     contractAddress: FheCounterData.address,

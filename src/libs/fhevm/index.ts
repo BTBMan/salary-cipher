@@ -1,6 +1,5 @@
 export * from './internal/constants'
 export * from './internal/fhevm'
-export * from './internal/fhevm-mock'
 export * from './internal/public-key-storage'
 export * from './internal/relayer-sdk-loader'
 export * from './signature'

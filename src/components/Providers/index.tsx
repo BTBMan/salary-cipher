@@ -7,7 +7,7 @@ import { ThemeProvider } from 'next-themes'
 import { useState } from 'react'
 import { WagmiProvider } from 'wagmi'
 import { wagmiConfig } from '@/configs'
-import { FhevmContext } from '@/contexts'
+import { FHEContext } from '@/contexts'
 import { GenericStringInMemoryStorage } from '@/libs/fhevm'
 
 const queryClient = new QueryClient()
@@ -18,7 +18,7 @@ export default function Providers({ children }: PropsWithChildren) {
   return (
     <WagmiProvider config={wagmiConfig.wagmiConfig}>
       <QueryClientProvider client={queryClient}>
-        <FhevmContext value={{ storage }}>
+        <FHEContext value={{ storage }}>
           <ThemeProvider
             attribute="class"
             defaultTheme="system"
@@ -27,7 +27,7 @@ export default function Providers({ children }: PropsWithChildren) {
           >
             {children}
           </ThemeProvider>
-        </FhevmContext>
+        </FHEContext>
       </QueryClientProvider>
     </WagmiProvider>
   )

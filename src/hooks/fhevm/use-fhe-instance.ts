@@ -13,7 +13,7 @@ function _assert(condition: boolean, message?: string): asserts condition {
 
 export type FhevmGoState = 'idle' | 'loading' | 'ready' | 'error'
 
-export function useFhevm(parameters: {
+export function useFHEInstance(parameters: {
   provider: string | ethers.Eip1193Provider | undefined
   chainId: number | undefined
   enabled?: boolean

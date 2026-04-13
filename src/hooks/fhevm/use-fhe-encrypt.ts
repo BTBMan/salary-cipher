@@ -5,7 +5,7 @@ import type { RelayerEncryptedInput } from '@zama-fhe/relayer-sdk/web'
 import type { ethers } from 'ethers'
 import { useCallback, useMemo } from 'react'
 
-export function useFHEEncryption(params: {
+export function useFHEEncrypt(params: {
   instance: FhevmInstance | undefined
   ethersSigner: ethers.JsonRpcSigner | undefined
   contractAddress: `0x${string}` | undefined
