@@ -3,14 +3,16 @@
 import type { WalletClient } from 'viem'
 import { Loader } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
+import { zeroAddress } from 'viem'
 import { useChainId, useConnection, useReadContract, useWalletClient, useWriteContractSync } from 'wagmi'
 import { Button } from '@/components/ui/button'
 import { FheCounter as FheCounterData } from '@/contract-data/fhe-counter'
-import { toHex, useFHEEncryption, useFhevm } from '@/hooks/fhevm'
+import { GenericStringInMemoryStorage, toHex, useFHEDecrypt, useFHEEncryption, useFhevm } from '@/hooks/fhevm'
 import { toEthersSigner } from '@/utils'
 
 export default function FheCounter() {
   const [loading, setLoading] = useState(false)
+  const [signatureStorage] = useState(() => new GenericStringInMemoryStorage())
 
   const { address, isConnected } = useConnection()
   const chainId = useChainId()
@@ -102,39 +104,58 @@ export default function FheCounter() {
     }
   }
 
-  // const {
-  //   canDecrypt,
-  //   decrypt,
-  //   isDecrypting,
-  //   message: decMsg,
-  //   results,
-  // } = useFHEDecrypt({
-  //   instance,
-  //   ethersSigner: signer,
-  //   fhevmDecryptionSignatureStorage,
-  //   chainId,
-  //   requests,
-  // })
+  const requests = useMemo(() => {
+    if (!data || data === zeroAddress) {
+      return undefined
+    }
+    return [{ handle: data as string, contractAddress: FheCounterData.address }] as const
+  }, [data])
+
+  const {
+    canDecrypt,
+    decrypt,
+    isDecrypting,
+    message: decryptMessage,
+    results,
+    error: decryptError,
+  } = useFHEDecrypt({
+    instance,
+    ethersSigner: signer,
+    fhevmDecryptionSignatureStorage: signatureStorage,
+    chainId,
+    requests,
+  })
+
+  const decryptedCount = useMemo(() => {
+    if (!data) {
+      return undefined
+    }
+    return results[data as string]
+  }, [data, results])
 
   const decryptCount = async () => {
-    //
+    decrypt()
   }
 
   return (
     <div>
       <div>FheCounter</div>
       <div>FHEVM Status: {status}</div>
-      {error && <div>Error: {error.message}</div>}
+      <div>Error: {error?.message}</div>
+      <div>Decrypt Error: {decryptError}</div>
+      <div>{decryptMessage}</div>
       <hr />
       <div>Encrypted Count: {data}</div>
       <Button variant="secondary" onClick={decrement} disabled={loading || !canEncrypt || isWriteCounterPending}>
         {isWriteCounterPending && <Loader className="animate-spin" />} Decrease Count -1
       </Button>
-      <span>Decrypted Count: 0</span>
+      <span>Decrypted Count: {decryptedCount !== undefined ? String(decryptedCount) : '***'}</span>
       <Button variant="secondary" onClick={increment} disabled={loading || !canEncrypt || isWriteCounterPending}>
         {isWriteCounterPending && <Loader className="animate-spin" />} Increase Count +1
       </Button>
-      <Button variant="destructive" onClick={decryptCount}>Decrypt Count</Button>
+      <Button variant="destructive" onClick={decryptCount} disabled={!canDecrypt || isDecrypting}>
+        {isDecrypting && <Loader className="animate-spin" />} Decrypt Count
+      </Button>
     </div>
   )
 }

@@ -1,3 +1,5 @@
 export * from './types'
+export * from './storage'
+export * from './useFHEDecrypt'
 export * from './useFHEEncryption'
 export * from './useFhevm'
