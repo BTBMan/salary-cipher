@@ -4,7 +4,7 @@ import type { PropsWithChildren } from 'react'
 import { FhevmProvider } from '@liyincode/fhevm-sdk/react'
 import { GenericStringInMemoryStorage } from '@liyincode/fhevm-sdk/storage'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-// import { ThemeProvider } from 'next-themes'
+import { ThemeProvider } from 'next-themes'
 import { useState } from 'react'
 import { WagmiProvider } from 'wagmi'
 import { fhevmConfig, wagmiConfig } from '@/configs'
@@ -18,14 +18,14 @@ export default function Providers({ children }: PropsWithChildren) {
     <WagmiProvider config={wagmiConfig.wagmiConfig}>
       <QueryClientProvider client={queryClient}>
         <FhevmProvider config={fhevmConfig} storageOverrides={{ signatureStorage }}>
-          {/* <ThemeProvider
+          <ThemeProvider
             attribute="class"
             defaultTheme="system"
             enableSystem
             disableTransitionOnChange
-          > */}
-          {children}
-          {/* </ThemeProvider> */}
+          >
+            {children}
+          </ThemeProvider>
         </FhevmProvider>
       </QueryClientProvider>
     </WagmiProvider>

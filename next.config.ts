@@ -9,6 +9,7 @@ const nextConfig: NextConfig = {
   typescript: {
     tsconfigPath: './tsconfig.app.json',
   },
+  serverExternalPackages: ['pino-pretty', 'lokijs', 'encoding'],
   turbopack: {
     resolveAlias: {
       fs: './module-resolvers/empty-module.js',
