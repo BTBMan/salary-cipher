@@ -1,86 +1,170 @@
-type FhevmStoredPublicKey = {
+import type { DBSchema, IDBPDatabase } from 'idb'
+import { openDB } from 'idb'
+
+interface FhevmStoredPublicKey {
   publicKeyId: string
   publicKey: Uint8Array
 }
 
-type FhevmStoredPublicParams = {
+interface FhevmStoredPublicParams {
   publicParamsId: string
   publicParams: Uint8Array
 }
 
-type FhevmPublicKeyType = {
+interface PublicParamsDB extends DBSchema {
+  publicKeyStore: {
+    key: string
+    value: {
+      acl: `0x${string}`
+      value: FhevmStoredPublicKey
+    }
+  }
+  paramsStore: {
+    key: string
+    value: {
+      acl: `0x${string}`
+      value: FhevmStoredPublicParams
+    }
+  }
+}
+
+let __dbPromise: Promise<IDBPDatabase<PublicParamsDB>> | undefined
+
+async function _getDB(): Promise<IDBPDatabase<PublicParamsDB> | undefined> {
+  if (__dbPromise) {
+    return __dbPromise
+  }
+  if (typeof window === 'undefined') {
+    return undefined
+  }
+  __dbPromise = openDB<PublicParamsDB>('fhevm', 1, {
+    upgrade(db) {
+      if (!db.objectStoreNames.contains('paramsStore')) {
+        db.createObjectStore('paramsStore', { keyPath: 'acl' })
+      }
+      if (!db.objectStoreNames.contains('publicKeyStore')) {
+        db.createObjectStore('publicKeyStore', { keyPath: 'acl' })
+      }
+    },
+  })
+  return __dbPromise
+}
+
+// Types that match @zama-fhe/relayer-sdk v0.4 FhevmPkeConfigType
+interface FhevmPublicKeyType {
   data: Uint8Array
   id: string
 }
 
-type FhevmPkeCrsType = {
+interface FhevmPkeCrsType {
   publicParams: Uint8Array
   publicParamsId: string
 }
 
-type FhevmPkeCrsByCapacityType = {
+interface FhevmPkeCrsByCapacityType {
   2048: FhevmPkeCrsType
 }
 
-const publicKeyStoreKey = (aclAddress: `0x${string}`) => `fhevm:publicKey:${aclAddress}`
-const publicParamsStoreKey = (aclAddress: `0x${string}`) => `fhevm:publicParams:${aclAddress}`
-
-function encode(bytes: Uint8Array) {
-  let binary = ''
-  for (const byte of bytes) {
-    binary += String.fromCharCode(byte)
+function assertFhevmStoredPublicKey(
+  value: unknown,
+): asserts value is FhevmStoredPublicKey | null {
+  if (typeof value !== 'object') {
+    throw new TypeError(`FhevmStoredPublicKey must be an object`)
   }
-  return btoa(binary)
+  if (value === null) {
+    return
+  }
+  if (!('publicKeyId' in value)) {
+    throw new Error(`FhevmStoredPublicKey.publicKeyId does not exist`)
+  }
+  if (typeof value.publicKeyId !== 'string') {
+    throw new TypeError(`FhevmStoredPublicKey.publicKeyId must be a string`)
+  }
+  if (!('publicKey' in value)) {
+    throw new Error(`FhevmStoredPublicKey.publicKey does not exist`)
+  }
+  if (!(value.publicKey instanceof Uint8Array)) {
+    throw new TypeError(`FhevmStoredPublicKey.publicKey must be a Uint8Array`)
+  }
 }
 
-function decode(value: string) {
-  const binary = atob(value)
-  const bytes = new Uint8Array(binary.length)
-  for (let i = 0; i < binary.length; i++) {
-    bytes[i] = binary.charCodeAt(i)
+function assertFhevmStoredPublicParams(
+  value: unknown,
+): asserts value is FhevmStoredPublicParams | null {
+  if (typeof value !== 'object') {
+    throw new TypeError(`FhevmStoredPublicParams must be an object`)
   }
-  return bytes
+  if (value === null) {
+    return
+  }
+  if (!('publicParamsId' in value)) {
+    throw new Error(`FhevmStoredPublicParams.publicParamsId does not exist`)
+  }
+  if (typeof value.publicParamsId !== 'string') {
+    throw new TypeError(`FhevmStoredPublicParams.publicParamsId must be a string`)
+  }
+  if (!('publicParams' in value)) {
+    throw new Error(`FhevmStoredPublicParams.publicParams does not exist`)
+  }
+  if (!(value.publicParams instanceof Uint8Array)) {
+    throw new TypeError(
+      `FhevmStoredPublicParams.publicParams must be a Uint8Array`,
+    )
+  }
 }
 
 export async function publicKeyStorageGet(aclAddress: `0x${string}`): Promise<{
   publicKey?: FhevmPublicKeyType
   publicParams?: FhevmPkeCrsByCapacityType
 }> {
-  if (typeof window === 'undefined') {
+  const db = await _getDB()
+  if (!db) {
     return {}
   }
 
+  let storedPublicKey: FhevmStoredPublicKey | null = null
   try {
-    const rawPublicKey = window.localStorage.getItem(publicKeyStoreKey(aclAddress))
-    const rawPublicParams = window.localStorage.getItem(publicParamsStoreKey(aclAddress))
-    const result: {
-      publicKey?: FhevmPublicKeyType
-      publicParams?: FhevmPkeCrsByCapacityType
-    } = {}
-
-    if (rawPublicKey) {
-      const parsed = JSON.parse(rawPublicKey) as { id: string, data: string }
-      result.publicKey = {
-        id: parsed.id,
-        data: decode(parsed.data),
-      }
+    const pk = await db.get('publicKeyStore', aclAddress)
+    if (pk?.value) {
+      assertFhevmStoredPublicKey(pk.value)
+      storedPublicKey = pk.value
     }
-
-    if (rawPublicParams) {
-      const parsed = JSON.parse(rawPublicParams) as { publicParamsId: string, publicParams: string }
-      result.publicParams = {
-        2048: {
-          publicParamsId: parsed.publicParamsId,
-          publicParams: decode(parsed.publicParams),
-        },
-      }
-    }
-
-    return result
   }
   catch {
-    return {}
+    //
   }
+
+  let storedPublicParams: FhevmStoredPublicParams | null = null
+  try {
+    const pp = await db.get('paramsStore', aclAddress)
+    if (pp?.value) {
+      assertFhevmStoredPublicParams(pp.value)
+      storedPublicParams = pp.value
+    }
+  }
+  catch {
+    //
+  }
+
+  const result: {
+    publicKey?: FhevmPublicKeyType
+    publicParams?: FhevmPkeCrsByCapacityType
+  } = {}
+
+  if (storedPublicKey) {
+    result.publicKey = {
+      id: storedPublicKey.publicKeyId,
+      data: storedPublicKey.publicKey,
+    }
+  }
+
+  if (storedPublicParams) {
+    result.publicParams = {
+      2048: storedPublicParams,
+    }
+  }
+
+  return result
 }
 
 export async function publicKeyStorageSet(
@@ -88,21 +172,19 @@ export async function publicKeyStorageSet(
   publicKey: FhevmStoredPublicKey | null,
   publicParams: FhevmStoredPublicParams | null,
 ) {
-  if (typeof window === 'undefined') {
+  assertFhevmStoredPublicKey(publicKey)
+  assertFhevmStoredPublicParams(publicParams)
+
+  const db = await _getDB()
+  if (!db) {
     return
   }
 
   if (publicKey) {
-    window.localStorage.setItem(publicKeyStoreKey(aclAddress), JSON.stringify({
-      id: publicKey.publicKeyId,
-      data: encode(publicKey.publicKey),
-    }))
+    await db.put('publicKeyStore', { acl: aclAddress, value: publicKey })
   }
 
   if (publicParams) {
-    window.localStorage.setItem(publicParamsStoreKey(aclAddress), JSON.stringify({
-      publicParamsId: publicParams.publicParamsId,
-      publicParams: encode(publicParams.publicParams),
-    }))
+    await db.put('paramsStore', { acl: aclAddress, value: publicParams })
   }
 }
