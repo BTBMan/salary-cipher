@@ -16,7 +16,7 @@
     "components": "@/components",
     "utils": "@/utils",
     "ui": "@/components/ui",
-    "lib": "@/libs",
+    "lib": "@/libs/tailwind",
     "hooks": "@/hooks"
   },
   "menuColor": "inverted-translucent",

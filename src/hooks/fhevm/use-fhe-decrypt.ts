@@ -1,22 +1,22 @@
 'use client'
 
-import type { GenericStringStorage } from './storage'
-import type { FhevmInstance } from './types'
+import type { FhevmInstance } from '@/libs/fhevm'
 import type { ethers } from 'ethers'
 import { useCallback, useMemo, useRef, useState } from 'react'
-import { FhevmDecryptionSignature } from './signature'
+import { useFhevmContext } from '@/hooks'
+import { FhevmDecryptionSignature } from '@/libs/fhevm'
 
 export interface FHEDecryptRequest { handle: string, contractAddress: `0x${string}` }
 
 export function useFHEDecrypt(params: {
   instance: FhevmInstance | undefined
   ethersSigner: ethers.JsonRpcSigner | undefined
-  fhevmDecryptionSignatureStorage: GenericStringStorage
   chainId: number | undefined
   requests: readonly FHEDecryptRequest[] | undefined
 }) {
-  const { instance, ethersSigner, fhevmDecryptionSignatureStorage, chainId, requests } = params
+  const { instance, ethersSigner, chainId, requests } = params
 
+  const { storage: fhevmDecryptionSignatureStorage } = useFhevmContext()
   const [isDecrypting, setIsDecrypting] = useState<boolean>(false)
   const [message, setMessage] = useState<string>('')
   const [results, setResults] = useState<Record<string, string | bigint | boolean>>({})

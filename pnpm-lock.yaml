@@ -14,9 +14,6 @@ dependencies:
   '@fhevm/solidity':
     specifier: ^0.11.1
     version: 0.11.1
-  '@liyincode/fhevm-sdk':
-    specifier: ^0.1.2
-    version: 0.1.2(@fhevm/mock-utils@0.4.2)(@zama-fhe/relayer-sdk@0.4.2)(ethers@6.16.0)(react@19.2.5)
   '@reown/appkit':
     specifier: ^1.8.19
     version: 1.8.19(@types/react@19.2.14)(react@19.2.5)(typescript@5.9.3)(zod@4.3.6)
@@ -1675,30 +1672,6 @@ packages:
     resolution: {integrity: sha512-pbCDiVMnne1lYUIaYNN5wrwQXDtHaYtg7YEFPeW+hws6U47WeFvISGUWekPGKWOP1ygrs0ef0o1VJMk1exos5A==}
     dependencies:
       '@lit-labs/ssr-dom-shim': 1.5.1
-    dev: false
-
-  /@liyincode/fhevm-sdk@0.1.2(@fhevm/mock-utils@0.4.2)(@zama-fhe/relayer-sdk@0.4.2)(ethers@6.16.0)(react@19.2.5):
-    resolution: {integrity: sha512-vMs8ur5NJpK67/EfWG7vPPrSTUFNrk9XCmA0fZ1fMipKjouLmIv45dNduG0soepsRaD5le8R2Ir3H9j2A7WxPg==}
-    engines: {node: '>=18.0.0', pnpm: '>=8.0.0'}
-    peerDependencies:
-      '@fhevm/mock-utils': '*'
-      '@zama-fhe/relayer-sdk': '*'
-      ethers: ^6.13.4
-      react: ^18.0.0 || ^19.0.0
-      vue: ^3.4.0
-    peerDependenciesMeta:
-      '@fhevm/mock-utils':
-        optional: true
-      react:
-        optional: true
-      vue:
-        optional: true
-    dependencies:
-      '@fhevm/mock-utils': 0.4.2(@zama-fhe/relayer-sdk@0.4.2)(ethers@6.16.0)(typescript@5.9.3)
-      '@zama-fhe/relayer-sdk': 0.4.2
-      ethers: 6.16.0
-      idb: 8.0.3
-      react: 19.2.5
     dev: false
 
   /@modelcontextprotocol/sdk@1.29.0(zod@3.25.76):

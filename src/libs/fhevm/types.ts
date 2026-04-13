@@ -54,3 +54,8 @@ export interface FhevmRelayerSDKType {
 export interface FhevmWindowType {
   relayerSDK: FhevmRelayerSDKType
 }
+
+export interface EncryptResult {
+  handles: Uint8Array[]
+  inputProof: Uint8Array
+}

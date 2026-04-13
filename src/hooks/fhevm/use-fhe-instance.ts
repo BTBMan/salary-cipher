@@ -1,8 +1,8 @@
 /* eslint-disable react/set-state-in-effect */
-import type { FhevmInstance } from './types'
+import type { FhevmInstance } from '@/libs/fhevm'
 import type { ethers } from 'ethers'
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { createFhevmInstance } from './internal/fhevm'
+import { createFhevmInstance } from '@/libs/fhevm'
 
 function _assert(condition: boolean, message?: string): asserts condition {
   if (!condition) {

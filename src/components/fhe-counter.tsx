@@ -3,16 +3,15 @@
 import type { WalletClient } from 'viem'
 import { Loader } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
-import { zeroAddress } from 'viem'
+import { toHex, zeroAddress } from 'viem'
 import { useChainId, useConnection, useReadContract, useWalletClient, useWriteContractSync } from 'wagmi'
 import { Button } from '@/components/ui/button'
 import { FheCounter as FheCounterData } from '@/contract-data/fhe-counter'
-import { GenericStringInMemoryStorage, toHex, useFHEDecrypt, useFHEEncryption, useFhevm } from '@/hooks/fhevm'
+import { useFHEDecrypt, useFHEEncryption, useFhevm } from '@/hooks/fhevm'
 import { toEthersSigner } from '@/utils'
 
 export default function FheCounter() {
   const [loading, setLoading] = useState(false)
-  const [signatureStorage] = useState(() => new GenericStringInMemoryStorage())
 
   const { address, isConnected } = useConnection()
   const chainId = useChainId()
@@ -121,7 +120,6 @@ export default function FheCounter() {
   } = useFHEDecrypt({
     instance,
     ethersSigner: signer,
-    fhevmDecryptionSignatureStorage: signatureStorage,
     chainId,
     requests,
   })
