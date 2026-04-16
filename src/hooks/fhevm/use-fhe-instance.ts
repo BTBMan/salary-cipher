@@ -14,7 +14,7 @@ function _assert(condition: boolean, message?: string): asserts condition {
 
 export type FhevmGoState = 'idle' | 'loading' | 'ready' | 'error'
 
-export function useFHEInstance(parameters: {
+export function useFHEInstance(parameters?: {
   enabled?: boolean
   initialMockChains?: Readonly<Record<number, string>>
 }): {
@@ -23,7 +23,7 @@ export function useFHEInstance(parameters: {
   error: Error | undefined
   status: FhevmGoState
 } {
-  const { initialMockChains, enabled = true } = parameters
+  const { initialMockChains = {}, enabled = true } = parameters || {}
 
   const { isConnected, chainId } = useConnection()
 

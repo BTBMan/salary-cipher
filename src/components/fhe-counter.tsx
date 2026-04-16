@@ -11,13 +11,9 @@ import { useFHEDecrypt, useFHEEncrypt, useFHEInstance } from '@/hooks/fhevm'
 export default function FheCounter() {
   const [loading, setLoading] = useState(false)
 
-  const initialMockChains = useMemo(() => ({ 31337: 'http://localhost:8545' }), [])
-
   const { address } = useConnection()
 
-  const { instance, status, error } = useFHEInstance({
-    initialMockChains,
-  })
+  const { instance, status, error } = useFHEInstance()
 
   const { canEncrypt, encryptWith } = useFHEEncrypt({
     instance,

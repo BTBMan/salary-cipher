@@ -6,6 +6,16 @@ function _timestampNow(): number {
   return Math.floor(Date.now() / 1000)
 }
 
+function _jsonStringifyWithBigInt(value: unknown): string {
+  return JSON.stringify(value, (_key, currentValue) => {
+    if (typeof currentValue === 'bigint') {
+      return currentValue.toString()
+    }
+
+    return currentValue
+  })
+}
+
 class FhevmDecryptionSignatureStorageKey {
   #contractAddresses: `0x${string}`[]
   #userAddress: `0x${string}`
@@ -184,7 +194,7 @@ export class FhevmDecryptionSignature {
 
   async saveToGenericStringStorage(storage: GenericStringStorage, instance: FhevmInstance, withPublicKey: boolean) {
     try {
-      const value = JSON.stringify(this)
+      const value = _jsonStringifyWithBigInt(this)
 
       const storageKey = new FhevmDecryptionSignatureStorageKey(
         instance,
