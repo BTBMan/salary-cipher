@@ -1,48 +1,26 @@
 'use client'
 
-import type { WalletClient } from 'viem'
 import { Loader } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { toHex, zeroAddress } from 'viem'
-import { useChainId, useConnection, useReadContract, useWalletClient, useWriteContractSync } from 'wagmi'
+import { useConnection, useReadContract, useWriteContractSync } from 'wagmi'
 import { Button } from '@/components/ui/button'
 import { FheCounter as FheCounterData } from '@/contract-data/fhe-counter'
 import { useFHEDecrypt, useFHEEncrypt, useFHEInstance } from '@/hooks/fhevm'
-import { toEthersSigner } from '@/utils'
 
 export default function FheCounter() {
   const [loading, setLoading] = useState(false)
 
-  const { address, isConnected } = useConnection()
-  const chainId = useChainId()
-  const walletClient = useWalletClient()
   const initialMockChains = useMemo(() => ({ 31337: 'http://localhost:8545' }), [])
 
-  const provider = useMemo(() => {
-    if (typeof window === 'undefined')
-      return undefined
-
-    return (window as any).ethereum
-  }, [])
-
-  const signer = useMemo(() => {
-    if (!walletClient.data) {
-      return undefined
-    }
-
-    return toEthersSigner(walletClient.data as WalletClient)
-  }, [walletClient.data])
+  const { address } = useConnection()
 
   const { instance, status, error } = useFHEInstance({
-    provider,
-    chainId,
-    enabled: Boolean(provider && chainId && isConnected),
     initialMockChains,
   })
 
   const { canEncrypt, encryptWith } = useFHEEncrypt({
     instance,
-    ethersSigner: signer,
     contractAddress: FheCounterData.address,
   })
 
@@ -112,15 +90,13 @@ export default function FheCounter() {
 
   const {
     canDecrypt,
-    decrypt,
+    decrypt: decryptCount,
     isDecrypting,
     message: decryptMessage,
     results,
     error: decryptError,
   } = useFHEDecrypt({
     instance,
-    ethersSigner: signer,
-    chainId,
     requests,
   })
 
@@ -131,17 +107,13 @@ export default function FheCounter() {
     return results[data as string]
   }, [data, results])
 
-  const decryptCount = async () => {
-    decrypt()
-  }
-
   return (
     <div>
       <div>FheCounter</div>
       <div>FHEVM Status: {status}</div>
       <div>Error: {error?.message}</div>
       <div>Decrypt Error: {decryptError}</div>
-      <div>{decryptMessage}</div>
+      <div>Decrypt Message: {decryptMessage}</div>
       <hr />
       <div>Encrypted Count: {data}</div>
       <Button variant="secondary" onClick={decrement} disabled={loading || !canEncrypt || isWriteCounterPending}>

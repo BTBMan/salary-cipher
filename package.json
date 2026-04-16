@@ -41,7 +41,7 @@
     "@reown/appkit": "^1.8.19",
     "@reown/appkit-adapter-wagmi": "^1.8.19",
     "@tanstack/react-query": "^5.97.0",
-    "@zama-fhe/relayer-sdk": "^0.4.1",
+    "@zama-fhe/relayer-sdk": "0.4.1",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "encrypted-types": "^0.0.4",
@@ -96,9 +96,7 @@
       "ignoreMissing": [],
       "allowedVersions": {
         "typescript": "*",
-        "zod": "*",
-        "@zama-fhe/relayer-sdk": "*",
-        "@fhevm/mock-utils": "*"
+        "zod": "*"
       }
     }
   }

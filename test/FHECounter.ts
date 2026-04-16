@@ -3,7 +3,7 @@ import { loadFixture } from '@nomicfoundation/hardhat-toolbox-viem/network-helpe
 import { expect } from 'chai'
 import { fhevm, viem } from 'hardhat'
 import { toHex, zeroHash } from 'viem'
-import { toEthersSigner } from '../utils'
+import { ethersWrapper } from '../src/utils'
 
 describe('FHECounter', () => {
   async function deployFHECounter() {
@@ -51,7 +51,7 @@ describe('FHECounter', () => {
         FhevmType.euint32,
         encryptedCountAfterInc,
         fheCounter.address,
-        toEthersSigner(alice)!,
+        ethersWrapper(alice).ethersSigner()!,
       )
 
       expect(clearCountAfterInc).to.eq(BigInt(clearCountBeforeInc + clearOne))
@@ -86,7 +86,7 @@ describe('FHECounter', () => {
         FhevmType.euint32,
         encryptedCountAfterDec,
         fheCounter.address,
-        toEthersSigner(alice)!,
+        ethersWrapper(alice).ethersSigner()!,
       )
 
       expect(clearCountAfterDec).to.eq(0n)

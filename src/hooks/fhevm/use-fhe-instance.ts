@@ -1,7 +1,8 @@
 /* eslint-disable react/set-state-in-effect */
 import type { FhevmInstance } from '@/libs/fhevm'
 import type { ethers } from 'ethers'
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useConnection } from 'wagmi'
 import { createFhevmInstance } from '@/libs/fhevm'
 
 function _assert(condition: boolean, message?: string): asserts condition {
@@ -14,8 +15,6 @@ function _assert(condition: boolean, message?: string): asserts condition {
 export type FhevmGoState = 'idle' | 'loading' | 'ready' | 'error'
 
 export function useFHEInstance(parameters: {
-  provider: string | ethers.Eip1193Provider | undefined
-  chainId: number | undefined
   enabled?: boolean
   initialMockChains?: Readonly<Record<number, string>>
 }): {
@@ -24,14 +23,27 @@ export function useFHEInstance(parameters: {
   error: Error | undefined
   status: FhevmGoState
 } {
-  const { provider, chainId, initialMockChains, enabled = true } = parameters
+  const { initialMockChains, enabled = true } = parameters
+
+  const { isConnected, chainId } = useConnection()
+
+  const provider = useMemo(() => {
+    if (typeof window === 'undefined')
+      return undefined
+
+    return (window as any).ethereum
+  }, [])
+
+  const _enabled = useMemo(() => {
+    return Boolean(provider && chainId && isConnected && enabled)
+  }, [chainId, isConnected, enabled, provider])
 
   const [instance, setInstance] = useState<FhevmInstance | undefined>(
     undefined,
   )
   const [status, setStatus] = useState<FhevmGoState>('idle')
   const [error, setError] = useState<Error | undefined>(undefined)
-  const [_isRunning, setIsRunning] = useState<boolean>(enabled)
+  const [_isRunning, setIsRunning] = useState<boolean>(_enabled)
   const [_providerChanged, setProviderChanged] = useState<number>(0)
   const _abortControllerRef = useRef<AbortController | null>(null)
   const _providerRef = useRef<string | ethers.Eip1193Provider | undefined>(
@@ -68,8 +80,8 @@ export function useFHEInstance(parameters: {
   }, [refresh])
 
   useEffect(() => {
-    setIsRunning(enabled)
-  }, [enabled])
+    setIsRunning(_enabled)
+  }, [_enabled])
 
   useEffect(() => {
     if (_isRunning === false) {

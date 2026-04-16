@@ -1,21 +1,17 @@
-'use client'
-
 import type { FhevmInstance } from '@/libs/fhevm'
-import type { ethers } from 'ethers'
 import { useCallback, useMemo, useRef, useState } from 'react'
-import { useFHEContext } from '@/hooks'
+import { useFHEContext, useWagmiEthers } from '@/hooks'
 import { FhevmDecryptionSignature } from '@/libs/fhevm'
 
 export interface FHEDecryptRequest { handle: string, contractAddress: `0x${string}` }
 
 export function useFHEDecrypt(params: {
   instance: FhevmInstance | undefined
-  ethersSigner: ethers.JsonRpcSigner | undefined
-  chainId: number | undefined
   requests: readonly FHEDecryptRequest[] | undefined
 }) {
-  const { instance, ethersSigner, chainId, requests } = params
+  const { instance, requests } = params
 
+  const { chainId, ethersSigner } = useWagmiEthers()
   const { storage: fhevmDecryptionSignatureStorage } = useFHEContext()
   const [isDecrypting, setIsDecrypting] = useState<boolean>(false)
   const [message, setMessage] = useState<string>('')

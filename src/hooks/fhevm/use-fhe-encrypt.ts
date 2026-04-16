@@ -1,16 +1,15 @@
-'use client'
-
 import type { EncryptResult, FhevmInstance } from '@/libs/fhevm'
 import type { RelayerEncryptedInput } from '@zama-fhe/relayer-sdk/web'
-import type { ethers } from 'ethers'
 import { useCallback, useMemo } from 'react'
+import { useWagmiEthers } from '@/hooks'
 
 export function useFHEEncrypt(params: {
   instance: FhevmInstance | undefined
-  ethersSigner: ethers.JsonRpcSigner | undefined
   contractAddress: `0x${string}` | undefined
 }) {
-  const { instance, ethersSigner, contractAddress } = params
+  const { instance, contractAddress } = params
+
+  const { ethersSigner } = useWagmiEthers()
 
   const canEncrypt = useMemo(
     () => Boolean(instance && ethersSigner && contractAddress),
