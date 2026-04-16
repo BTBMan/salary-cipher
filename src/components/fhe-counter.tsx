@@ -6,17 +6,16 @@ import { toHex, zeroAddress } from 'viem'
 import { useConnection, useReadContract, useWriteContractSync } from 'wagmi'
 import { Button } from '@/components/ui/button'
 import { FheCounter as FheCounterData } from '@/contract-data/fhe-counter'
-import { useFHEDecrypt, useFHEEncrypt, useFHEInstance } from '@/hooks/fhevm'
+import { useFHEContext, useFHEDecrypt, useFHEEncrypt } from '@/hooks'
 
 export default function FheCounter() {
   const [loading, setLoading] = useState(false)
 
   const { address } = useConnection()
 
-  const { instance, status, error } = useFHEInstance()
+  const { status, error } = useFHEContext()
 
   const { canEncrypt, encryptWith } = useFHEEncrypt({
-    instance,
     contractAddress: FheCounterData.address,
   })
 
@@ -92,7 +91,6 @@ export default function FheCounter() {
     results,
     error: decryptError,
   } = useFHEDecrypt({
-    instance,
     requests,
   })
 

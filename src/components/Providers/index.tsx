@@ -1,24 +1,19 @@
 'use client'
 
-import type { GenericStringStorage } from '@/libs/fhevm'
 import type { PropsWithChildren } from 'react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { ThemeProvider } from 'next-themes'
-import { useState } from 'react'
 import { WagmiProvider } from 'wagmi'
 import { wagmiConfig } from '@/configs'
-import { FHEContext } from '@/contexts'
-import { GenericStringInMemoryStorage } from '@/libs/fhevm'
+import { FheProvider } from './fhe-provider'
 
 const queryClient = new QueryClient()
 
 export default function Providers({ children }: PropsWithChildren) {
-  const [storage] = useState<GenericStringStorage>(() => new GenericStringInMemoryStorage())
-
   return (
     <WagmiProvider config={wagmiConfig.wagmiConfig}>
       <QueryClientProvider client={queryClient}>
-        <FHEContext value={{ storage }}>
+        <FheProvider>
           <ThemeProvider
             attribute="class"
             defaultTheme="system"
@@ -27,7 +22,7 @@ export default function Providers({ children }: PropsWithChildren) {
           >
             {children}
           </ThemeProvider>
-        </FHEContext>
+        </FheProvider>
       </QueryClientProvider>
     </WagmiProvider>
   )
