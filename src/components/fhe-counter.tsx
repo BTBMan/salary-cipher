@@ -145,7 +145,7 @@ export default function FheCounter() {
             <Button
               onClick={increment}
               disabled={loading || !canEncrypt || isWriteCounterPending}
-              className="flex-[2] primary-gradient border-none font-bold h-11"
+              className="flex-2 primary-gradient border-none font-bold h-11"
             >
               {isWriteCounterPending && <Loader className="size-4 mr-2 animate-spin" />}
               Increment Cipher

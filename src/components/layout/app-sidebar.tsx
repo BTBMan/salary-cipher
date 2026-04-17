@@ -80,7 +80,7 @@ export function AppSidebar() {
                       className={cn(
                         'h-12 px-4 transition-all duration-300 font-heading font-semibold tracking-wide',
                         isActive
-                          ? 'text-primary bg-gradient-to-r from-primary/10 to-transparent border-r-2 border-primary scale-100'
+                          ? 'text-primary bg-linear-to-r from-primary/10 to-transparent border-r-2 border-primary scale-100'
                           : 'text-slate-500 hover:text-slate-300 hover:bg-surface-container-low',
                       )}
                       render={(

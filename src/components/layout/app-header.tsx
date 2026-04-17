@@ -22,7 +22,7 @@ export function AppHeader() {
         <div className="flex items-center gap-2 px-3 py-1.5 bg-surface-container rounded-sm border border-white/10 cursor-pointer hover:bg-surface-container-high transition-colors group">
           <img
             alt="Aura Labs Logo"
-            className="w-5 h-5 rounded-sm"
+            className="size-5 rounded-sm"
             src="https://lh3.googleusercontent.com/aida-public/AB6AXuB8KLSlceWhY_x3ZA6wrO76jymBblR__ShMy_QX1iCKVAt0p9Vn6e5351MzbjTu_4KuKfGSx6mTXadJat_d6TTHkcovKTDb9wxA4TI1d_8KcAgGLMlPcegxiu-XH3vBKT9ADRy1uTmTpwfjYCOUSjd4TuZKZWTNmXUfiD062c4tHIp3gnPpTQvUAFDo75KG6NNoBk8gbfxRALqUFtEw0dd5AGZICn0ShL23ynJjkk3-E_SZP-znIXsedz2K1M6WOu5NI66gSiBG68Y"
           />
           <span className="text-on-surface font-heading font-semibold text-sm">Aura Labs</span>

@@ -65,7 +65,7 @@ export default function OnboardingPage() {
           {/* Header Section */}
           <div className="p-8 pb-4 text-center">
             <div className="flex justify-center mb-6">
-              <div className="w-16 h-16 bg-gradient-to-br from-primary-container to-primary rounded-lg flex items-center justify-center shadow-lg">
+              <div className="w-16 h-16 bg-linear-to-br from-primary-container to-primary rounded-lg flex items-center justify-center shadow-lg">
                 <HubIcon className="text-on-primary size-10" />
               </div>
             </div>
@@ -84,7 +84,7 @@ export default function OnboardingPage() {
                   <AvatarImage src={company.img} className="object-cover" />
                   <AvatarFallback className="bg-surface-container-highest text-primary font-bold">{company.name.charAt(0)}</AvatarFallback>
                 </Avatar>
-                <div className="flex-grow">
+                <div className="grow">
                   <div className="flex items-center gap-2 mb-1">
                     <span className="font-heading font-semibold text-on-surface text-lg">{company.name}</span>
                     <Badge className={`${company.roleColor} border-none text-[10px] font-bold tracking-wider uppercase rounded-sm px-2 py-0.5`}>
@@ -111,7 +111,7 @@ export default function OnboardingPage() {
 
           {/* Footer Section */}
           <div className="p-8 pt-4">
-            <div className="w-full h-[1px] bg-white/5 mb-6" />
+            <div className="w-full h-px bg-white/5 mb-6" />
             <div className="flex flex-col items-center gap-4">
               <Link href="/onboarding/no-company" className="group flex items-center gap-2 text-on-surface-variant hover:text-primary font-bold transition-colors duration-200 text-sm">
                 <AddCircleIcon className="size-5 group-hover:scale-110 transition-transform" />

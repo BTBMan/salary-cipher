@@ -11,134 +11,114 @@
   --font-mono: var(--font-mono);
   --font-heading: var(--font-heading);
 
-  --color-sidebar-ring: var(--sidebar-ring);
-  --color-sidebar-border: var(--sidebar-border);
-  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
-  --color-sidebar-accent: var(--sidebar-accent);
-  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
-  --color-sidebar-primary: var(--sidebar-primary);
-  --color-sidebar-foreground: var(--sidebar-foreground);
-  --color-sidebar: var(--sidebar);
-
-  --color-chart-5: var(--chart-5);
-  --color-chart-4: var(--chart-4);
-  --color-chart-3: var(--chart-3);
-  --color-chart-2: var(--chart-2);
-  --color-chart-1: var(--chart-1);
-
-  --color-ring: var(--ring);
-  --color-input: var(--input);
-  --color-border: var(--border);
-  --color-destructive: var(--destructive);
-  --color-destructive-foreground: var(--destructive-foreground);
-  --color-accent-foreground: var(--accent-foreground);
-  --color-accent: var(--accent);
-  --color-muted-foreground: var(--muted-foreground);
-  --color-muted: var(--muted);
-  --color-secondary-foreground: var(--secondary-foreground);
-  --color-secondary: var(--secondary);
-  --color-primary-foreground: var(--primary-foreground);
   --color-primary: var(--primary);
-  --color-popover-foreground: var(--popover-foreground);
-  --color-popover: var(--popover);
-  --color-card-foreground: var(--card-foreground);
-  --color-card: var(--card);
-
-  /* Stitch Specific Surface Variables - The Tonal Foundation */
-  --color-surface: var(--surface);
-  --color-surface-low: var(--surface-low);
-  --color-surface-container: var(--surface-container);
-  --color-surface-high: var(--surface-high);
-  --color-surface-highest: var(--surface-highest);
-  --color-surface-variant: var(--surface-variant);
-
-  /* Tertiary & Role Colors */
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
   --color-tertiary: var(--tertiary);
   --color-tertiary-foreground: var(--tertiary-foreground);
-  --color-success: #10b981;
-  --color-warning: #f59e0b;
+
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  /* Tonal Surface Palette */
+  --color-surface: var(--surface);
+  --color-surface-bright: var(--surface-bright);
+  --color-surface-dim: var(--surface-dim);
+  --color-surface-container: var(--surface-container);
+  --color-surface-container-low: var(--surface-container-low);
+  --color-surface-container-high: var(--surface-container-high);
+  --color-surface-container-highest: var(--surface-container-highest);
+
+  /* Encrypted Identifier */
+  --color-encrypted: #8B5CF6;
 
   --radius-sm: 0.125rem;
   --radius-md: 0.25rem;
-  --radius-lg: 0.5rem;
-  --radius-xl: 0.75rem;
+  --radius-lg: 0.375rem;
+  --radius-xl: 0.5rem;
 }
 
 :root {
-  /* Fallback Light Mode */
-  --background: #ffffff;
-  --foreground: #0b1326;
-  --card: #ffffff;
-  --card-foreground: #0b1326;
-  --popover: #ffffff;
-  --popover-foreground: #0b1326;
-  --primary: #6366F1;
-  --primary-foreground: #ffffff;
-  --secondary: #f1f5f9;
-  --secondary-foreground: #0f172a;
-  --muted: #f1f5f9;
-  --muted-foreground: #64748b;
-  --accent: #f1f5f9;
-  --accent-foreground: #0f172a;
-  --destructive: #ef4444;
+  /* Light Mode - Indigo Modernist */
+  --background: #fbf8ff;
+  --foreground: #1b1b23;
+  --primary: #c0c1ff;
+  --primary-container: #8083ff;
+  --on-primary: #1000a9;
+  --on-primary-fixed: #07006c;
+
+  --secondary: #d0bcff;
+  --secondary-container: #571bc1;
+  --tertiary: #ddb7ff;
+  --tertiary-container: #b76dff;
+
+  --muted: #efecf8;
+  --muted-foreground: #464554;
+  --accent: #e3e1ec;
+  --accent-foreground: #1b1b23;
+  --destructive: #ba1a1a;
   --destructive-foreground: #ffffff;
-  --border: transparent; /* No-Line Rule */
-  --input: #e2e8e0;
-  --ring: #6366F1;
-  --radius: 0.25rem;
+  --border: #c7c4d7;
+  --input: #767586;
+  --ring: #494bd6;
+  --radius: 0.125rem;
 
-  --surface: #ffffff;
-  --surface-low: #f8fafc;
-  --surface-container: #f1f5f9;
-  --surface-high: #e2e8f0;
-  --surface-highest: #cbd5e1;
-  --surface-variant: #f1f5f9;
+  --surface: #fbf8ff;
+  --surface-bright: #fbf8ff;
+  --surface-dim: #dbd8e4;
+  --surface-container: #efecf8;
+  --surface-container-low: #f5f2fe;
+  --surface-container-high: #e9e7f2;
+  --surface-container-highest: #e3e1ec;
+  --surface-container-lowest: #ffffff;
 
-  --tertiary: #A855F7;
-  --tertiary-foreground: #ffffff;
+  --font-sans: "Inter", system-ui, sans-serif;
+  --font-heading: "Inter", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", monospace;
 }
 
 .dark {
-  /* Exact Colors from Project 4917503157574169089 */
+  /* Dark Mode - Technical Deep Navy (Matching Design Files) */
   --background: #0b1326;
   --foreground: #dae2fd;
-  --card: #171f33;
-  --card-foreground: #dae2fd;
-  --popover: #2d3449;
-  --popover-foreground: #dae2fd;
   --primary: #c0c1ff;
-  --primary-foreground: #1000a9;
+  --primary-container: #8083ff;
+  --on-primary: #1000a9;
+  --on-primary-fixed: #07006c;
+
   --secondary: #d0bcff;
-  --secondary-foreground: #3c0091;
-  --muted: #131b2e;
+  --secondary-container: #571bc1;
+  --tertiary: #ddb7ff;
+  --tertiary-container: #b76dff;
+
+  --muted: #171f33;
   --muted-foreground: #c7c4d7;
   --accent: #222a3d;
   --accent-foreground: #dae2fd;
   --destructive: #ffb4ab;
   --destructive-foreground: #690005;
-  --border: transparent; /* No-Line Rule: boundaries defined by color shift */
+  --border: #464554;
   --input: #464554;
   --ring: #c0c1ff;
 
-  /* Tonal Stacking Hierarchy */
-  --surface: #0b1326;           /* Base Layer */
-  --surface-low: #131b2e;       /* Section Layer */
-  --surface-container: #171f33; /* Interactive Layer / Cards */
-  --surface-high: #222a3d;      /* Elevated Layer */
-  --surface-highest: #2d3449;   /* Modals / Popovers */
-  --surface-variant: rgba(45, 52, 73, 0.6); /* For Glassmorphism */
+  --surface: #0b1326;
+  --surface-bright: #31394d;
+  --surface-dim: #0b1326;
+  --surface-container: #171f33;
+  --surface-container-low: #131b2e;
+  --surface-container-high: #222a3d;
+  --surface-container-highest: #2d3449;
+  --surface-container-lowest: #060e20;
 
-  --tertiary: #ddb7ff;
-  --tertiary-foreground: #490080;
-
-  --sidebar: #0b1326;
-  --sidebar-foreground: #dae2fd;
-  --sidebar-primary: #c0c1ff;
-  --sidebar-primary-foreground: #1000a9;
-  --sidebar-accent: #171f33;
-  --sidebar-accent-foreground: #dae2fd;
-  --sidebar-border: transparent;
-  --sidebar-ring: #c0c1ff;
+  --font-heading: "Manrope", system-ui, sans-serif;
 }
 
 @layer base {
@@ -146,39 +126,20 @@
     @apply border-border outline-ring/50;
   }
   body {
-    @apply bg-background text-foreground font-sans antialiased selection:bg-primary/30 selection:text-primary-foreground;
+    @apply bg-background text-foreground font-sans antialiased;
   }
-  h1, h2, h3, h4, h5, h6 {
-    @apply font-heading font-semibold tracking-tight;
+   button:not(:disabled),
+  [role="button"]:not(:disabled) {
+    cursor: pointer;
   }
 }
 
 @layer utilities {
-  .vault-glass {
-    @apply bg-surface-variant backdrop-blur-xl border border-white/5;
+  .encrypted-shadow {
+    box-shadow: 0 0 15px -3px rgba(139, 92, 246, 0.3);
   }
-  .primary-gradient {
-    @apply bg-linear-to-br from-[#8083ff] to-[#c0c1ff];
-  }
-  .text-truth {
-    @apply font-mono text-foreground; /* For JetBrains Mono data */
-  }
-  /* The Ghost Border fallback for accessibility in dense tables */
-  .ghost-border {
-    @apply border border-white/15;
-  }
-  .no-border-section {
-    @apply border-none!;
+  .glass-panel {
+    @apply bg-surface-container/60 backdrop-blur-md border border-white/5;
   }
 }
 
-/* Scrollbar styling to match dark theme */
-::-webkit-scrollbar {
-  width: 8px;
-}
-::-webkit-scrollbar-track {
-  @apply bg-background;
-}
-::-webkit-scrollbar-thumb {
-  @apply bg-surface-high rounded-full hover:bg-surface-highest transition-colors;
-}

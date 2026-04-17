@@ -72,7 +72,7 @@ export default function CompliancePage() {
                   <label className="text-[10px] font-black text-outline uppercase tracking-widest">Engineering Median</label>
                   <div className="h-12 bg-surface-container-lowest rounded-lg flex items-center px-4 overflow-hidden relative border border-white/5">
                     <div className="text-on-surface font-heading font-black text-sm relative z-10">Tier 4 Range</div>
-                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full animate-[shimmer_2s_infinite] opacity-30" />
+                    <div className="absolute inset-0 bg-linear-to-r from-transparent via-white/5 to-transparent -translate-x-full animate-[shimmer_2s_infinite] opacity-30" />
                     <div className="ml-auto text-[10px] text-on-surface-variant font-black uppercase tracking-tighter opacity-40 relative z-10">(Confidential)</div>
                   </div>
                 </div>
@@ -80,7 +80,7 @@ export default function CompliancePage() {
                   <label className="text-[10px] font-black text-outline uppercase tracking-widest">Product Median</label>
                   <div className="h-12 bg-surface-container-lowest rounded-lg flex items-center px-4 overflow-hidden relative border border-white/5">
                     <div className="text-on-surface font-heading font-black text-sm relative z-10">Tier 3 Range</div>
-                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full animate-[shimmer_2s_infinite] opacity-30" />
+                    <div className="absolute inset-0 bg-linear-to-r from-transparent via-white/5 to-transparent -translate-x-full animate-[shimmer_2s_infinite] opacity-30" />
                     <div className="ml-auto text-[10px] text-on-surface-variant font-black uppercase tracking-tighter opacity-40 relative z-10">(Confidential)</div>
                   </div>
                 </div>
@@ -151,9 +151,9 @@ export default function CompliancePage() {
                   { icon: WorkspacePremiumIcon, title: 'Monthly Salary ≥ 5,000 USDC', status: 'Verified', id: '0x7d21...f9a2', expires: '12 Nov 2023', color: 'text-primary' },
                   { icon: AssignmentTurnedInIcon, title: 'Employment Duration ≥ 1 Year', status: 'Verified', id: '0xe119...88c4', expires: '24 Jan 2024', color: 'text-secondary' },
                   { icon: HistoryIcon, title: 'Historical Tax Proof FY22', status: 'Archived', id: '0x33e2...9011', expires: 'Expired 01 Oct', color: 'text-outline', isExpired: true },
-                ].map((p, i) => (
-                  <div key={i} className="bg-surface-container rounded-xl p-6 flex flex-col sm:flex-row items-center gap-6 group hover:bg-surface-container-high transition-all border border-transparent hover:border-white/5 shadow-xl">
-                    <div className="flex-shrink-0 w-12 h-12 rounded-full bg-surface-container-low flex items-center justify-center border border-white/5">
+                ].map(p => (
+                  <div key={p.id} className="bg-surface-container rounded-xl p-6 flex flex-col sm:flex-row items-center gap-6 group hover:bg-surface-container-high transition-all border border-transparent hover:border-white/5 shadow-xl">
+                    <div className="shrink-0 w-12 h-12 rounded-full bg-surface-container-low flex items-center justify-center border border-white/5">
                       <p.icon className={cn('size-6 fill-current', p.color)} />
                     </div>
                     <div className="flex-1 min-w-0 text-center sm:text-left">
@@ -210,7 +210,7 @@ export default function CompliancePage() {
                 <SecurityIcon className="size-3 fill-current text-tertiary" />
                 MPC & ZK-PROOFS SECURED
               </p>
-              <p className="text-[9px] text-outline font-medium uppercase tracking-[0.1em] mt-0.5">Sovereign Protocol v2.0.4</p>
+              <p className="text-[9px] text-outline font-medium uppercase tracking-widest mt-0.5">Sovereign Protocol v2.0.4</p>
             </div>
           </div>
         </footer>

@@ -28,7 +28,7 @@ export default function DashboardPage() {
           {/* Stat 2: Encrypted Payroll */}
           <div className="bg-[#571bc1] p-5 rounded-lg transition-all shadow-[0_20px_40px_rgba(87,27,193,0.3)] relative overflow-hidden group border-none">
             {/* Shimmer effect */}
-            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full animate-[shimmer_3s_infinite] pointer-events-none" />
+            <div className="absolute inset-0 bg-linear-to-r from-transparent via-white/5 to-transparent -translate-x-full animate-[shimmer_3s_infinite] pointer-events-none" />
 
             <p className="text-[#c4abff] text-[10px] font-bold uppercase tracking-widest mb-3 flex items-center gap-1.5">
               <LockIcon className="size-3 fill-current" /> Total Monthly Payroll
@@ -91,8 +91,8 @@ export default function DashboardPage() {
                     { date: 'Sep 28, 2023', block: 'Block #18,310,441', amount: '39,120.00' },
                     { date: 'Sep 14, 2023', block: 'Block #18,201,889', amount: '41,050.00' },
                     { date: 'Aug 30, 2023', block: 'Block #18,102,154', amount: '38,900.00' },
-                  ].map((row, i) => (
-                    <tr key={i} className="hover:bg-surface-container transition-colors group cursor-pointer">
+                  ].map(row => (
+                    <tr key={row.block} className="hover:bg-surface-container transition-colors group cursor-pointer">
                       <td className="px-6 py-5">
                         <div className="flex flex-col">
                           <span className="text-on-surface text-sm font-bold">{row.date}</span>
@@ -102,7 +102,7 @@ export default function DashboardPage() {
                       <td className="px-6 py-5">
                         <div className="flex items-center gap-2">
                           <LockIcon className="text-tertiary size-3.5 fill-current" />
-                          <span className="font-mono text-sm blur-[4px] text-on-surface-variant font-bold">{row.amount}</span>
+                          <span className="font-mono text-sm blur-xs text-on-surface-variant font-bold">{row.amount}</span>
                           <span className="text-[10px] font-black text-outline uppercase tracking-tighter">USDC</span>
                         </div>
                       </td>
@@ -148,7 +148,7 @@ export default function DashboardPage() {
                     <span className="text-destructive">82%</span>
                   </div>
                   <div className="h-3 bg-surface-container-lowest rounded-full overflow-hidden border border-white/5 shadow-inner">
-                    <div className="bg-gradient-to-r from-primary to-destructive h-full w-[82%] rounded-full" />
+                    <div className="bg-linear-to-r from-primary to-destructive h-full w-[82%] rounded-full" />
                   </div>
                   <p className="text-[9px] text-outline italic text-right font-medium">Liquidity alert: Top-up recommended within 14 days.</p>
                 </div>

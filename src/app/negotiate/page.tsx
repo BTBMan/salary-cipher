@@ -65,8 +65,8 @@ export default function SalaryNegotiationPage() {
                       { id: '0x992...2b01', status: 'Waiting for Employee', color: 'bg-surface-variant text-on-surface-variant' },
                       { id: '0x11b...a8c2', status: 'No Match', color: 'bg-destructive/10 text-destructive', isNoMatch: true },
                       { id: '0x33e...d991', status: 'Match', color: 'bg-emerald-500/10 text-emerald-400', isMatch: true },
-                    ].map((row, i) => (
-                      <tr key={i} className="hover:bg-surface-container transition-colors group cursor-pointer">
+                    ].map(row => (
+                      <tr key={row.id} className="hover:bg-surface-container transition-colors group cursor-pointer">
                         <td className="px-6 py-5">
                           <div className="flex items-center gap-3">
                             <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center border border-primary/20">
@@ -165,7 +165,7 @@ export default function SalaryNegotiationPage() {
               <div className="flex items-end gap-1.5 h-20">
                 {[50, 75, 60, 100, 85, 50, 30, 65, 75, 40, 90, 55].map((h, i) => (
                   <div
-                    key={i}
+                    key={h}
                     className={cn(
                       'flex-1 rounded-t-[2px] transition-all duration-1000',
                       i % 4 === 0 ? 'bg-tertiary/40' : 'bg-primary/30',

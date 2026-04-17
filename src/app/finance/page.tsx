@@ -25,17 +25,14 @@ export default function FinancePage() {
           <p className="text-on-surface-variant text-sm font-medium opacity-80">Managing liquidity and encrypted treasury operations for automated payroll.</p>
         </div>
 
-        {/* Bento Grid Layout: 5:7 Split */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-
-          {/* Left Column: Balance (5/12) */}
           <div className="lg:col-span-5 flex flex-col gap-6">
             <div className="bg-surface-container-low p-8 rounded-xl relative overflow-hidden group border-l-4 border-primary shadow-2xl min-h-[280px] flex flex-col justify-between border-y-none border-r-none">
               <div className="relative z-10">
                 <span className="text-[10px] font-black text-on-surface-variant tracking-[0.2em] uppercase mb-4 block">Platform Balance</span>
                 <div className="flex items-baseline gap-3 mb-10">
                   <div className="relative inline-flex flex-col">
-                    <span className="text-primary font-heading text-5xl font-black tracking-tighter font-['JetBrains_Mono']">482,910.42</span>
+                    <span className="text-primary font-heading text-5xl font-black tracking-tighter">482,910.42</span>
                     <div className="absolute inset-0 bg-secondary/10 blur-xl opacity-0 group-hover:opacity-100 transition-opacity" />
                   </div>
                   <span className="text-outline text-xl font-black uppercase tracking-tighter">USDC</span>
@@ -59,7 +56,7 @@ export default function FinancePage() {
             <div className="bg-surface-container p-6 rounded-xl border border-white/5 flex justify-between items-center shadow-xl">
               <div>
                 <span className="text-on-surface-variant text-[10px] font-black uppercase tracking-widest mb-1.5 block">Yield Generated (30d)</span>
-                <span className="text-on-surface font-heading text-2xl font-black font-['JetBrains_Mono'] tracking-tight">+1,240.18 <span className="text-xs text-outline font-black">USDC</span></span>
+                <span className="text-on-surface font-heading text-2xl font-black tracking-tight">+1,240.18 <span className="text-xs text-outline font-black">USDC</span></span>
               </div>
               <div className="h-10 w-24 bg-surface-container-low rounded-sm flex items-end gap-1 p-2 border border-white/5">
                 <div className="w-2 bg-primary/40 h-1/2 rounded-t-[1px]" />
@@ -96,7 +93,7 @@ export default function FinancePage() {
                   <span className="text-primary font-mono">74.2%</span>
                 </div>
                 <div className="h-3 w-full bg-surface-container-highest rounded-full overflow-hidden shadow-inner border border-white/5">
-                  <div className="h-full bg-gradient-to-r from-primary to-tertiary w-[74.2%] rounded-full shadow-[0_0_15px_rgba(192,193,255,0.4)]" />
+                  <div className="h-full bg-linear-to-r from-primary to-tertiary w-[74.2%] rounded-full shadow-[0_0_15px_rgba(192,193,255,0.4)]" />
                 </div>
               </div>
 
@@ -158,8 +155,8 @@ export default function FinancePage() {
                   { date: 'Oct 24, 2023', time: '14:22 UTC', type: 'Vault Deposit', amount: '45,000.00', icon: AccountBalanceWalletIcon, iconColor: 'text-primary', bgColor: 'bg-primary/10', hash: '0x4f...a812' },
                   { date: 'Oct 21, 2023', time: '09:15 UTC', type: 'Payroll Execution', amount: '122,402.10', icon: PaymentsIcon, iconColor: 'text-tertiary', bgColor: 'bg-tertiary/10', hash: '0x12...c4e9' },
                   { date: 'Oct 18, 2023', time: '18:40 UTC', type: 'Vault Deposit', amount: '80,000.00', icon: AccountBalanceWalletIcon, iconColor: 'text-primary', bgColor: 'bg-primary/10', hash: '0x9d...f221' },
-                ].map((tx, i) => (
-                  <tr key={i} className="hover:bg-surface-container-high/40 transition-colors group cursor-pointer">
+                ].map(tx => (
+                  <tr key={tx.hash} className="hover:bg-surface-container-high/40 transition-colors group cursor-pointer">
                     <td className="px-8 py-6">
                       <div className="text-sm text-white font-bold tracking-tight">{tx.date}</div>
                       <div className="text-[10px] text-outline font-black uppercase mt-1 tracking-widest">{tx.time}</div>
@@ -175,7 +172,7 @@ export default function FinancePage() {
                     <td className="px-8 py-6">
                       <div className="relative w-36 h-10 bg-surface-container-lowest rounded-lg overflow-hidden flex items-center px-4 border border-white/5 group-hover:border-primary/30 transition-all">
                         <span className="text-sm font-['JetBrains_Mono'] font-bold text-white opacity-0 group-hover:opacity-100 transition-opacity z-10">{tx.amount}</span>
-                        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full animate-[shimmer_2s_infinite] group-hover:hidden opacity-30" />
+                        <div className="absolute inset-0 bg-linear-to-r from-transparent via-white/5 to-transparent -translate-x-full animate-[shimmer_2s_infinite] group-hover:hidden opacity-30" />
                         <LockIcon className="text-tertiary size-3.5 absolute right-3 opacity-60 group-hover:hidden fill-current" />
                       </div>
                     </td>

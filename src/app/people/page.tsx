@@ -66,10 +66,10 @@ export default function PeoplePage() {
                 </div>
                 {/* Stepper Visual */}
                 <div className="flex items-center gap-2">
-                  <div className="flex-grow h-1.5 rounded-full bg-primary-container relative overflow-hidden">
+                  <div className="grow h-1.5 rounded-full bg-primary-container relative overflow-hidden">
                     <div className="absolute inset-0 bg-white/20 animate-pulse" />
                   </div>
-                  <div className="flex-grow h-1.5 rounded-full bg-surface-variant" />
+                  <div className="grow h-1.5 rounded-full bg-surface-variant" />
                 </div>
               </div>
 
@@ -258,7 +258,7 @@ export default function PeoplePage() {
                 <span className="text-emerald-400 font-mono">100% SECURE</span>
               </div>
               <div className="h-1.5 w-full bg-surface-container rounded-full overflow-hidden shadow-inner">
-                <div className="h-full w-full bg-gradient-to-r from-primary to-tertiary rounded-full" />
+                <div className="h-full w-full bg-linear-to-r from-primary to-tertiary rounded-full" />
               </div>
               <p className="text-[9px] text-outline leading-relaxed italic font-medium uppercase tracking-wider">
                 All salary data is processed using FHE. Salary Cipher never sees raw salary values.

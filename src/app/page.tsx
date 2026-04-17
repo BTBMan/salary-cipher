@@ -68,13 +68,11 @@ export default function LandingPage() {
             <Button
               size="lg"
               className="w-full sm:w-auto px-8 py-7 text-base font-semibold rounded-sm primary-gradient text-on-primary-fixed shadow-lg shadow-primary/20 hover:opacity-90 transition-all border-none"
-              render={<Link href="/app">Launch App</Link>}
+              nativeButton={false}
+              render={<Link href="/dashboard">Launch App</Link>}
             >
               Launch App
             </Button>
-            {/* <Button size="lg" variant="outline" className="w-full sm:w-auto px-8 py-7 text-base font-semibold rounded-sm bg-surface-container border border-white/10 hover:bg-surface-container-high transition-all text-on-surface">
-              View Docs
-            </Button> */}
           </div>
 
           {/* Dashboard Preview */}
@@ -103,7 +101,6 @@ export default function LandingPage() {
         </div>
       </main>
 
-      {/* Features Bento Grid */}
       <section id="features" className="py-24 px-6 relative z-10 bg-surface">
         <div className="max-w-7xl mx-auto">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -123,7 +120,7 @@ export default function LandingPage() {
               </div>
               <h3 className="font-heading text-xl font-bold text-on-surface mb-3">Multi-Company Management</h3>
               <p className="text-on-surface-variant text-sm leading-relaxed">
-                Manage global payroll for multiple entities from a single sovereign vault. Granular permissioning for HR, accounting, and compliance teams.
+                Manage global payroll for multiple entities from a single sovereign vault. Granular permissions for HR, accounting, and compliance teams.
               </p>
             </div>
 
@@ -178,7 +175,6 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* Footer */}
       <footer className="py-16 px-6 border-t border-white/5 bg-surface">
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-start gap-12 mb-16">
           <div className="max-w-xs">

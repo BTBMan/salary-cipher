@@ -113,8 +113,8 @@ export default function EmployeeDashboardPage() {
                     { date: 'April 01, 2024', tx: '0x24a...77b', amount: '8,450.00' },
                     { date: 'March 01, 2024', tx: '0xc12...89a', amount: '7,920.00' },
                     { date: 'February 01, 2024', tx: '0xb55...21c', amount: '7,920.00' },
-                  ].map((row, i) => (
-                    <tr key={i} className="hover:bg-surface-container transition-colors group cursor-pointer">
+                  ].map(row => (
+                    <tr key={row.tx} className="hover:bg-surface-container transition-colors group cursor-pointer">
                       <td className="px-6 py-5">
                         <div className="flex flex-col">
                           <span className="text-sm font-bold text-on-surface">{row.date}</span>
@@ -123,7 +123,7 @@ export default function EmployeeDashboardPage() {
                       </td>
                       <td className="px-6 py-5">
                         <div className="flex items-center gap-2">
-                          <span className="font-mono text-sm blur-[4px] text-on-surface-variant font-bold">{row.amount}</span>
+                          <span className="font-mono text-sm blur-xs text-on-surface-variant font-bold">{row.amount}</span>
                           <span className="text-[10px] font-black text-outline uppercase tracking-tighter">USDC</span>
                         </div>
                       </td>
@@ -146,7 +146,7 @@ export default function EmployeeDashboardPage() {
 
             {/* Proof CTA Card */}
             <div className="relative bg-surface-container p-6 rounded-xl overflow-hidden group cursor-pointer border border-white/5 shadow-2xl">
-              <div className="absolute inset-0 bg-gradient-to-br from-tertiary/10 via-transparent to-primary/10 opacity-0 group-hover:opacity-100 transition-opacity" />
+              <div className="absolute inset-0 bg-linear-to-br from-tertiary/10 via-transparent to-primary/10 opacity-0 group-hover:opacity-100 transition-opacity" />
               <div className="relative z-10">
                 <div className="w-14 h-14 bg-surface-container-highest rounded-xl flex items-center justify-center mb-6 border border-white/10 shadow-inner">
                   <VerifiedUserIcon className="text-tertiary size-8 fill-current" />
@@ -174,8 +174,8 @@ export default function EmployeeDashboardPage() {
                   { icon: HomeIcon, title: 'Mortgage Eligibility', sub: 'Used: Wells Fargo API', color: 'text-primary' },
                   { icon: DirectionsCarIcon, title: 'Auto Loan Check', sub: 'Used: Chase Auto', color: 'text-tertiary' },
                   { icon: DescriptionIcon, title: 'Generic Income Level', sub: 'Tier: Platinum (+5k/mo)', color: 'text-emerald-400' },
-                ].map((p, i) => (
-                  <div key={i} className="bg-surface-container-low p-4 rounded-xl flex items-center justify-between group hover:bg-surface-container-high transition-all cursor-pointer border border-transparent hover:border-white/5 shadow-lg">
+                ].map(p => (
+                  <div key={p.title} className="bg-surface-container-low p-4 rounded-xl flex items-center justify-between group hover:bg-surface-container-high transition-all cursor-pointer border border-transparent hover:border-white/5 shadow-lg">
                     <div className="flex items-center gap-4">
                       <div className="w-10 h-10 rounded-lg bg-surface-container flex items-center justify-center border border-white/5 group-hover:border-white/10 transition-colors">
                         <p.icon className={cn('size-5', p.color)} />

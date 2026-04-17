@@ -49,7 +49,7 @@ export default function NoCompanyPage() {
           {/* Icon/Visual Header */}
           <div className="flex flex-col items-center text-center gap-4">
             <div className="w-16 h-16 bg-surface-container rounded-lg flex items-center justify-center shadow-inner relative overflow-hidden border border-white/5">
-              <div className="absolute inset-0 bg-gradient-to-br from-primary/20 to-transparent" />
+              <div className="absolute inset-0 bg-linear-to-br from-primary/20 to-transparent" />
               <LockOpenIcon className="text-primary size-10" />
             </div>
             <div className="space-y-2">
@@ -109,7 +109,7 @@ export default function NoCompanyPage() {
       </main>
 
       {/* Decorators */}
-      <div className="fixed bottom-12 left-12 flex flex-col gap-2 pointer-events-none opacity-20 hidden lg:flex">
+      <div className="fixed bottom-12 left-12 flex-col gap-2 pointer-events-none opacity-20 hidden lg:flex">
         <div className="text-[10px] font-mono text-primary-fixed uppercase tracking-widest">Sys_Status: IDLE</div>
         <div className="text-[10px] font-mono text-primary-fixed uppercase tracking-widest">Loc: Cloud_Region_01</div>
       </div>

@@ -114,8 +114,8 @@ export default function PayrollHistoryPage() {
                     { date: '2024-10-01', name: 'Alex Rivera', wallet: '0x71C...92Aa', amount: '4,250.00', icon: 'https://lh3.googleusercontent.com/aida-public/AB6AXuAl8eVdHzCEqknVUBpPULD_sxi-r29S1BmZL__PqQ9th7TnTeAF1_QXkfA2tk9raiDcgAux1RU_-su_yr1F0wUIwMpvwGzDkt9hWMCs1F5R7RCeuzAHenJVmSOvFMh1yhXwh5jSW7hoM3VXSbwbFerRosi1hwN3PS3Ks8xWUW1N1YK9Uj2yYLExwur_63rACwvoeervuooaiwdoT6O51Tx68y5cJ-Boi-K9UsrPlh7MBNCCYDZ1X0qXlDxog8gDv-jtjsS5sf3qWY4', status: 'Paid', color: 'text-primary' },
                     { date: '2024-10-01', name: 'Sarah Chen', wallet: '0x42B...11Ee', amount: '5,800.00', icon: 'https://lh3.googleusercontent.com/aida-public/AB6AXuCIo9hkn6hFtXXBlBOdFvoDU-8MpUsTU50TsNvPhNeLhmEgQZMfOUNsY7V4kGFqh8sKRbpCnDLzxnu6h-nXwu7VRqAZfXsH9GaJ-oa6inChJhmfx3fu8Soo_j0SBvtmdDXRr1P-wIElZJ3OjYCYVUo6msm4p7yfebi_LH4THl6tX_kFeX9XGyNX3vUZRw8CQih4tUjMt46UxbN136RTq-D223QAHR_kwIlgz-O8V2qd3wNUUufXjW9wMagC7X4RBcL4xfUaoh5gJQE', status: 'Paid', color: 'text-primary' },
                     { date: '2024-09-28', name: 'Marcus Thorne', wallet: '0x99A...33Cc', amount: '12,100.00', icon: 'https://lh3.googleusercontent.com/aida-public/AB6AXuDWOGE8frGr_w0KofYiZzntvxZy-9VTdKdBrJGgK__UsXQFQwUXz9vCCNII44sh423l7RTcseA0-wIwSdJ9XIZAFOt_fA6ZbqU-1DgohhzJDp1cy25ExJN4dYgBqMr-VnUHv2Tp73QJ-Z_qi6SUqwIbpDXxEFMMTycmYEv8KlgfdktJo_QbA7ymge6rE6OYxi2wHTXEwRnuMHha2ncajH3DdQAo2xWDncHlP1ToqZFUl4aDJDZ1kKdwBYUmJM-kEgnxC8Ua1Q6tw38', status: 'Pending', color: 'text-amber-500', isPending: true },
-                  ].map((row, i) => (
-                    <tr key={i} className="hover:bg-surface-bright/10 transition-colors group cursor-pointer">
+                  ].map(row => (
+                    <tr key={row.wallet} className="hover:bg-surface-bright/10 transition-colors group cursor-pointer">
                       <td className="px-6 py-5 font-mono text-sm font-bold text-on-surface">{row.date}</td>
                       <td className="px-6 py-5">
                         <div className="flex items-center gap-3">
@@ -131,8 +131,8 @@ export default function PayrollHistoryPage() {
                       </td>
                       <td className="px-6 py-5">
                         <div className="inline-flex items-center gap-2 bg-surface-container-lowest border border-tertiary/10 px-3 py-1.5 rounded-lg group-hover:border-tertiary/40 transition-all relative overflow-hidden">
-                          <span className="font-mono text-sm text-tertiary blur-[4px] group-hover:blur-0 transition-all font-bold">{row.amount} <span className="text-[10px] text-outline font-black">USDC</span></span>
-                          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full animate-[shimmer_2s_infinite] group-hover:hidden opacity-30" />
+                          <span className="font-mono text-sm text-tertiary blur-xs group-hover:blur-0 transition-all font-bold">{row.amount} <span className="text-[10px] text-outline font-black">USDC</span></span>
+                          <div className="absolute inset-0 bg-linear-to-r from-transparent via-white/5 to-transparent -translate-x-full animate-[shimmer_2s_infinite] group-hover:hidden opacity-30" />
                           <LockIcon className="size-3 text-tertiary fill-current group-hover:hidden" />
                         </div>
                       </td>
@@ -185,7 +185,7 @@ export default function PayrollHistoryPage() {
                   <KeyVisualizerIcon className="text-tertiary size-5 fill-current" />
                 </div>
                 {/* Shimmer Overlay */}
-                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full animate-[shimmer_3s_infinite] group-hover:hidden opacity-30" />
+                <div className="absolute inset-0 bg-linear-to-r from-transparent via-white/5 to-transparent -translate-x-full animate-[shimmer_3s_infinite] group-hover:hidden opacity-30" />
               </div>
             </div>
           </div>
