@@ -1,4 +1,5 @@
 export * from './fhevm'
 export * from './use-controllable-value'
+export * from './use-mobile'
 export * from './use-previous'
 export * from './use-wagmi-ethers'

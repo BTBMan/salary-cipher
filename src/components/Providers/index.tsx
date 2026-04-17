@@ -4,6 +4,8 @@ import type { PropsWithChildren } from 'react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { ThemeProvider } from 'next-themes'
 import { WagmiProvider } from 'wagmi'
+import { Toaster } from '@/components/ui/sonner'
+import { TooltipProvider } from '@/components/ui/tooltip'
 import { wagmiConfig } from '@/configs'
 import { FheProvider } from './fhe-provider'
 
@@ -16,11 +18,14 @@ export default function Providers({ children }: PropsWithChildren) {
         <FheProvider>
           <ThemeProvider
             attribute="class"
-            defaultTheme="system"
+            defaultTheme="dark"
             enableSystem
             disableTransitionOnChange
           >
-            {children}
+            <TooltipProvider>
+              {children}
+              <Toaster richColors position="bottom-right" />
+            </TooltipProvider>
           </ThemeProvider>
         </FheProvider>
       </QueryClientProvider>
