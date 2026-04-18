@@ -1,6 +1,6 @@
-@import "tailwindcss";
-@import "tw-animate-css";
-@import "shadcn/tailwind.css";
+@import 'tailwindcss';
+@import 'tw-animate-css';
+@import 'shadcn/tailwind.css';
 
 @custom-variant dark (&:is(.dark *));
 
@@ -38,7 +38,7 @@
   --color-surface-container-highest: var(--surface-container-highest);
 
   /* Encrypted Identifier */
-  --color-encrypted: #8B5CF6;
+  --color-encrypted: #8b5cf6;
 
   --radius-sm: 0.125rem;
   --radius-md: 0.25rem;
@@ -80,9 +80,9 @@
   --surface-container-highest: #e3e1ec;
   --surface-container-lowest: #ffffff;
 
-  --font-sans: "Inter", system-ui, sans-serif;
-  --font-heading: "Inter", system-ui, sans-serif;
-  --font-mono: "JetBrains Mono", monospace;
+  --font-sans: 'Inter', system-ui, sans-serif;
+  --font-heading: 'Inter', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
 }
 
 .dark {
@@ -118,7 +118,7 @@
   --surface-container-highest: #2d3449;
   --surface-container-lowest: #060e20;
 
-  --font-heading: "Manrope", system-ui, sans-serif;
+  --font-heading: 'Manrope', system-ui, sans-serif;
 }
 
 @layer base {
@@ -128,8 +128,8 @@
   body {
     @apply bg-background text-foreground font-sans antialiased;
   }
-   button:not(:disabled),
-  [role="button"]:not(:disabled) {
+  button:not(:disabled),
+  [role='button']:not(:disabled) {
     cursor: pointer;
   }
 }
@@ -142,4 +142,3 @@
     @apply bg-surface-container/60 backdrop-blur-md border border-white/5;
   }
 }
-
