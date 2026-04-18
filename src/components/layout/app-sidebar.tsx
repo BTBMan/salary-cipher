@@ -15,7 +15,7 @@ import {
   HubIcon,
   LogoutIcon,
   PaymentsIcon,
-  SettingsIcon,
+  // SettingsIcon,
   ShieldLockIcon,
   VerifiedIcon,
 } from '@/components/icons'
@@ -42,9 +42,10 @@ const mainNav = [
   { title: 'Overview', href: '/dashboard', icon: DashboardIcon },
   { title: 'People', href: '/people', icon: GroupsIcon },
   { title: 'Payroll', href: '/payroll', icon: PaymentsIcon },
+  { title: 'Negotiate', href: '/negotiate', icon: GavelIcon },
   { title: 'Compliance', href: '/compliance', icon: GavelIcon },
   { title: 'Finance', href: '/finance', icon: AccountBalanceIcon },
-  { title: 'Settings', href: '/settings', icon: SettingsIcon },
+  // { title: 'Settings', href: '/settings', icon: SettingsIcon },
 ]
 
 export function AppSidebar() {
