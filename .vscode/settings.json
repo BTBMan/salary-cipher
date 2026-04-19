@@ -53,11 +53,11 @@
 
   "prettier.documentSelectors": ["**/*.sol"],
 
+  "solidity.telemetry": false,
   "solidity.formatter": "prettier",
-  "solidity.monoRepoSupport": false,
 
   "[solidity]": {
-    "editor.defaultFormatter": "JuanBlanco.solidity",
+    "editor.defaultFormatter": "NomicFoundation.hardhat-solidity",
     "editor.formatOnSave": true
   },
 
