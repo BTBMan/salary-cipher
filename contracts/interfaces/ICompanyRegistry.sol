@@ -27,8 +27,6 @@ interface ICompanyRegistry {
     struct Employee {
         // The display name of the employee
         string displayName;
-        // The address of the employee
-        address account;
         // The role of the employee
         Role role;
         // The timestamp when the employee was added
@@ -48,8 +46,20 @@ interface ICompanyRegistry {
     ////////////////////////////////////
     // Events                         //
     ////////////////////////////////////
-    event CompanyCreated(uint256 indexed companyId, address indexed owner, string name, uint256 createdAt);
-    event EmployeeAdded(uint256 indexed companyId, address indexed account, Role role, uint256 addedAt);
+    event CompanyCreated(
+        uint256 indexed companyId,
+        address indexed owner,
+        string name,
+        uint256 createdAt
+    );
+    event EmployeeAdded(
+        uint256 indexed companyId,
+        address indexed account,
+        Role role,
+        uint256 addedAt
+    );
+    event EmployeeRemoved(uint256 indexed companyId, address indexed employee);
+
     ////////////////////////////////////
     // Errors                         //
     ////////////////////////////////////
@@ -59,6 +69,7 @@ interface ICompanyRegistry {
     error CompanyRegistry__CompanyDoesNotExist();
     error CompanyRegistry__EmployeeIsZeroAddress();
     error CompanyRegistry__EmployeeAlreadyExists();
+    error CompanyRegistry__EmployeeDoesNotExist();
 
     ////////////////////////////////////
     // Modifiers                      //

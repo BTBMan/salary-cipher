@@ -31,10 +31,8 @@ contract CompanyRegistry is ICompanyRegistry {
     // All companies
     mapping(uint256 companyId => Company company) public companies;
     // All employees of a company
-    mapping(uint256 companyId => Employee[] employees) public employees;
-    // The role of an employee in a company
-    mapping(uint256 companyId => mapping(address employee => Role role))
-        public roles;
+    mapping(uint256 companyId => mapping(address account => Employee employeeInfo))
+        public companyEmployees;
     // The companies an employee belongs to
     mapping(address employee => uint256[] companyIds) public userCompanies;
 
@@ -81,16 +79,13 @@ contract CompanyRegistry is ICompanyRegistry {
             owner: msg.sender,
             createdAt: _blockTimestamp()
         });
-        employees[nextCompanyId].push(
-            Employee({
-                displayName: "Owner",
-                account: msg.sender,
-                role: Role.Owner,
-                addedAt: _blockTimestamp()
-            })
-        );
-        roles[nextCompanyId][msg.sender] = Role.Owner;
+        companyEmployees[nextCompanyId][msg.sender] = Employee({
+            displayName: "Owner",
+            role: Role.Owner,
+            addedAt: _blockTimestamp()
+        });
         userCompanies[msg.sender].push(nextCompanyId);
+
         nextCompanyId++;
 
         emit CompanyCreated(
@@ -119,22 +114,40 @@ contract CompanyRegistry is ICompanyRegistry {
         if (account == address(0)) {
             revert CompanyRegistry__EmployeeIsZeroAddress();
         }
-        if (roles[companyId][account] != Role.None) {
+        if (companyEmployees[companyId][account].role != Role.None) {
             revert CompanyRegistry__EmployeeAlreadyExists();
         }
 
-        employees[companyId].push(
-            Employee({
-                displayName: displayName,
-                account: account,
-                role: role,
-                addedAt: _blockTimestamp()
-            })
-        );
-        roles[companyId][account] = role;
+        companyEmployees[companyId][account] = Employee({
+            displayName: displayName,
+            role: role,
+            addedAt: _blockTimestamp()
+        });
         userCompanies[account].push(companyId);
 
         emit EmployeeAdded(companyId, account, role, _blockTimestamp());
+    }
+
+    /**
+     * @notice Remove an employee from a company
+     * @param companyId The ID of the company
+     * @param account The address of the employee
+     */
+    function removeEmployee(uint256 companyId, address account) external {
+        if (companies[companyId].owner == address(0)) {
+            revert CompanyRegistry__CompanyDoesNotExist();
+        }
+        if (account == address(0)) {
+            revert CompanyRegistry__EmployeeIsZeroAddress();
+        }
+        if (companyEmployees[companyId][account].role == Role.None) {
+            revert CompanyRegistry__EmployeeDoesNotExist();
+        }
+
+        delete companyEmployees[companyId][account];
+        delete userCompanies[account];
+
+        emit EmployeeRemoved(companyId, account);
     }
 
     ////////////////////////////////////
