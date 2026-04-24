@@ -66,11 +66,6 @@ contract CompanyRegistry is ICompanyRegistry {
         _;
     }
 
-    modifier onlyMember(uint256 companyId) {
-        _requireCompanyMember(companyId, msg.sender);
-        _;
-    }
-
     constructor() {
         nextCompanyId = 1;
     }
@@ -91,12 +86,6 @@ contract CompanyRegistry is ICompanyRegistry {
     ) external returns (uint256 companyId) {
         if (bytes(name).length == 0) {
             revert CompanyRegistry__CompanyNameIsEmpty();
-        }
-        if (msg.sender == address(0)) {
-            revert CompanyRegistry__OwnerIsZeroAddress();
-        }
-        if (companies[nextCompanyId].owner != address(0)) {
-            revert CompanyRegistry__CompanyAlreadyExists();
         }
 
         companyId = nextCompanyId;
@@ -305,19 +294,6 @@ contract CompanyRegistry is ICompanyRegistry {
         }
     }
 
-    function _requireCompanyMember(
-        uint256 companyId,
-        address account
-    ) private view {
-        _requireCompanyExists(companyId);
-        if (
-            companies[companyId].owner != account &&
-            companyEmployees[companyId][account].role == Role.None
-        ) {
-            revert CompanyRegistry__Unauthorized();
-        }
-    }
-
     ////////////////////////////////////
     // Getter functions               //
     ////////////////////////////////////
@@ -348,7 +324,7 @@ contract CompanyRegistry is ICompanyRegistry {
         return companyEmployeeAccounts[companyId].length;
     }
 
-    function _blockTimestamp() private view returns (uint32) {
-        return uint32(block.timestamp);
+    function _blockTimestamp() private view returns (uint64) {
+        return uint64(block.timestamp);
     }
 }

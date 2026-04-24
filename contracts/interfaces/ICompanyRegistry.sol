@@ -21,7 +21,7 @@ interface ICompanyRegistry {
         // The owner of the company
         address owner;
         // The timestamp when the company was created
-        uint256 createdAt;
+        uint64 createdAt;
     }
 
     struct Employee {
@@ -30,7 +30,7 @@ interface ICompanyRegistry {
         // The role of the employee
         Role role;
         // The timestamp when the employee was added
-        uint256 addedAt;
+        uint64 addedAt;
     }
 
     struct NewEmployee {

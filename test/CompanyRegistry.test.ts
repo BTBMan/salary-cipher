@@ -60,6 +60,7 @@ describe('companyRegistry', () => {
       expect(company[1].toLowerCase()).to.equal(owner.account.address.toLowerCase())
       expect(ownerEmployee[0]).to.equal('Owner')
       expect(ownerEmployee[1]).to.equal(RolesEnum.Owner)
+      expect(await companyRegistry.read.getRole([companyId, owner.account.address])).to.equal(RolesEnum.Owner)
       expect(normalizeAddresses(employees)).to.deep.equal(
         normalizeAddresses([owner.account.address]),
       )
