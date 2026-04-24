@@ -26,6 +26,7 @@ contract CompanyRegistry is ICompanyRegistry {
     ////////////////////////////////////
     // State variables                //
     ////////////////////////////////////
+    // Next company identifier to assign.
     uint256 public nextCompanyId;
 
     // All companies
@@ -44,6 +45,9 @@ contract CompanyRegistry is ICompanyRegistry {
     // 1-based index into userCompanies for O(1) removal
     mapping(address employee => mapping(uint256 companyId => uint256 indexPlusOne))
         private userCompanyIndexPlusOne;
+    // System contracts allowed to act for a specific company
+    mapping(uint256 companyId => mapping(address caller => bool isAuthorized))
+        public authorizedCallers;
 
     ////////////////////////////////////
     // Events                         //
@@ -56,13 +60,15 @@ contract CompanyRegistry is ICompanyRegistry {
     ////////////////////////////////////
     // Modifiers                      //
     ////////////////////////////////////
+    /// @notice Restricts execution to the company owner.
     modifier onlyOwner(uint256 companyId) {
         _requireCompanyOwner(companyId, msg.sender);
         _;
     }
 
+    /// @notice Restricts execution to owner, HR, or an authorized system contract.
     modifier onlyOwnerOrHR(uint256 companyId) {
-        _requireCompanyOwnerOrHR(companyId, msg.sender);
+        _requireCompanyOwnerOrHROrAuthorized(companyId, msg.sender);
         _;
     }
 
@@ -183,6 +189,19 @@ contract CompanyRegistry is ICompanyRegistry {
         emit RoleUpdated(companyId, account, oldRole, newRole);
     }
 
+    function setAuthorizedCaller(
+        uint256 companyId,
+        address caller,
+        bool authorized
+    ) external onlyOwner(companyId) {
+        if (caller == address(0)) {
+            revert CompanyRegistry__InvalidCaller();
+        }
+
+        authorizedCallers[companyId][caller] = authorized;
+    }
+
+    /// @dev Shared insert path used by both single and batch employee creation.
     function _addEmployee(
         uint256 companyId,
         address account,
@@ -216,6 +235,7 @@ contract CompanyRegistry is ICompanyRegistry {
         emit EmployeeAdded(companyId, account, role, _blockTimestamp());
     }
 
+    /// @dev Removes one account from the enumerable company member list via swap-and-pop.
     function _removeEmployeeFromCompanyList(
         uint256 companyId,
         address account
@@ -234,6 +254,7 @@ contract CompanyRegistry is ICompanyRegistry {
         delete companyEmployeeIndexPlusOne[companyId][account];
     }
 
+    /// @dev Removes one company id from the reverse user membership list via swap-and-pop.
     function _removeCompanyFromUserList(
         address account,
         uint256 companyId
@@ -252,12 +273,14 @@ contract CompanyRegistry is ICompanyRegistry {
         delete userCompanyIndexPlusOne[account][companyId];
     }
 
+    /// @dev Reverts if the company id has not been created yet.
     function _requireCompanyExists(uint256 companyId) private view {
         if (companies[companyId].owner == address(0)) {
             revert CompanyRegistry__CompanyDoesNotExist();
         }
     }
 
+    /// @dev Reverts if the account is not an active employee entry for the company.
     function _requireExistingEmployee(
         uint256 companyId,
         address account
@@ -271,6 +294,7 @@ contract CompanyRegistry is ICompanyRegistry {
         }
     }
 
+    /// @dev Reverts unless the account is the recorded company owner.
     function _requireCompanyOwner(
         uint256 companyId,
         address account
@@ -281,6 +305,7 @@ contract CompanyRegistry is ICompanyRegistry {
         }
     }
 
+    /// @dev Reverts unless the account is owner or HR.
     function _requireCompanyOwnerOrHR(
         uint256 companyId,
         address account
@@ -294,9 +319,25 @@ contract CompanyRegistry is ICompanyRegistry {
         }
     }
 
+    /// @dev Reverts unless the account is owner, HR, or an authorized system contract.
+    function _requireCompanyOwnerOrHROrAuthorized(
+        uint256 companyId,
+        address account
+    ) private view {
+        _requireCompanyExists(companyId);
+        if (
+            companies[companyId].owner != account &&
+            companyEmployees[companyId][account].role != Role.HR &&
+            !authorizedCallers[companyId][account]
+        ) {
+            revert CompanyRegistry__Unauthorized();
+        }
+    }
+
     ////////////////////////////////////
     // Getter functions               //
     ////////////////////////////////////
+    /// @inheritdoc ICompanyRegistry
     function getRole(
         uint256 companyId,
         address account
@@ -304,12 +345,14 @@ contract CompanyRegistry is ICompanyRegistry {
         return companyEmployees[companyId][account].role;
     }
 
+    /// @inheritdoc ICompanyRegistry
     function getUserCompanies(
         address account
     ) external view returns (uint256[] memory) {
         return userCompanies[account];
     }
 
+    /// @inheritdoc ICompanyRegistry
     function getEmployees(
         uint256 companyId
     ) external view returns (address[] memory) {
@@ -317,6 +360,7 @@ contract CompanyRegistry is ICompanyRegistry {
         return companyEmployeeAccounts[companyId];
     }
 
+    /// @inheritdoc ICompanyRegistry
     function getEmployeeCount(
         uint256 companyId
     ) external view returns (uint256) {
@@ -324,6 +368,14 @@ contract CompanyRegistry is ICompanyRegistry {
         return companyEmployeeAccounts[companyId].length;
     }
 
+    /// @inheritdoc ICompanyRegistry
+    function getCompany(
+        uint256 companyId
+    ) external view returns (Company memory companyInfo) {
+        companyInfo = companies[companyId];
+    }
+
+    /// @dev Returns the current block timestamp in the contract-wide compact format.
     function _blockTimestamp() private view returns (uint64) {
         return uint64(block.timestamp);
     }
