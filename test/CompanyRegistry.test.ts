@@ -1,24 +1,11 @@
-import type { Address } from 'viem'
 import { loadFixture } from '@nomicfoundation/hardhat-toolbox-viem/network-helpers'
 import { expect } from 'chai'
 import { ignition, viem } from 'hardhat'
-import { toFunctionSelector } from 'viem'
 import CompanyRegistryModule from '../ignition/modules/CompanyRegistry'
 import { RolesEnum } from '../src/enums'
+import { customErrorPattern, normalizeAddresses } from './utils'
 
-describe('CompanyRegistry', () => {
-  function normalizeAddresses(addresses: readonly Address[]) {
-    return addresses.map(address => address.toLowerCase())
-  }
-
-  function customErrorSelector(errorName: string) {
-    return toFunctionSelector(`${errorName}()`)
-  }
-
-  function customErrorPattern(errorName: string) {
-    return new RegExp(`${errorName}|${customErrorSelector(errorName)}`)
-  }
-
+describe('companyRegistry', () => {
   async function deployCompanyRegistryFixture() {
     const [owner, hr, employee, outsider, anotherEmployee] = await viem.getWalletClients()
     const publicClient = await viem.getPublicClient()

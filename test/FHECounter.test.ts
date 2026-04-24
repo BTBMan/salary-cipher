@@ -6,7 +6,7 @@ import { toHex, zeroHash } from 'viem'
 import FHECounterModule from '../ignition/modules/FHECounter'
 import { ethersWrapper } from '../src/utils'
 
-describe('FHECounter', () => {
+describe('fHECounter', () => {
   async function deployFHECounter() {
     const [owner, alice, bob] = await viem.getWalletClients()
     const publicClient = await viem.getPublicClient()
@@ -16,7 +16,7 @@ describe('FHECounter', () => {
     return { fheCounter, deployer: owner, alice, bob, publicClient }
   }
 
-  describe('Deployment', () => {
+  describe('deployment', () => {
     it('should deploy the contract', async () => {
       const { fheCounter } = await loadFixture(deployFHECounter)
 
@@ -24,7 +24,7 @@ describe('FHECounter', () => {
     })
   })
 
-  describe('Increment', () => {
+  describe('increment', () => {
     it('increment the counter by 1', async () => {
       const { fheCounter, alice, publicClient } = await deployFHECounter()
 
@@ -57,7 +57,7 @@ describe('FHECounter', () => {
     })
   })
 
-  describe('Decrement', () => {
+  describe('decrement', () => {
     it('decrement the counter by 1', async () => {
       const { fheCounter, alice, publicClient } = await deployFHECounter()
 
