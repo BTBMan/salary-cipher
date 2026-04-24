@@ -5,14 +5,15 @@
     "lib": ["esnext"],
     "module": "commonjs",
     "moduleResolution": "node10",
-    "types": ["node", "mocha"],
+    "types": ["node", "mocha", "chai", "chai-as-promised"],
     "noEmit": true
   },
   "include": [
     "hardhat.config.ts",
     "ignition/**/*.ts",
     "test/**/*.ts",
-    "utils/**/*.ts"
+    "utils/**/*.ts",
+    "artifacts/**/*"
   ],
   "exclude": ["node_modules"]
 }

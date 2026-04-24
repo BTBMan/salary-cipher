@@ -33,6 +33,15 @@ interface ICompanyRegistry {
         uint256 addedAt;
     }
 
+    struct NewEmployee {
+        // The wallet address of the employee
+        address account;
+        // The display name of the employee
+        string displayName;
+        // The role of the employee
+        Role role;
+    }
+
     enum Role {
         None,
         Owner,
@@ -59,6 +68,12 @@ interface ICompanyRegistry {
         uint256 addedAt
     );
     event EmployeeRemoved(uint256 indexed companyId, address indexed employee);
+    event RoleUpdated(
+        uint256 indexed companyId,
+        address indexed employee,
+        Role oldRole,
+        Role newRole
+    );
 
     ////////////////////////////////////
     // Errors                         //
@@ -70,6 +85,9 @@ interface ICompanyRegistry {
     error CompanyRegistry__EmployeeIsZeroAddress();
     error CompanyRegistry__EmployeeAlreadyExists();
     error CompanyRegistry__EmployeeDoesNotExist();
+    error CompanyRegistry__InvalidRole();
+    error CompanyRegistry__Unauthorized();
+    error CompanyRegistry__CannotModifyOwner();
 
     ////////////////////////////////////
     // Modifiers                      //
@@ -82,8 +100,47 @@ interface ICompanyRegistry {
     ////////////////////////////////////
     // Functions                      //
     ////////////////////////////////////
+    function createCompany(
+        string memory name
+    ) external returns (uint256 companyId);
+
+    function addEmployee(
+        uint256 companyId,
+        address account,
+        Role role,
+        string memory displayName
+    ) external;
+
+    function batchAddEmployees(
+        uint256 companyId,
+        NewEmployee[] calldata newEmployees
+    ) external;
+
+    function removeEmployee(uint256 companyId, address account) external;
+
+    function updateRole(
+        uint256 companyId,
+        address account,
+        Role newRole
+    ) external;
 
     ////////////////////////////////////
     // Getter functions               //
     ////////////////////////////////////
+    function getRole(
+        uint256 companyId,
+        address account
+    ) external view returns (Role);
+
+    function getUserCompanies(
+        address account
+    ) external view returns (uint256[] memory);
+
+    function getEmployees(
+        uint256 companyId
+    ) external view returns (address[] memory);
+
+    function getEmployeeCount(
+        uint256 companyId
+    ) external view returns (uint256);
 }

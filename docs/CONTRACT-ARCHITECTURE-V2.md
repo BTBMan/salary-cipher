@@ -120,7 +120,7 @@ SalaryCipherCore    SalaryNegotiation
 核心函数：
   createCompany(name) → companyId
   addEmployee(companyId, employee, role, displayName)
-  batchAddEmployees(companyId, employees[], roles[], names[])   // 批量添加
+  batchAddEmployees(companyId, newEmployees[])   // 批量添加，元素为 { account, displayName, role }
   removeEmployee(companyId, employee)
   updateRole(companyId, employee, newRole)
   getRole(companyId, address) → Role

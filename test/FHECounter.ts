@@ -1,8 +1,9 @@
 import { FhevmType } from '@fhevm/hardhat-plugin'
 import { loadFixture } from '@nomicfoundation/hardhat-toolbox-viem/network-helpers'
 import { expect } from 'chai'
-import { fhevm, viem } from 'hardhat'
+import { fhevm, ignition, viem } from 'hardhat'
 import { toHex, zeroHash } from 'viem'
+import FHECounterModule from '../ignition/modules/FHECounter'
 import { ethersWrapper } from '../src/utils'
 
 describe('FHECounter', () => {
@@ -10,9 +11,7 @@ describe('FHECounter', () => {
     const [owner, alice, bob] = await viem.getWalletClients()
     const publicClient = await viem.getPublicClient()
 
-    const fheCounter = await viem.deployContract('FHECounter', [], {
-      client: { wallet: owner },
-    })
+    const { fheCounter } = await ignition.deploy(FHECounterModule)
 
     return { fheCounter, deployer: owner, alice, bob, publicClient }
   }
