@@ -192,11 +192,7 @@ contract SalaryCipherCore is ISalaryCipherCore, ZamaEthereumConfig {
     }
 
     /// @inheritdoc ISalaryCipherCore
-    function executePayroll(
-        uint256 companyId,
-        uint256 startIndex,
-        uint256 batchSize
-    ) external onlyOwner(companyId) {
+    function executePayroll(uint256 companyId) external onlyOwner(companyId) {
         _requireCompanyExists(companyId);
 
         address[] memory employees = companyRegistry.getEmployees(companyId);
@@ -227,11 +223,7 @@ contract SalaryCipherCore is ISalaryCipherCore, ZamaEthereumConfig {
         lastPayrollTime[companyId] = _blockTimestamp();
         _grantBalanceAccess(companyId);
 
-        emit PayrollExecuted(
-            companyId,
-            startIndex,
-            batchSize == 0 ? count : count
-        );
+        emit PayrollExecuted(companyId, count);
     }
 
     /// @inheritdoc ISalaryCipherCore
@@ -281,9 +273,7 @@ contract SalaryCipherCore is ISalaryCipherCore, ZamaEthereumConfig {
 
     /// @inheritdoc ISalaryCipherCore
     function generateAudit(
-        uint256 companyId,
-        uint256 /* startIndex */,
-        uint256 /* batchSize */
+        uint256 companyId
     ) external onlyOwnerOrHR(companyId) returns (uint256 auditId) {
         _requireCompanyExists(companyId);
 

@@ -55,11 +55,7 @@ interface ISalaryCipherCore {
         address indexed wallet
     );
     /// @notice Emitted when payroll processing moves salaries into pending payouts.
-    event PayrollExecuted(
-        uint256 indexed companyId,
-        uint256 startIndex,
-        uint256 count
-    );
+    event PayrollExecuted(uint256 indexed companyId, uint256 count);
     /// @notice Emitted when a member clears their pending payout balance.
     event PayoutClaimed(uint256 indexed companyId, address indexed employee);
     /// @notice Emitted when an employee is settled and removed from the company registry.
@@ -121,12 +117,7 @@ interface ISalaryCipherCore {
     ) external;
 
     /// @notice Executes payroll for the company and moves salary into pending payouts.
-    /// @dev Pagination arguments are reserved for future use and currently ignored.
-    function executePayroll(
-        uint256 companyId,
-        uint256 startIndex,
-        uint256 batchSize
-    ) external;
+    function executePayroll(uint256 companyId) external;
 
     /// @notice Clears the caller's pending payout after a claim.
     function claimPayout(uint256 companyId) external;
@@ -135,11 +126,8 @@ interface ISalaryCipherCore {
     function terminateEmployee(uint256 companyId, address employee) external;
 
     /// @notice Creates an audit snapshot over the current company salary state.
-    /// @dev Pagination arguments are reserved for future use and currently ignored.
     function generateAudit(
-        uint256 companyId,
-        uint256 startIndex,
-        uint256 batchSize
+        uint256 companyId
     ) external returns (uint256 auditId);
 
     /// @notice Finalizes an audit by computing whether the salary gap stays under threshold.

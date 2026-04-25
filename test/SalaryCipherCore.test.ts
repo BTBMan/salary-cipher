@@ -1,12 +1,9 @@
-import { FhevmType } from '@fhevm/hardhat-plugin'
 import { loadFixture, time } from '@nomicfoundation/hardhat-toolbox-viem/network-helpers'
 import { expect } from 'chai'
-import { fhevm, ignition, viem } from 'hardhat'
-import { toHex } from 'viem'
+import { ignition, viem } from 'hardhat'
 import SalaryCipherCoreModule from '../ignition/modules/SalaryCipherCore'
 import { RolesEnum } from '../src/enums'
-import { ethersWrapper } from '../src/utils'
-import { customErrorPattern } from './utils'
+import { customErrorPattern, decryptBool, decryptUint128, encryptUint128 } from './utils'
 
 describe('salaryCipherCore', () => {
   async function deploySalaryCipherCoreFixture() {
@@ -35,40 +32,6 @@ describe('salaryCipherCore', () => {
     await publicClient.waitForTransactionReceipt({ hash })
 
     return { ...fixture, companyId: 1n }
-  }
-
-  async function encryptUint128(contractAddress: `0x${string}`, userAddress: `0x${string}`, value: number) {
-    const encrypted = await fhevm
-      .createEncryptedInput(contractAddress, userAddress)
-      .add128(value)
-      .encrypt()
-
-    return [toHex(encrypted.handles[0]), toHex(encrypted.inputProof)] as const
-  }
-
-  async function decryptUint128(
-    handle: string,
-    contractAddress: `0x${string}`,
-    walletClient: Awaited<ReturnType<typeof viem.getWalletClients>>[number],
-  ) {
-    return await fhevm.userDecryptEuint(
-      FhevmType.euint128,
-      handle,
-      contractAddress,
-      ethersWrapper(walletClient).ethersSigner()!,
-    )
-  }
-
-  async function decryptBool(
-    handle: string,
-    contractAddress: `0x${string}`,
-    walletClient: Awaited<ReturnType<typeof viem.getWalletClients>>[number],
-  ) {
-    return await fhevm.userDecryptEbool(
-      handle,
-      contractAddress,
-      ethersWrapper(walletClient).ethersSigner()!,
-    )
   }
 
   it('handles payroll balance, salary accrual and payout claim', async () => {
@@ -103,7 +66,7 @@ describe('salaryCipherCore', () => {
     })
     await publicClient.waitForTransactionReceipt({ hash: depositHash })
 
-    const executeHash = await salaryCipherCore.write.executePayroll([companyId, 0n, 0n], {
+    const executeHash = await salaryCipherCore.write.executePayroll([companyId], {
       account: owner.account,
     })
     await publicClient.waitForTransactionReceipt({ hash: executeHash })
@@ -180,7 +143,7 @@ describe('salaryCipherCore', () => {
     )
     await publicClient.waitForTransactionReceipt({ hash: setEmployeeSalaryHash })
 
-    const generateAuditHash = await salaryCipherCore.write.generateAudit([companyId, 0n, 0n], {
+    const generateAuditHash = await salaryCipherCore.write.generateAudit([companyId], {
       account: owner.account,
     })
     await publicClient.waitForTransactionReceipt({ hash: generateAuditHash })
@@ -223,6 +186,7 @@ describe('salaryCipherCore', () => {
     )
     await publicClient.waitForTransactionReceipt({ hash: setSalaryHash })
 
+    // 30 days
     await time.increase(30 * 24 * 60 * 60)
 
     const terminateHash = await salaryCipherCore.write.terminateEmployee(

@@ -4,17 +4,17 @@
 
 ## V1 → V2 核心优化
 
-| 维度 | V1 | V2 | 改进 |
-|------|----|----|------|
-| 合约数量 | 6 | 5 | 减少 1 个，但更重要的是减少耦合 |
-| 跨合约 FHE 调用 | 4 处 | 1 处 | 大幅降低 Gas 和复杂度 |
-| eaddress 使用 | 有 | 无 | 消除高风险依赖 |
-| 发薪 Gas 风险 | 无分页 | 分页 | 支持大公司 |
-| 审计 Gas 风险 | 无分页 | 分页 | 支持大公司 |
-| 前端索引 | 无 Events | 全量 Events | 前端可高效监听 |
-| 批量操作 | 无 | 批量添加员工 | 减少 tx 数量 |
-| 谈判多轮 | 需新建 | 原地开新轮次 | UX 更流畅 |
-| NFT 铸造 | 混在 Proof 中 | 独立合约 | 职责更清晰 |
+| 维度            | V1            | V2           | 改进                            |
+| --------------- | ------------- | ------------ | ------------------------------- |
+| 合约数量        | 6             | 5            | 减少 1 个，但更重要的是减少耦合 |
+| 跨合约 FHE 调用 | 4 处          | 1 处         | 大幅降低 Gas 和复杂度           |
+| eaddress 使用   | 有            | 无           | 消除高风险依赖                  |
+| 发薪 Gas 风险   | 无分页        | 分页         | 支持大公司                      |
+| 审计 Gas 风险   | 无分页        | 分页         | 支持大公司                      |
+| 前端索引        | 无 Events     | 全量 Events  | 前端可高效监听                  |
+| 批量操作        | 无            | 批量添加员工 | 减少 tx 数量                    |
+| 谈判多轮        | 需新建        | 原地开新轮次 | UX 更流畅                       |
+| NFT 铸造        | 混在 Proof 中 | 独立合约     | 职责更清晰                      |
 
 ---
 
@@ -33,16 +33,16 @@
 
 ### 存储分层
 
-| 数据 | 敏感性 | 存储位置 | 说明 |
-|------|--------|----------|------|
-| 薪资金额 | 高 | 链上（FHE 加密） | 核心隐私数据，必须加密上链 |
-| 接收钱包地址 | 低 | 链上明文 | V2 改为明文 address（提取时链上本就可见） |
-| 谈判报价 | 高 | 链上（FHE 加密） | 核心隐私数据，必须加密上链 |
-| 公司名称 | 低 | 链上明文 | 数据量小，不敏感，直接存链上 |
-| 员工显示名称 | 低 | 链上明文 | 数据量小，不敏感，直接存链上 |
-| 公司 Logo | 低 | IPFS | 图片文件大，存链上 Gas 费极高 |
-| 员工头像 | 低 | IPFS | 图片文件大，存链上 Gas 费极高 |
-| 薪资证明 NFT 元数据 | 低 | IPFS | ERC721 标准的 tokenURI 指向 IPFS |
+| 数据                | 敏感性 | 存储位置         | 说明                                      |
+| ------------------- | ------ | ---------------- | ----------------------------------------- |
+| 薪资金额            | 高     | 链上（FHE 加密） | 核心隐私数据，必须加密上链                |
+| 接收钱包地址        | 低     | 链上明文         | V2 改为明文 address（提取时链上本就可见） |
+| 谈判报价            | 高     | 链上（FHE 加密） | 核心隐私数据，必须加密上链                |
+| 公司名称            | 低     | 链上明文         | 数据量小，不敏感，直接存链上              |
+| 员工显示名称        | 低     | 链上明文         | 数据量小，不敏感，直接存链上              |
+| 公司 Logo           | 低     | IPFS             | 图片文件大，存链上 Gas 费极高             |
+| 员工头像            | 低     | IPFS             | 图片文件大，存链上 Gas 费极高             |
+| 薪资证明 NFT 元数据 | 低     | IPFS             | ERC721 标准的 tokenURI 指向 IPFS          |
 
 ### 链上存储（合约）
 
@@ -51,14 +51,17 @@
 ### IPFS 存储
 
 **公司 Logo / 员工头像：**
+
 - 前端上传图片到 IPFS，获得 CID
 - 链上合约只存储 CID（`string` 类型），不存图片本身
 - 前端通过 CID 拼接 IPFS 网关 URL 展示图片
 
 **薪资证明 NFT 元数据：**
+
 - 铸造前先将证明元数据（结论摘要、有效期、公司名等）上传 IPFS
 - 获得 metadata JSON 的 CID 作为 `tokenURI` 传入铸造函数
 - metadata 内容示例：
+
 ```json
 {
   "name": "Salary Proof #001",
@@ -71,6 +74,7 @@
   ]
 }
 ```
+
 注意：metadata 中**不包含具体薪资数字**，只包含结论性描述。
 
 ### Hackathon 阶段简化策略
@@ -145,6 +149,7 @@ modifier：
 ### 2. `SalaryCipherCore.sol` — 核心合约（合并 PayrollVault + ConfidentialPayroll + FairnessAudit）
 
 **合并理由：** 这三个合约全部操作同一批 `euint256` 薪资数据。合并后：
+
 - 资金池扣款 → 内部函数调用，无需跨合约 `TFHE.allow()`
 - 审计遍历薪资 → 直接读内部 mapping，无需外部授权
 - 减少约 40% 的 FHE 权限管理代码
@@ -187,7 +192,7 @@ modifier：
   setReceivingWallet(companyId, walletAddress)
     → onlyMember(本人)，明文地址
 
-  // --- 发薪（分页）---
+  // --- 发薪 ---
   executePayroll(companyId, startIndex, batchSize)
     → onlyOwner
     → 从 startIndex 开始处理 batchSize 个员工
@@ -204,7 +209,7 @@ modifier：
     → 累加到 pendingPayout
     → 调用 CompanyRegistry.removeEmployee()
 
-  // --- 审计（分页）---
+  // --- 审计 ---
   generateAudit(companyId, startIndex, batchSize) → auditId
     → onlyOwnerOrHR
     → 分批累加薪资 TFHE.add，支持多次调用同一 auditId 追加
@@ -235,6 +240,7 @@ Events：
 ```
 
 **`receivingWallet` 改为明文 `address` 的理由：**
+
 - `eaddress` 是 PRD 假设 #1 标注的高风险项，当前版本可能不稳定
 - 员工 `claimPayout` 提取时，链上转账的目标地址本就公开可见
 - 去掉 `eaddress` 减少一类 FHE 操作，降低合约复杂度和 Gas
@@ -367,18 +373,18 @@ Events：
 
 ## 加密字段汇总
 
-| 字段 | 合约 | Zama 类型 | 可见权限 |
-|------|------|-----------|----------|
-| 公司资金池余额 | SalaryCipherCore | `euint256` | Owner + HR |
-| 员工月薪 | SalaryCipherCore | `euint256` | 本人 + Owner + HR + SalaryProof 合约 |
-| 累计待领薪资 | SalaryCipherCore | `euint256` | 本人 + Owner + HR |
-| 员工接收钱包 | SalaryCipherCore | `address` | **明文**（去掉 eaddress） |
-| 审计薪资总额 | SalaryCipherCore | `euint256` | Owner only |
-| 审计差距结论 | SalaryCipherCore | `ebool` | Owner + HR |
-| 雇主预算上限 | SalaryNegotiation | `euint256` | 合约内部，不对外开放 |
-| 员工期望薪资 | SalaryNegotiation | `euint256` | 合约内部，不对外开放 |
-| 谈判匹配结果 | SalaryNegotiation | `ebool` | 双方各自可解密 |
-| 证明比较结果 | SalaryProof | `ebool` | 本人 + 授权第三方 |
+| 字段           | 合约              | Zama 类型  | 可见权限                             |
+| -------------- | ----------------- | ---------- | ------------------------------------ |
+| 公司资金池余额 | SalaryCipherCore  | `euint256` | Owner + HR                           |
+| 员工月薪       | SalaryCipherCore  | `euint256` | 本人 + Owner + HR + SalaryProof 合约 |
+| 累计待领薪资   | SalaryCipherCore  | `euint256` | 本人 + Owner + HR                    |
+| 员工接收钱包   | SalaryCipherCore  | `address`  | **明文**（去掉 eaddress）            |
+| 审计薪资总额   | SalaryCipherCore  | `euint256` | Owner only                           |
+| 审计差距结论   | SalaryCipherCore  | `ebool`    | Owner + HR                           |
+| 雇主预算上限   | SalaryNegotiation | `euint256` | 合约内部，不对外开放                 |
+| 员工期望薪资   | SalaryNegotiation | `euint256` | 合约内部，不对外开放                 |
+| 谈判匹配结果   | SalaryNegotiation | `ebool`    | 双方各自可解密                       |
+| 证明比较结果   | SalaryProof       | `ebool`    | 本人 + 授权第三方                    |
 
 **FHE 加密字段：10 个（V1 为 11 个，去掉了 eaddress）**
 
@@ -460,14 +466,14 @@ Owner/HR → 解密 gapWithinThreshold（ebool），只看到 true / false
 
 ## Hackathon 阶段优先级
 
-| 合约 | 优先级 | 理由 |
-|------|--------|------|
-| `CompanyRegistry` | P0 | 所有合约的权限基础，必须最先完成 |
-| `SalaryCipherCore` | P0 | 核心业务逻辑，最主要的 FHE 展示，合并了资金池+薪资+审计 |
-| `SalaryNegotiation` | P1 | FHE 双向加密撮合，评审亮点 |
-| `SalaryProof` | P1 | RWA 叙事亮点 |
-| `ProofNFT` | P1 | NFT 铸造，依赖 SalaryProof |
+| 合约                | 优先级 | 理由                                                    |
+| ------------------- | ------ | ------------------------------------------------------- |
+| `CompanyRegistry`   | P0     | 所有合约的权限基础，必须最先完成                        |
+| `SalaryCipherCore`  | P0     | 核心业务逻辑，最主要的 FHE 展示，合并了资金池+薪资+审计 |
+| `SalaryNegotiation` | P1     | FHE 双向加密撮合，评审亮点                              |
+| `SalaryProof`       | P1     | RWA 叙事亮点                                            |
+| `ProofNFT`          | P1     | NFT 铸造，依赖 SalaryProof                              |
 
 ---
 
-*文档版本：v2.0 | 创建日期：2026-04-06*
+_文档版本：v2.0 | 创建日期：2026-04-06_
