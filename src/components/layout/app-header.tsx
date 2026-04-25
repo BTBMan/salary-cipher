@@ -1,11 +1,11 @@
 'use client'
 
-import { useConnection } from 'wagmi'
 import {
-  AccountBalanceWalletIcon,
-  HubIcon,
-  UnfoldMoreIcon,
-} from '@/components/icons'
+  MdAccountBalanceWallet as AccountBalanceWalletIcon,
+  MdHub as HubIcon,
+  MdUnfoldMore as UnfoldMoreIcon,
+} from 'react-icons/md'
+import { useConnection } from 'wagmi'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { SidebarTrigger } from '@/components/ui/sidebar'

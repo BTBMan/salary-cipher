@@ -1,24 +1,24 @@
 'use client'
 
 import { useAppKit } from '@reown/appkit/react'
-import { ArrowRight, HelpCircle } from 'lucide-react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import * as React from 'react'
-import { useConnection } from 'wagmi'
 import {
-  AccountBalanceIcon,
-  DarkModeIcon,
-  DashboardIcon,
-  GavelIcon,
-  GroupsIcon,
-  HubIcon,
-  LogoutIcon,
-  PaymentsIcon,
-  // SettingsIcon,
-  ShieldLockIcon,
-  VerifiedIcon,
-} from '@/components/icons'
+  MdAccountBalance as AccountBalanceIcon,
+  MdDarkMode as DarkModeIcon,
+  MdDashboard as DashboardIcon,
+  MdGavel as GavelIcon,
+  MdGroups as GroupsIcon,
+  MdHub as HubIcon,
+  MdLogout as LogoutIcon,
+  MdArrowForward,
+  MdHelpOutline,
+  MdPayments as PaymentsIcon,
+  MdShield as ShieldLockIcon,
+  MdVerified as VerifiedIcon,
+} from 'react-icons/md'
+import { useConnection } from 'wagmi'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -150,7 +150,7 @@ export function AppSidebar() {
                             </div>
                             <span className="font-semibold text-foreground">MetaMask</span>
                           </div>
-                          <ArrowRight className="size-4 text-muted-foreground group-hover:text-primary transition-colors" />
+                          <MdArrowForward className="size-4 text-muted-foreground group-hover:text-primary transition-colors" />
                         </button>
 
                         <button
@@ -166,7 +166,7 @@ export function AppSidebar() {
                             </div>
                             <span className="font-semibold text-foreground">WalletConnect</span>
                           </div>
-                          <ArrowRight className="size-4 text-muted-foreground group-hover:text-primary transition-colors" />
+                          <MdArrowForward className="size-4 text-muted-foreground group-hover:text-primary transition-colors" />
                         </button>
                       </div>
 
@@ -188,7 +188,7 @@ export function AppSidebar() {
 
                   <div className="p-4 bg-surface-container-lowest/30 border-t border-white/5 flex justify-between px-6">
                     <button className="flex items-center gap-2 text-xs font-semibold text-muted-foreground hover:text-foreground transition-colors">
-                      <HelpCircle className="size-3.5" />
+                      <MdHelpOutline className="size-3.5" />
                       Support Center
                     </button>
                     <div className="flex gap-4">

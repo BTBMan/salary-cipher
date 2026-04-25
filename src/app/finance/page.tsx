@@ -1,16 +1,16 @@
 'use client'
 
 import {
-  AccountBalanceWalletIcon,
-  AddCircleIcon,
-  ArrowUpwardIcon,
-  DownloadIcon,
-  FilterListIcon,
-  LockIcon,
-  OpenInNewIcon,
-  PaymentsIcon,
-  ShieldLockIcon,
-} from '@/components/icons'
+  MdAccountBalanceWallet as AccountBalanceWalletIcon,
+  MdAddCircle as AddCircleIcon,
+  MdArrowUpward as ArrowUpwardIcon,
+  MdDownload as DownloadIcon,
+  MdFilterList as FilterListIcon,
+  MdLock as LockIcon,
+  MdOpenInNew as OpenInNewIcon,
+  MdPayments as PaymentsIcon,
+  MdShield as ShieldLockIcon,
+} from 'react-icons/md'
 import { AppLayout } from '@/components/layout/app-layout'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/utils'

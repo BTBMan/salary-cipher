@@ -1,15 +1,15 @@
 import Link from 'next/link'
 import {
-  AccountBalanceIcon,
-  AlternateEmailIcon,
-  CheckCircleIcon,
-  CodeIcon,
-  HubIcon,
-  LockIcon,
-  PublicIcon,
-  SecurityIcon,
-  VerifiedIcon,
-} from '@/components/icons'
+  MdAccountBalance as AccountBalanceIcon,
+  MdAlternateEmail as AlternateEmailIcon,
+  MdCheckCircle as CheckCircleIcon,
+  MdCode as CodeIcon,
+  MdHub as HubIcon,
+  MdLock as LockIcon,
+  MdPublic as PublicIcon,
+  MdSecurity as SecurityIcon,
+  MdVerified as VerifiedIcon,
+} from 'react-icons/md'
 import { Button } from '@/components/ui/button'
 
 export const metadata = {

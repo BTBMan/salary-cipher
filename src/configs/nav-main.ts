@@ -1,43 +1,43 @@
 import {
-  HelpCircle,
-  History,
-  LayoutDashboard,
-  Settings,
-  ShieldCheck,
-  Users,
-  Wallet,
-} from 'lucide-react'
+  MdAccountBalanceWallet as AccountBalanceWalletIcon,
+  MdDashboard as DashboardIcon,
+  MdGroups as GroupsIcon,
+  MdHelpOutline as HelpIcon,
+  MdHistory as HistoryIcon,
+  MdSecurity as SecurityIcon,
+  MdSettings as SettingsIcon,
+} from 'react-icons/md'
 
 export const navItems = [
   {
     title: 'Overview',
     href: '/dashboard',
-    icon: LayoutDashboard,
+    icon: DashboardIcon,
   },
   {
     title: 'People',
     href: '/people',
-    icon: Users,
+    icon: GroupsIcon,
   },
   {
     title: 'Finance & Vault',
     href: '/finance',
-    icon: Wallet,
+    icon: AccountBalanceWalletIcon,
   },
   {
     title: 'Compliance',
     href: '/compliance',
-    icon: ShieldCheck,
+    icon: SecurityIcon,
   },
   {
     title: 'Payroll History',
     href: '/history',
-    icon: History,
+    icon: HistoryIcon,
   },
   {
     title: 'Employee',
     href: '/employee',
-    icon: History,
+    icon: HistoryIcon,
   },
 ]
 
@@ -45,11 +45,11 @@ export const secondaryNavItems = [
   {
     title: 'Settings',
     href: '/settings',
-    icon: Settings,
+    icon: SettingsIcon,
   },
   {
     title: 'Support',
     href: '/support',
-    icon: HelpCircle,
+    icon: HelpIcon,
   },
 ]

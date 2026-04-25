@@ -1,16 +1,16 @@
 'use client'
 
 import {
-  AnalyticsIcon,
-  AssignmentTurnedInIcon,
-  ContentCopyIcon,
-  HistoryIcon,
-  KeyIcon,
-  LockIcon,
-  SecurityIcon,
-  VerifiedUserIcon,
-  WorkspacePremiumIcon,
-} from '@/components/icons'
+  MdAnalytics as AnalyticsIcon,
+  MdAssignmentTurnedIn as AssignmentTurnedInIcon,
+  MdContentCopy as ContentCopyIcon,
+  MdHistory as HistoryIcon,
+  MdKey as KeyIcon,
+  MdLock as LockIcon,
+  MdSecurity as SecurityIcon,
+  MdVerifiedUser as VerifiedUserIcon,
+  MdWorkspacePremium as WorkspacePremiumIcon,
+} from 'react-icons/md'
 import { AppLayout } from '@/components/layout/app-layout'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/utils'

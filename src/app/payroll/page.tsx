@@ -1,18 +1,18 @@
 'use client'
 
 import {
-  CalendarMonthIcon,
-  CurrencyExchangeIcon,
-  EventRepeatIcon,
-  FilterListIcon,
-  HourglassEmptyIcon,
-  KeyVisualizerIcon,
-  LockIcon,
-  OpenInNewIcon,
-  SaveIcon,
-  ShieldPersonIcon,
-  TokenIcon,
-} from '@/components/icons'
+  MdCalendarMonth as CalendarMonthIcon,
+  MdCurrencyExchange as CurrencyExchangeIcon,
+  MdEventRepeat as EventRepeatIcon,
+  MdFilterList as FilterListIcon,
+  MdHourglassEmpty as HourglassEmptyIcon,
+  MdGeneratingTokens as KeyVisualizerIcon,
+  MdLock as LockIcon,
+  MdOpenInNew as OpenInNewIcon,
+  MdSave as SaveIcon,
+  MdShield as ShieldPersonIcon,
+  MdToken as TokenIcon,
+} from 'react-icons/md'
 import { AppLayout } from '@/components/layout/app-layout'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'

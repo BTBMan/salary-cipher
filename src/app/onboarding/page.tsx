@@ -1,13 +1,13 @@
 import Link from 'next/link'
 import {
-  AddCircleIcon,
-  GroupsIcon,
-  HelpIcon,
-  HubIcon,
-  LogoutIcon,
-  VerifiedUserIcon,
-  WalletIcon,
-} from '@/components/icons'
+  MdAddCircle as AddCircleIcon,
+  MdGroups as GroupsIcon,
+  MdHelpOutline as HelpIcon,
+  MdHub as HubIcon,
+  MdLogout as LogoutIcon,
+  MdVerifiedUser as VerifiedUserIcon,
+  MdAccountBalanceWallet as WalletIcon,
+} from 'react-icons/md'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'

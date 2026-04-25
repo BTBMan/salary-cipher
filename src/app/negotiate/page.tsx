@@ -1,12 +1,12 @@
 'use client'
 
 import {
-  CancelIcon,
-  CheckCircleIcon,
-  FingerprintIcon,
-  LockIcon,
-  SecurityIcon,
-} from '@/components/icons'
+  MdCancel as CancelIcon,
+  MdCheckCircle as CheckCircleIcon,
+  MdFingerprint as FingerprintIcon,
+  MdLock as LockIcon,
+  MdSecurity as SecurityIcon,
+} from 'react-icons/md'
 import { AppLayout } from '@/components/layout/app-layout'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/utils'
@@ -165,7 +165,7 @@ export default function SalaryNegotiationPage() {
               <div className="flex items-end gap-1.5 h-20">
                 {[50, 75, 60, 100, 85, 50, 30, 65, 75, 40, 90, 55].map((h, i) => (
                   <div
-                    key={h}
+                    key={h + Math.random()}
                     className={cn(
                       'flex-1 rounded-t-[2px] transition-all duration-1000',
                       i % 4 === 0 ? 'bg-tertiary/40' : 'bg-primary/30',

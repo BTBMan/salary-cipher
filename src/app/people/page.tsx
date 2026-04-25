@@ -2,18 +2,18 @@
 
 import { useState } from 'react'
 import {
-  AccountBalanceWalletIcon,
-  ArrowForwardIcon,
-  CloseIcon,
-  DeleteIcon,
-  EditIcon,
-  ExpandMoreIcon,
-  FingerprintIcon,
-  LockIcon,
-  PersonAddIcon,
-  SearchIcon,
-  SecurityIcon,
-} from '@/components/icons'
+  MdAccountBalanceWallet as AccountBalanceWalletIcon,
+  MdArrowForward as ArrowForwardIcon,
+  MdClose as CloseIcon,
+  MdDelete as DeleteIcon,
+  MdEdit as EditIcon,
+  MdExpandMore as ExpandMoreIcon,
+  MdFingerprint as FingerprintIcon,
+  MdLock as LockIcon,
+  MdPersonAdd as PersonAddIcon,
+  MdSearch as SearchIcon,
+  MdSecurity as SecurityIcon,
+} from 'react-icons/md'
 import { AppLayout } from '@/components/layout/app-layout'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'

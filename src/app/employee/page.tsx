@@ -1,17 +1,17 @@
 'use client'
 
 import {
-  AccountBalanceIcon,
-  AddIcon,
-  DescriptionIcon,
-  DirectionsCarIcon,
-  EncryptedIcon,
-  HomeIcon,
-  LockIcon,
-  ScheduleIcon,
-  VerifiedUserIcon,
-  VisibilityIcon,
-} from '@/components/icons'
+  MdAccountBalance as AccountBalanceIcon,
+  MdAdd as AddIcon,
+  MdDescription as DescriptionIcon,
+  MdDirectionsCar as DirectionsCarIcon,
+  MdGeneratingTokens as EncryptedIcon,
+  MdHome as HomeIcon,
+  MdLock as LockIcon,
+  MdSchedule as ScheduleIcon,
+  MdVerifiedUser as VerifiedUserIcon,
+  MdVisibility as VisibilityIcon,
+} from 'react-icons/md'
 import { AppLayout } from '@/components/layout/app-layout'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/utils'

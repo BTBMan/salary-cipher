@@ -1,7 +1,7 @@
 'use client'
 
-import { Loader, Zap } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
+import { MdAutorenew, MdBolt } from 'react-icons/md'
 import { toHex, zeroAddress } from 'viem'
 import { useConnection, useReadContract, useWriteContractSync } from 'wagmi'
 import { Button } from '@/components/ui/button'
@@ -104,7 +104,7 @@ export function FheCounter() {
     <Card className="bg-surface-container border-none shadow-none max-w-md w-full mx-auto overflow-hidden no-border-section">
       <CardHeader className="bg-primary/5 border-b border-white/5">
         <div className="flex items-center gap-2 mb-1">
-          <Zap className="size-4 text-primary" />
+          <MdBolt className="size-4 text-primary" />
           <CardTitle className="text-sm font-heading font-bold uppercase tracking-widest text-primary">FHE Proof of Concept</CardTitle>
         </div>
         <CardDescription className="text-[10px]">Verifying encrypted computation on the FHEVM.</CardDescription>
@@ -139,7 +139,7 @@ export function FheCounter() {
               disabled={loading || !canEncrypt || isWriteCounterPending}
               className="flex-1 bg-surface-high border-border/50 font-bold h-11"
             >
-              {isWriteCounterPending && <Loader className="size-4 mr-2 animate-spin" />}
+              {isWriteCounterPending && <MdAutorenew className="size-4 mr-2 animate-spin" />}
               -1
             </Button>
             <Button
@@ -147,7 +147,7 @@ export function FheCounter() {
               disabled={loading || !canEncrypt || isWriteCounterPending}
               className="flex-2 primary-gradient border-none font-bold h-11"
             >
-              {isWriteCounterPending && <Loader className="size-4 mr-2 animate-spin" />}
+              {isWriteCounterPending && <MdAutorenew className="size-4 mr-2 animate-spin" />}
               Increment Cipher
             </Button>
           </div>
@@ -158,7 +158,7 @@ export function FheCounter() {
             disabled={!canDecrypt || isDecrypting}
             className="w-full border-tertiary/30 bg-tertiary/5 text-tertiary hover:bg-tertiary/10 h-11 font-bold"
           >
-            {isDecrypting && <Loader className="size-4 mr-2 animate-spin" />}
+            {isDecrypting && <MdAutorenew className="size-4 mr-2 animate-spin" />}
             Decrypt with Multi-Sig
           </Button>
         </div>

@@ -1,12 +1,12 @@
 'use client'
 
 import {
-  ArrowForwardIcon,
-  LockIcon,
-  PendingActionsIcon,
-  VerifiedUserIcon,
-  WarningIcon,
-} from '@/components/icons'
+  MdArrowForward as ArrowForwardIcon,
+  MdLock as LockIcon,
+  MdPendingActions as PendingActionsIcon,
+  MdVerifiedUser as VerifiedUserIcon,
+  MdWarningAmber as WarningIcon,
+} from 'react-icons/md'
 import { AppLayout } from '@/components/layout/app-layout'
 import { Button } from '@/components/ui/button'
 

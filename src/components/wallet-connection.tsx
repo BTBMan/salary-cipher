@@ -1,8 +1,13 @@
 'use client'
 
 import { useAppKit } from '@reown/appkit/react'
-import { ArrowRight, HelpCircle } from 'lucide-react'
 import { useState } from 'react'
+import {
+  MdHub as HubIcon,
+  MdArrowForward,
+  MdHelpOutline,
+  MdVerified as VerifiedIcon,
+} from 'react-icons/md'
 import { formatUnits } from 'viem'
 import { useBalance, useConnection } from 'wagmi'
 import { Button } from '@/components/ui/button'
@@ -11,10 +16,6 @@ import {
   DialogContent,
   DialogTrigger,
 } from '@/components/ui/dialog'
-import {
-  HubIcon,
-  VerifiedIcon,
-} from './icons'
 import { WalletAddress } from './wallet-address'
 
 export function WalletConnection() {
@@ -90,7 +91,7 @@ export function WalletConnection() {
                   </div>
                   <span className="font-semibold text-foreground">MetaMask</span>
                 </div>
-                <ArrowRight className="size-4 text-muted-foreground group-hover:text-primary transition-colors" />
+                <MdArrowForward className="size-4 text-muted-foreground group-hover:text-primary transition-colors" />
               </button>
 
               {/* WalletConnect */}
@@ -107,7 +108,7 @@ export function WalletConnection() {
                   </div>
                   <span className="font-semibold text-foreground">WalletConnect</span>
                 </div>
-                <ArrowRight className="size-4 text-muted-foreground group-hover:text-primary transition-colors" />
+                <MdArrowForward className="size-4 text-muted-foreground group-hover:text-primary transition-colors" />
               </button>
             </div>
 
@@ -136,7 +137,7 @@ export function WalletConnection() {
 
         <div className="p-4 bg-surface-container-lowest/30 border-t border-white/5 flex justify-between px-6">
           <button className="flex items-center gap-2 text-xs font-semibold text-muted-foreground hover:text-foreground transition-colors">
-            <HelpCircle className="size-3.5" />
+            <MdHelpOutline className="size-3.5" />
             Support Center
           </button>
           <div className="flex gap-4">

@@ -1,8 +1,8 @@
 'use client'
 
-import { Menu, Shield, X } from 'lucide-react'
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
+import { MdClose, MdMenu, MdShield } from 'react-icons/md'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/utils'
 
@@ -29,7 +29,7 @@ export function Navbar() {
       <div className="container mx-auto px-4 md:px-8 flex items-center justify-between">
         <Link href="/" className="flex items-center gap-2 group">
           <div className="p-1.5 rounded-lg primary-gradient text-primary-foreground group-hover:scale-110 transition-transform">
-            <Shield className="size-6" />
+            <MdShield className="size-6" />
           </div>
           <span className="text-xl font-heading font-bold tracking-tight">Salary Cipher</span>
         </Link>
@@ -68,7 +68,7 @@ export function Navbar() {
           className="md:hidden p-2 text-foreground"
           onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
         >
-          {isMobileMenuOpen ? <X /> : <Menu />}
+          {isMobileMenuOpen ? <MdClose /> : <MdMenu />}
         </button>
       </div>
 

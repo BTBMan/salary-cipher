@@ -1,11 +1,11 @@
 import {
-  AddBusinessIcon,
-  ArrowForwardIcon,
-  HelpIcon,
-  LockOpenIcon,
-  MailIcon,
-  SecurityIcon,
-} from '@/components/icons'
+  MdAddBusiness as AddBusinessIcon,
+  MdArrowForward as ArrowForwardIcon,
+  MdHelpOutline as HelpIcon,
+  MdLockOpen as LockOpenIcon,
+  MdMail as MailIcon,
+  MdSecurity as SecurityIcon,
+} from 'react-icons/md'
 import { Button } from '@/components/ui/button'
 
 export const metadata = {

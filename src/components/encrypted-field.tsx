@@ -1,7 +1,10 @@
 'use client'
 
-import { Eye, Lock } from 'lucide-react'
 import { useState } from 'react'
+import {
+  MdLock as LockIcon,
+  MdVisibility as VisibilityIcon,
+} from 'react-icons/md'
 import { cn } from '@/utils'
 
 interface EncryptedFieldProps {
@@ -28,7 +31,7 @@ export function EncryptedField({ value, label, className, isEncrypted = true }: 
       {label && (
         <div className="flex items-center gap-1.5">
           <span className="text-xs font-medium text-muted-foreground">{label}</span>
-          <Lock className="h-3 w-3 text-tertiary" />
+          <LockIcon className="h-3 w-3 text-tertiary" />
         </div>
       )}
       <div
@@ -46,7 +49,7 @@ export function EncryptedField({ value, label, className, isEncrypted = true }: 
         </div>
         {!isRevealed && (
           <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-            <Eye className="h-3.5 w-3.5 text-tertiary" />
+            <VisibilityIcon className="h-3.5 w-3.5 text-tertiary" />
           </div>
         )}
       </div>
