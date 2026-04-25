@@ -9,6 +9,9 @@ import {ZamaEthereumConfig} from "@fhevm/solidity/config/ZamaConfig.sol";
 import {ICompanyRegistry} from "./interfaces/ICompanyRegistry.sol";
 import {ISalaryCipherCore} from "./interfaces/ISalaryCipherCore.sol";
 
+/* Libraries *****/
+import {DateTimeLib} from "solady/src/utils/DateTimeLib.sol";
+
 /**
  * @title SalaryCipherCore
  * @author BTBMan
@@ -16,8 +19,10 @@ import {ISalaryCipherCore} from "./interfaces/ISalaryCipherCore.sol";
  * @dev This contract is used to manage the encryption and decryption of salary data
  */
 contract SalaryCipherCore is ISalaryCipherCore, ZamaEthereumConfig {
-    // Used for prorated termination settlement based on a 30-day month.
-    uint128 private constant TERMINATION_DAYS_DENOMINATOR = 30;
+    using DateTimeLib for uint256;
+
+    // Used for prorated settlement based on a 30-day payroll month.
+    uint128 private constant PAYROLL_PERIOD_SECONDS = 30 days;
     // Temporary fixed threshold used by audit finalization.
     uint128 private constant GAP_THRESHOLD_MULTIPLE = 3;
 
@@ -36,11 +41,11 @@ contract SalaryCipherCore is ISalaryCipherCore, ZamaEthereumConfig {
     // Encrypted accumulated payout waiting to be claimed by each member.
     mapping(uint256 companyId => mapping(address account => euint128 payout))
         public pendingPayout;
+    // Company-level payroll schedule config.
+    mapping(uint256 companyId => PayrollConfig config) public payrollConfigs;
     // Plain payout destination chosen by each member.
     mapping(uint256 companyId => mapping(address account => address wallet))
         public receivingWallet;
-    // Reserved plain payroll cycle config for future scheduling support.
-    mapping(uint256 companyId => uint256 cycle) public payrollCycle;
     // Last payroll execution timestamp for a company.
     mapping(uint256 companyId => uint64 paidAt) public lastPayrollTime;
     // Employment start date used for termination settlement.
@@ -178,6 +183,24 @@ contract SalaryCipherCore is ISalaryCipherCore, ZamaEthereumConfig {
     }
 
     /// @inheritdoc ISalaryCipherCore
+    function setPayrollConfig(
+        uint256 companyId,
+        uint8 dayOfMonth,
+        uint64 nextPayrollTime
+    ) external onlyOwner(companyId) {
+        _requireCompanyExists(companyId);
+        if (dayOfMonth == 0 || dayOfMonth > 31 || nextPayrollTime == 0) {
+            revert SalaryCipherCore__InvalidPayrollConfig();
+        }
+
+        payrollConfigs[companyId] = PayrollConfig({
+            dayOfMonth: dayOfMonth,
+            nextPayrollTime: nextPayrollTime,
+            initialized: true
+        });
+    }
+
+    /// @inheritdoc ISalaryCipherCore
     function setReceivingWallet(
         uint256 companyId,
         address walletAddress
@@ -194,19 +217,35 @@ contract SalaryCipherCore is ISalaryCipherCore, ZamaEthereumConfig {
     /// @inheritdoc ISalaryCipherCore
     function executePayroll(uint256 companyId) external onlyOwner(companyId) {
         _requireCompanyExists(companyId);
+        PayrollConfig memory payrollConfig = payrollConfigs[companyId];
+        if (!payrollConfig.initialized) {
+            revert SalaryCipherCore__PayrollConfigNotSet();
+        }
 
         address[] memory employees = companyRegistry.getEmployees(companyId);
         uint256 count;
+
+        uint64 payrollTimestamp = _blockTimestamp();
+        if (payrollTimestamp < payrollConfig.nextPayrollTime) {
+            revert SalaryCipherCore__PayrollNotDue();
+        }
 
         // Pagination is intentionally skipped for now; all eligible members are processed.
         for (uint256 i = 0; i < employees.length; i++) {
             address employee = employees[i];
             // Only HR and employees are eligible for payroll.
-            if (!_isPayrollEligible(companyId, employee)) {
+            if (
+                !_isPayrollEligible(companyId, employee) ||
+                !FHE.isInitialized(monthlySalary[companyId][employee])
+            ) {
                 continue;
             }
 
-            euint128 salary = monthlySalary[companyId][employee];
+            euint128 salary = _calculateProratedPayout(
+                companyId,
+                employee,
+                payrollTimestamp
+            );
             pendingPayout[companyId][employee] = FHE.add(
                 pendingPayout[companyId][employee],
                 salary
@@ -220,7 +259,11 @@ contract SalaryCipherCore is ISalaryCipherCore, ZamaEthereumConfig {
             count++;
         }
 
-        lastPayrollTime[companyId] = _blockTimestamp();
+        lastPayrollTime[companyId] = payrollConfig.nextPayrollTime;
+        payrollConfigs[companyId].nextPayrollTime = _nextPayrollTime(
+            payrollConfig.nextPayrollTime,
+            payrollConfig.dayOfMonth
+        );
         _grantBalanceAccess(companyId);
 
         emit PayrollExecuted(companyId, count);
@@ -246,14 +289,13 @@ contract SalaryCipherCore is ISalaryCipherCore, ZamaEthereumConfig {
     ) external onlyOwnerOrHR(companyId) {
         _requireActiveEmployee(companyId, employee);
 
-        uint64 employeeStartDate = startDate[companyId][employee];
-        uint128 daysWorked = employeeStartDate == 0
-            ? 0
-            : uint128((block.timestamp - employeeStartDate) / 1 days);
-        // Termination payout is prorated from the employee's encrypted monthly salary.
-        euint128 terminationPayout = FHE.div(
-            FHE.mul(monthlySalary[companyId][employee], daysWorked),
-            TERMINATION_DAYS_DENOMINATOR
+        uint64 terminationTimestamp = _blockTimestamp();
+        // Termination payout only covers the interval that has not yet been settled
+        // by the latest company-wide payroll run.
+        euint128 terminationPayout = _calculateProratedPayout(
+            companyId,
+            employee,
+            terminationTimestamp
         );
 
         pendingPayout[companyId][employee] = FHE.add(
@@ -483,6 +525,38 @@ contract SalaryCipherCore is ISalaryCipherCore, ZamaEthereumConfig {
             role == ICompanyRegistry.Role.Employee;
     }
 
+    /// @dev Calculates the unsettled salary portion between the employee settlement start and period end.
+    function _calculateProratedPayout(
+        uint256 companyId,
+        address employee,
+        uint64 periodEnd
+    ) private returns (euint128) {
+        uint64 periodStart = _settlementStart(companyId, employee);
+        if (periodEnd <= periodStart) {
+            return FHE.asEuint128(0);
+        }
+
+        uint128 elapsedSeconds = uint128(periodEnd - periodStart);
+        return
+            FHE.div(
+                FHE.mul(monthlySalary[companyId][employee], elapsedSeconds),
+                PAYROLL_PERIOD_SECONDS
+            );
+    }
+
+    /// @dev Uses the later timestamp between employee start and the company-wide last payroll.
+    function _settlementStart(
+        uint256 companyId,
+        address employee
+    ) private view returns (uint64) {
+        uint64 employeeStartDate = startDate[companyId][employee];
+        uint64 companyLastPayrollTime = lastPayrollTime[companyId];
+        return
+            employeeStartDate > companyLastPayrollTime
+                ? employeeStartDate
+                : companyLastPayrollTime;
+    }
+
     /// @dev Refreshes FHE access for the encrypted company balance.
     function _grantBalanceAccess(uint256 companyId) private {
         FHE.allowThis(companyBalance[companyId]);
@@ -560,5 +634,36 @@ contract SalaryCipherCore is ISalaryCipherCore, ZamaEthereumConfig {
     /// @dev Returns the current block timestamp in the compact type used by this contract.
     function _blockTimestamp() private view returns (uint64) {
         return uint64(block.timestamp);
+    }
+
+    /// @dev Advances payroll to the next configured calendar month day, clamped to month end when needed.
+    function _nextPayrollTime(
+        uint64 currentPayrollTime,
+        uint8 dayOfMonth
+    ) private pure returns (uint64) {
+        uint256 nextMonthTimestamp = uint256(currentPayrollTime).addMonths(1);
+        (
+            uint256 year,
+            uint256 month,
+            ,
+            uint256 hour,
+            uint256 minute,
+            uint256 second
+        ) = DateTimeLib.timestampToDateTime(nextMonthTimestamp);
+        uint256 lastDayOfMonth = DateTimeLib.daysInMonth(year, month);
+        uint256 targetDay = dayOfMonth > lastDayOfMonth
+            ? lastDayOfMonth
+            : dayOfMonth;
+
+        return uint64(
+            DateTimeLib.dateTimeToTimestamp(
+                year,
+                month,
+                targetDay,
+                hour,
+                minute,
+                second
+            )
+        );
     }
 }

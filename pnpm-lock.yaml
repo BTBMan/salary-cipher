@@ -62,6 +62,9 @@ dependencies:
   shadcn:
     specifier: ^4.2.0
     version: 4.2.0(@types/node@25.5.2)(typescript@5.9.3)
+  solady:
+    specifier: ^0.1.26
+    version: 0.1.26
   sonner:
     specifier: ^2.0.7
     version: 2.0.7(react-dom@19.2.5)(react@19.2.5)
@@ -10442,6 +10445,10 @@ packages:
 
   /slow-redact@0.3.2:
     resolution: {integrity: sha512-MseHyi2+E/hBRqdOi5COy6wZ7j7DxXRz9NkseavNYSvvWC06D8a5cidVZX3tcG5eCW3NIyVU4zT63hw0Q486jw==}
+    dev: false
+
+  /solady@0.1.26:
+    resolution: {integrity: sha512-dhGr/ptJFdea/1KE6xgqgwEdbMhUiSfRc6A+jLeltPe16zyt9qtED3PElIBVRnzEmUO5aZTjKVAr6SlqXBBcIw==}
     dev: false
 
   /solc@0.8.26(debug@4.4.3):

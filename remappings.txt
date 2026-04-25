@@ -1,1 +1,2 @@
 @fhevm/=node_modules/@fhevm/
+solady/=node_modules/solady/
