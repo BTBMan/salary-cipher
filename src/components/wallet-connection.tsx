@@ -17,7 +17,7 @@ import {
 } from './icons'
 import { WalletAddress } from './wallet-address'
 
-export default function WalletConnection() {
+export function WalletConnection() {
   const [isOpen, setIsOpen] = useState(false)
   const { open } = useAppKit()
   const { address, isConnected } = useConnection()

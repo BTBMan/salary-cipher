@@ -9,7 +9,7 @@ import { FheCounter as FheCounterData } from '@/contract-data/fhe-counter'
 import { useFHEContext, useFHEDecrypt, useFHEEncrypt } from '@/hooks'
 import { cn } from '@/utils'
 
-export default function FheCounter() {
+export function FheCounter() {
   const [loading, setLoading] = useState(false)
 
   const { address } = useConnection()

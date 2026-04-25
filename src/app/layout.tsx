@@ -1,6 +1,6 @@
 import type { Metadata } from 'next'
 import { Inter, JetBrains_Mono, Manrope } from 'next/font/google'
-import Providers from '@/components/providers'
+import { Providers } from '@/components/providers'
 import { cn } from '@/utils'
 import '../styles/globals.css'
 

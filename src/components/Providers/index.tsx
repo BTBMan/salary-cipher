@@ -11,7 +11,7 @@ import { FheProvider } from './fhe-provider'
 
 const queryClient = new QueryClient()
 
-export default function Providers({ children }: PropsWithChildren) {
+export function Providers({ children }: PropsWithChildren) {
   return (
     <WagmiProvider config={wagmiConfig.wagmiConfig}>
       <QueryClientProvider client={queryClient}>
