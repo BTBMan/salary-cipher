@@ -19,6 +19,7 @@
     "pnpm": ">=8.15.6"
   },
   "scripts": {
+    "preinstall": "npx only-allow pnpm",
     "hh": "hardhat --tsconfig ./tsconfig.hardhat.json",
     "chain": "pnpm hh node --network hardhat",
     "compile": "pnpm hh compile",
@@ -45,6 +46,7 @@
     "@zama-fhe/relayer-sdk": "0.4.1",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "dayjs": "^1.11.20",
     "encrypted-types": "^0.0.4",
     "ethers": "^6.16.0",
     "idb": "^8.0.3",

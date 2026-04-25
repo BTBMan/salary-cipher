@@ -48,6 +48,9 @@ contract CompanyRegistry is ICompanyRegistry {
     // System contracts allowed to act for a specific company
     mapping(uint256 companyId => mapping(address caller => bool isAuthorized))
         public authorizedCallers;
+    // Company-level fixed monthly payroll configuration.
+    mapping(uint256 companyId => PayrollConfig payrollConfig)
+        private payrollConfigs;
 
     ////////////////////////////////////
     // Events                         //
@@ -88,11 +91,13 @@ contract CompanyRegistry is ICompanyRegistry {
      * @param name The name of the company
      */
     function createCompany(
-        string memory name
+        string memory name,
+        uint8 payrollDayOfMonth
     ) external returns (uint256 companyId) {
         if (bytes(name).length == 0) {
             revert CompanyRegistry__CompanyNameIsEmpty();
         }
+        _validatePayrollDay(payrollDayOfMonth);
 
         companyId = nextCompanyId;
 
@@ -100,6 +105,10 @@ contract CompanyRegistry is ICompanyRegistry {
             name: name,
             owner: msg.sender,
             createdAt: _blockTimestamp()
+        });
+        payrollConfigs[companyId] = PayrollConfig({
+            dayOfMonth: payrollDayOfMonth,
+            initialized: true
         });
         companyEmployees[companyId][msg.sender] = Employee({
             displayName: "Owner",
@@ -116,6 +125,7 @@ contract CompanyRegistry is ICompanyRegistry {
         nextCompanyId++;
 
         emit CompanyCreated(companyId, msg.sender, name, _blockTimestamp());
+        emit PayrollConfigUpdated(companyId, payrollDayOfMonth);
     }
 
     /**
@@ -199,6 +209,21 @@ contract CompanyRegistry is ICompanyRegistry {
         }
 
         authorizedCallers[companyId][caller] = authorized;
+    }
+
+    /// @inheritdoc ICompanyRegistry
+    function setPayrollConfig(
+        uint256 companyId,
+        uint8 dayOfMonth
+    ) external onlyOwner(companyId) {
+        _validatePayrollDay(dayOfMonth);
+
+        payrollConfigs[companyId] = PayrollConfig({
+            dayOfMonth: dayOfMonth,
+            initialized: true
+        });
+
+        emit PayrollConfigUpdated(companyId, dayOfMonth);
     }
 
     /// @dev Shared insert path used by both single and batch employee creation.
@@ -334,6 +359,13 @@ contract CompanyRegistry is ICompanyRegistry {
         }
     }
 
+    /// @dev Reverts unless the monthly payroll day falls within the Gregorian day range.
+    function _validatePayrollDay(uint8 dayOfMonth) private pure {
+        if (dayOfMonth == 0 || dayOfMonth > 31) {
+            revert CompanyRegistry__InvalidPayrollConfig();
+        }
+    }
+
     ////////////////////////////////////
     // Getter functions               //
     ////////////////////////////////////
@@ -373,6 +405,14 @@ contract CompanyRegistry is ICompanyRegistry {
         uint256 companyId
     ) external view returns (Company memory companyInfo) {
         companyInfo = companies[companyId];
+    }
+
+    /// @inheritdoc ICompanyRegistry
+    function getPayrollConfig(
+        uint256 companyId
+    ) external view returns (PayrollConfig memory payrollConfig) {
+        _requireCompanyExists(companyId);
+        payrollConfig = payrollConfigs[companyId];
     }
 
     /// @dev Returns the current block timestamp in the contract-wide compact format.

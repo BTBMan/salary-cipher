@@ -21,8 +21,8 @@ import {DateTimeLib} from "solady/src/utils/DateTimeLib.sol";
 contract SalaryCipherCore is ISalaryCipherCore, ZamaEthereumConfig {
     using DateTimeLib for uint256;
 
-    // Used for prorated settlement based on a 30-day payroll month.
-    uint128 private constant PAYROLL_PERIOD_SECONDS = 30 days;
+    // Date-based payroll calculations operate on whole UTC days.
+    uint64 private constant DAY_SECONDS = 1 days;
     // Temporary fixed threshold used by audit finalization.
     uint128 private constant GAP_THRESHOLD_MULTIPLE = 3;
 
@@ -41,8 +41,6 @@ contract SalaryCipherCore is ISalaryCipherCore, ZamaEthereumConfig {
     // Encrypted accumulated payout waiting to be claimed by each member.
     mapping(uint256 companyId => mapping(address account => euint128 payout))
         public pendingPayout;
-    // Company-level payroll schedule config.
-    mapping(uint256 companyId => PayrollConfig config) public payrollConfigs;
     // Plain payout destination chosen by each member.
     mapping(uint256 companyId => mapping(address account => address wallet))
         public receivingWallet;
@@ -183,24 +181,6 @@ contract SalaryCipherCore is ISalaryCipherCore, ZamaEthereumConfig {
     }
 
     /// @inheritdoc ISalaryCipherCore
-    function setPayrollConfig(
-        uint256 companyId,
-        uint8 dayOfMonth,
-        uint64 nextPayrollTime
-    ) external onlyOwner(companyId) {
-        _requireCompanyExists(companyId);
-        if (dayOfMonth == 0 || dayOfMonth > 31 || nextPayrollTime == 0) {
-            revert SalaryCipherCore__InvalidPayrollConfig();
-        }
-
-        payrollConfigs[companyId] = PayrollConfig({
-            dayOfMonth: dayOfMonth,
-            nextPayrollTime: nextPayrollTime,
-            initialized: true
-        });
-    }
-
-    /// @inheritdoc ISalaryCipherCore
     function setReceivingWallet(
         uint256 companyId,
         address walletAddress
@@ -217,16 +197,23 @@ contract SalaryCipherCore is ISalaryCipherCore, ZamaEthereumConfig {
     /// @inheritdoc ISalaryCipherCore
     function executePayroll(uint256 companyId) external onlyOwner(companyId) {
         _requireCompanyExists(companyId);
-        PayrollConfig memory payrollConfig = payrollConfigs[companyId];
+        ICompanyRegistry.PayrollConfig memory payrollConfig = companyRegistry
+            .getPayrollConfig(companyId);
         if (!payrollConfig.initialized) {
             revert SalaryCipherCore__PayrollConfigNotSet();
         }
 
         address[] memory employees = companyRegistry.getEmployees(companyId);
         uint256 count;
-
-        uint64 payrollTimestamp = _blockTimestamp();
-        if (payrollTimestamp < payrollConfig.nextPayrollTime) {
+        uint64 latestDuePayrollDate = _latestPayrollDate(
+            payrollConfig.dayOfMonth,
+            _blockTimestamp()
+        );
+        uint64 previousPaidAt = lastPayrollTime[companyId];
+        uint64 nextPayrollDateToSettle = previousPaidAt == 0
+            ? latestDuePayrollDate
+            : _nextPayrollDate(previousPaidAt, payrollConfig.dayOfMonth);
+        if (nextPayrollDateToSettle > latestDuePayrollDate) {
             revert SalaryCipherCore__PayrollNotDue();
         }
 
@@ -241,29 +228,28 @@ contract SalaryCipherCore is ISalaryCipherCore, ZamaEthereumConfig {
                 continue;
             }
 
-            euint128 salary = _calculateProratedPayout(
+            euint128 payout = _calculatePayrollCatchUpPayout(
                 companyId,
                 employee,
-                payrollTimestamp
+                previousPaidAt,
+                nextPayrollDateToSettle,
+                latestDuePayrollDate,
+                payrollConfig.dayOfMonth
             );
             pendingPayout[companyId][employee] = FHE.add(
                 pendingPayout[companyId][employee],
-                salary
+                payout
             );
             companyBalance[companyId] = FHE.sub(
                 companyBalance[companyId],
-                salary
+                payout
             );
 
             _grantPendingPayoutAccess(companyId, employee);
             count++;
         }
 
-        lastPayrollTime[companyId] = payrollConfig.nextPayrollTime;
-        payrollConfigs[companyId].nextPayrollTime = _nextPayrollTime(
-            payrollConfig.nextPayrollTime,
-            payrollConfig.dayOfMonth
-        );
+        lastPayrollTime[companyId] = latestDuePayrollDate;
         _grantBalanceAccess(companyId);
 
         emit PayrollExecuted(companyId, count);
@@ -288,14 +274,23 @@ contract SalaryCipherCore is ISalaryCipherCore, ZamaEthereumConfig {
         address employee
     ) external onlyOwnerOrHR(companyId) {
         _requireActiveEmployee(companyId, employee);
+        if (!FHE.isInitialized(monthlySalary[companyId][employee])) {
+            revert SalaryCipherCore__SalaryNotSet();
+        }
 
-        uint64 terminationTimestamp = _blockTimestamp();
-        // Termination payout only covers the interval that has not yet been settled
-        // by the latest company-wide payroll run.
-        euint128 terminationPayout = _calculateProratedPayout(
+        ICompanyRegistry.PayrollConfig memory payrollConfig = companyRegistry
+            .getPayrollConfig(companyId);
+        if (!payrollConfig.initialized) {
+            revert SalaryCipherCore__PayrollConfigNotSet();
+        }
+
+        // Termination settlement walks each still-unpaid payroll period and avoids
+        // paying any interval that the company-wide payroll already covered.
+        euint128 terminationPayout = _calculateTerminationPayout(
             companyId,
             employee,
-            terminationTimestamp
+            payrollConfig.dayOfMonth,
+            _floorToDay(_blockTimestamp())
         );
 
         pendingPayout[companyId][employee] = FHE.add(
@@ -525,36 +520,130 @@ contract SalaryCipherCore is ISalaryCipherCore, ZamaEthereumConfig {
             role == ICompanyRegistry.Role.Employee;
     }
 
-    /// @dev Calculates the unsettled salary portion between the employee settlement start and period end.
-    function _calculateProratedPayout(
+    /// @dev Sums all due payroll periods from the next unsettled payroll date up to the latest due date.
+    function _calculatePayrollCatchUpPayout(
         uint256 companyId,
         address employee,
-        uint64 periodEnd
-    ) private returns (euint128) {
-        uint64 periodStart = _settlementStart(companyId, employee);
-        if (periodEnd <= periodStart) {
+        uint64 previousPaidAt,
+        uint64 nextPayrollDateToSettle,
+        uint64 latestDuePayrollDate,
+        uint8 dayOfMonth
+    ) private returns (euint128 totalPayout) {
+        totalPayout = FHE.asEuint128(0);
+
+        uint64 payrollDate = nextPayrollDateToSettle;
+        while (payrollDate <= latestDuePayrollDate) {
+            uint64 periodStart = payrollDate == nextPayrollDateToSettle &&
+                previousPaidAt != 0
+                ? previousPaidAt
+                : _previousPayrollDate(payrollDate, dayOfMonth);
+            uint64 periodEnd = payrollDate - DAY_SECONDS;
+
+            totalPayout = FHE.add(
+                totalPayout,
+                _calculatePeriodPayout(companyId, employee, periodStart, periodEnd)
+            );
+
+            payrollDate = _nextPayrollDate(payrollDate, dayOfMonth);
+        }
+    }
+
+    /// @dev Settles the unpaid interval up to the termination day, splitting across natural payroll periods when needed.
+    function _calculateTerminationPayout(
+        uint256 companyId,
+        address employee,
+        uint8 dayOfMonth,
+        uint64 terminationDay
+    ) private returns (euint128 totalPayout) {
+        uint64 employeeStartDay = _floorToDay(startDate[companyId][employee]);
+        uint64 cursor = employeeStartDay;
+        uint64 companyLastPaidAt = lastPayrollTime[companyId];
+
+        if (companyLastPaidAt != 0 && companyLastPaidAt > cursor) {
+            cursor = companyLastPaidAt;
+        }
+        if (cursor > terminationDay) {
             return FHE.asEuint128(0);
         }
 
-        uint128 elapsedSeconds = uint128(periodEnd - periodStart);
+        totalPayout = FHE.asEuint128(0);
+        while (cursor <= terminationDay) {
+            uint64 periodStart = _periodStartForDate(dayOfMonth, cursor);
+            uint64 periodEnd = _nextPayrollDate(periodStart, dayOfMonth) -
+                DAY_SECONDS;
+            uint64 intervalStart = cursor > periodStart ? cursor : periodStart;
+            uint64 intervalEnd = terminationDay < periodEnd
+                ? terminationDay
+                : periodEnd;
+
+            totalPayout = FHE.add(
+                totalPayout,
+                _calculateIntervalPayout(
+                    companyId,
+                    employee,
+                    periodStart,
+                    periodEnd,
+                    intervalStart,
+                    intervalEnd
+                )
+            );
+
+            if (intervalEnd == type(uint64).max) {
+                break;
+            }
+            cursor = intervalEnd + DAY_SECONDS;
+        }
+    }
+
+    /// @dev Calculates one payroll-period payout using full salary for full coverage and day-based proration otherwise.
+    function _calculatePeriodPayout(
+        uint256 companyId,
+        address employee,
+        uint64 periodStart,
+        uint64 periodEnd
+    ) private returns (euint128) {
+        uint64 employeeStartDay = _floorToDay(startDate[companyId][employee]);
+        if (employeeStartDay > periodEnd) {
+            return FHE.asEuint128(0);
+        }
+
+        uint64 intervalStart = employeeStartDay > periodStart
+            ? employeeStartDay
+            : periodStart;
         return
-            FHE.div(
-                FHE.mul(monthlySalary[companyId][employee], elapsedSeconds),
-                PAYROLL_PERIOD_SECONDS
+            _calculateIntervalPayout(
+                companyId,
+                employee,
+                periodStart,
+                periodEnd,
+                intervalStart,
+                periodEnd
             );
     }
 
-    /// @dev Uses the later timestamp between employee start and the company-wide last payroll.
-    function _settlementStart(
+    /// @dev Converts one covered interval inside a payroll period into either full salary or an actual-day prorated salary.
+    function _calculateIntervalPayout(
         uint256 companyId,
-        address employee
-    ) private view returns (uint64) {
-        uint64 employeeStartDate = startDate[companyId][employee];
-        uint64 companyLastPayrollTime = lastPayrollTime[companyId];
+        address employee,
+        uint64 periodStart,
+        uint64 periodEnd,
+        uint64 intervalStart,
+        uint64 intervalEnd
+    ) private returns (euint128) {
+        if (intervalStart > intervalEnd) {
+            return FHE.asEuint128(0);
+        }
+        if (intervalStart == periodStart && intervalEnd == periodEnd) {
+            return monthlySalary[companyId][employee];
+        }
+
+        uint128 workedDays = _inclusiveDayCount(intervalStart, intervalEnd);
+        uint128 totalDays = _inclusiveDayCount(periodStart, periodEnd);
         return
-            employeeStartDate > companyLastPayrollTime
-                ? employeeStartDate
-                : companyLastPayrollTime;
+            FHE.div(
+                FHE.mul(monthlySalary[companyId][employee], workedDays),
+                totalDays
+            );
     }
 
     /// @dev Refreshes FHE access for the encrypted company balance.
@@ -636,34 +725,86 @@ contract SalaryCipherCore is ISalaryCipherCore, ZamaEthereumConfig {
         return uint64(block.timestamp);
     }
 
-    /// @dev Advances payroll to the next configured calendar month day, clamped to month end when needed.
-    function _nextPayrollTime(
-        uint64 currentPayrollTime,
+    /// @dev Floors any timestamp to 00:00:00 UTC of the same day.
+    function _floorToDay(uint64 timestamp) private pure returns (uint64) {
+        return timestamp - (timestamp % DAY_SECONDS);
+    }
+
+    /// @dev Returns the inclusive number of UTC days between two day-aligned timestamps.
+    function _inclusiveDayCount(
+        uint64 startDay,
+        uint64 endDay
+    ) private pure returns (uint128) {
+        return uint128(((endDay - startDay) / DAY_SECONDS) + 1);
+    }
+
+    /// @dev Returns the latest payroll date that is already due at the given timestamp.
+    function _latestPayrollDate(
+        uint8 dayOfMonth,
+        uint64 referenceTimestamp
+    ) private pure returns (uint64) {
+        (uint256 year, uint256 month, , , , ) = DateTimeLib.timestampToDateTime(
+            referenceTimestamp
+        );
+        uint64 currentMonthPayrollDate = _payrollDateForMonth(
+            year,
+            month,
+            dayOfMonth
+        );
+        if (referenceTimestamp >= currentMonthPayrollDate) {
+            return currentMonthPayrollDate;
+        }
+        return _previousPayrollDate(currentMonthPayrollDate, dayOfMonth);
+    }
+
+    /// @dev Returns the payroll period start that contains the given reference day.
+    function _periodStartForDate(
+        uint8 dayOfMonth,
+        uint64 referenceDay
+    ) private pure returns (uint64) {
+        return _latestPayrollDate(dayOfMonth, referenceDay);
+    }
+
+    /// @dev Returns the payroll timestamp for a specific month, clamped to month end when the day exceeds that month length.
+    function _payrollDateForMonth(
+        uint256 year,
+        uint256 month,
         uint8 dayOfMonth
     ) private pure returns (uint64) {
-        uint256 nextMonthTimestamp = uint256(currentPayrollTime).addMonths(1);
-        (
-            uint256 year,
-            uint256 month,
-            ,
-            uint256 hour,
-            uint256 minute,
-            uint256 second
-        ) = DateTimeLib.timestampToDateTime(nextMonthTimestamp);
         uint256 lastDayOfMonth = DateTimeLib.daysInMonth(year, month);
         uint256 targetDay = dayOfMonth > lastDayOfMonth
             ? lastDayOfMonth
             : dayOfMonth;
 
-        return uint64(
-            DateTimeLib.dateTimeToTimestamp(
-                year,
-                month,
-                targetDay,
-                hour,
-                minute,
-                second
-            )
+        return uint64(DateTimeLib.dateToTimestamp(year, month, targetDay));
+    }
+
+    /// @dev Returns the previous configured payroll day before the supplied payroll date.
+    function _previousPayrollDate(
+        uint64 currentPayrollDate,
+        uint8 dayOfMonth
+    ) private pure returns (uint64) {
+        (uint256 year, uint256 month, , , , ) = DateTimeLib.timestampToDateTime(
+            currentPayrollDate
         );
+        if (month == 1) {
+            year -= 1;
+            month = 12;
+        } else {
+            month -= 1;
+        }
+        return _payrollDateForMonth(year, month, dayOfMonth);
+    }
+
+    /// @dev Returns the next configured payroll day after the supplied payroll date.
+    function _nextPayrollDate(
+        uint64 currentPayrollDate,
+        uint8 dayOfMonth
+    ) private pure returns (uint64) {
+        uint256 nextMonthTimestamp = uint256(currentPayrollDate).addMonths(1);
+        (uint256 year, uint256 month, , , , ) = DateTimeLib.timestampToDateTime(
+            nextMonthTimestamp
+        );
+        return _payrollDateForMonth(year, month, dayOfMonth);
     }
 }

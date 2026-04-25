@@ -1,90 +1,13 @@
-import type { PublicClient, WalletClient } from 'viem'
 import { loadFixture, time } from '@nomicfoundation/hardhat-toolbox-viem/network-helpers'
 import { expect } from 'chai'
-import { ignition, viem } from 'hardhat'
-import SalaryCipherCoreModule from '../ignition/modules/SalaryCipherCore'
 import { RolesEnum } from '../src/enums'
-import { customErrorPattern, decryptUint128, encryptUint128, normalizeAddresses } from './utils'
+import { createSalaryCipherCompanyFixture } from './fixtures'
+import { computeFollowingMonthlyPayrollTimestamp, computeNextMonthlyPayrollTimestamp, customErrorPattern, decryptUint128, encryptUint128, normalizeAddresses } from './utils'
 
 describe('salaryCipherCore', () => {
-  function computeNextMonthlyPayrollTimestamp(timestamp: bigint, dayOfMonth: number) {
-    const date = new Date(Number(timestamp) * 1000)
-    const year = date.getUTCFullYear()
-    const month = date.getUTCMonth()
-    const day = date.getUTCDate()
-    const hour = date.getUTCHours()
-    const minute = date.getUTCMinutes()
-    const second = date.getUTCSeconds()
-
-    const targetMonth = day <= dayOfMonth ? month : month + 1
-    return BigInt(Math.floor(Date.UTC(year, targetMonth, dayOfMonth, hour, minute, second) / 1000))
-  }
-
-  function computeFollowingMonthlyPayrollTimestamp(timestamp: bigint, dayOfMonth: number) {
-    const date = new Date(Number(timestamp) * 1000)
-    return BigInt(
-      Math.floor(
-        Date.UTC(
-          date.getUTCFullYear(),
-          date.getUTCMonth() + 1,
-          dayOfMonth,
-          date.getUTCHours(),
-          date.getUTCMinutes(),
-          date.getUTCSeconds(),
-        ) / 1000,
-      ),
-    )
-  }
-
-  async function deploySalaryCipherCoreFixture() {
-    const [owner, hr, employee, outsider] = await viem.getWalletClients()
-    const publicClient = await viem.getPublicClient()
-    const { companyRegistry, salaryCipherCore } = await ignition.deploy(SalaryCipherCoreModule)
-
-    return {
-      companyRegistry,
-      salaryCipherCore,
-      owner,
-      hr,
-      employee,
-      outsider,
-      publicClient,
-    }
-  }
-
-  async function createCompanyFixture() {
-    const fixture = await deploySalaryCipherCoreFixture()
-    const { companyRegistry, owner, publicClient } = fixture
-
-    const hash = await companyRegistry.write.createCompany(['Acme'], {
-      account: owner.account,
-    })
-    await publicClient.waitForTransactionReceipt({ hash })
-
-    return { ...fixture, companyId: 1n }
-  }
-
-  async function setMonthlyPayrollConfig(
-    companyId: bigint,
-    salaryCipherCore: Awaited<ReturnType<typeof deploySalaryCipherCoreFixture>>['salaryCipherCore'],
-    owner: WalletClient,
-    publicClient: PublicClient,
-  ) {
-    const latestBlock = await publicClient.getBlock()
-    const nextPayrollTime = computeNextMonthlyPayrollTimestamp(latestBlock.timestamp, 15)
-
-    const setPayrollConfigHash = await salaryCipherCore.write.setPayrollConfig(
-      [companyId, 15, nextPayrollTime],
-      { account: owner.account },
-    )
-    await publicClient.waitForTransactionReceipt({ hash: setPayrollConfigHash })
-
-    return nextPayrollTime
-  }
-
   it('handles payroll balance, salary accrual and payout claim', async () => {
     const { companyRegistry, salaryCipherCore, owner, employee, publicClient, companyId }
-      = await loadFixture(createCompanyFixture)
+      = await loadFixture(createSalaryCipherCompanyFixture)
 
     const addEmployeeHash = await companyRegistry.write.addEmployee(
       [companyId, employee.account.address, RolesEnum.Employee, 'Alice'],
@@ -109,20 +32,16 @@ describe('salaryCipherCore', () => {
     )
     await publicClient.waitForTransactionReceipt({ hash: setSalaryHash })
 
-    const configuredPayrollTime = await setMonthlyPayrollConfig(
-      companyId,
-      salaryCipherCore,
-      owner,
-      publicClient,
-    )
-
     const depositHash = await salaryCipherCore.write.deposit([companyId, 12000n], {
       account: owner.account,
     })
     await publicClient.waitForTransactionReceipt({ hash: depositHash })
 
-    // 30 days
-    await time.increase(30 * 24 * 60 * 60)
+    const latestBlock = await publicClient.getBlock()
+    const nextPayrollTime = computeNextMonthlyPayrollTimestamp(latestBlock.timestamp, 15)
+    const configuredPayrollTime = computeFollowingMonthlyPayrollTimestamp(nextPayrollTime, 15)
+
+    await time.increaseTo(configuredPayrollTime)
 
     const executeHash = await salaryCipherCore.write.executePayroll([companyId], {
       account: owner.account,
@@ -138,9 +57,6 @@ describe('salaryCipherCore', () => {
     expect(await decryptUint128(encryptedBalance, salaryCipherCore.address, owner)).to.equal(7000n)
     expect(await decryptUint128(encryptedPending, salaryCipherCore.address, employee)).to.equal(5000n)
     expect(await salaryCipherCore.read.lastPayrollTime([companyId])).to.equal(configuredPayrollTime)
-    expect((await salaryCipherCore.read.payrollConfigs([companyId]))[1]).to.equal(
-      computeFollowingMonthlyPayrollTimestamp(configuredPayrollTime, 15),
-    )
 
     const claimHash = await salaryCipherCore.write.claimPayout([companyId], {
       account: employee.account,
@@ -154,9 +70,63 @@ describe('salaryCipherCore', () => {
     expect(await decryptUint128(encryptedPendingAfterClaim, salaryCipherCore.address, employee)).to.equal(0n)
   })
 
+  it('prorates salary by actual payroll-period days for partial-month employees', async () => {
+    const { companyRegistry, salaryCipherCore, owner, employee, publicClient, companyId }
+      = await createSalaryCipherCompanyFixture()
+
+    const setPayrollConfigHash = await companyRegistry.write.setPayrollConfig([companyId, 31], {
+      account: owner.account,
+    })
+    await publicClient.waitForTransactionReceipt({ hash: setPayrollConfigHash })
+
+    const addEmployeeHash = await companyRegistry.write.addEmployee(
+      [companyId, employee.account.address, RolesEnum.Employee, 'Alice'],
+      { account: owner.account },
+    )
+    await publicClient.waitForTransactionReceipt({ hash: addEmployeeHash })
+
+    const depositHash = await salaryCipherCore.write.deposit([companyId, 10000n], {
+      account: owner.account,
+    })
+    await publicClient.waitForTransactionReceipt({ hash: depositHash })
+
+    const latestBlock = await publicClient.getBlock()
+    const nextPayrollTime = computeNextMonthlyPayrollTimestamp(latestBlock.timestamp, 31)
+    const payrollTime = computeFollowingMonthlyPayrollTimestamp(nextPayrollTime, 31)
+    const employeeStartTime = payrollTime - 16n * 24n * 60n * 60n
+
+    await time.increaseTo(employeeStartTime)
+
+    const [salaryHandle, salaryProof] = await encryptUint128(
+      salaryCipherCore.address,
+      owner.account.address,
+      5000,
+    )
+    const setSalaryHash = await salaryCipherCore.write.setSalary(
+      [companyId, employee.account.address, salaryHandle, salaryProof],
+      { account: owner.account },
+    )
+    await publicClient.waitForTransactionReceipt({ hash: setSalaryHash })
+
+    await time.increaseTo(payrollTime)
+
+    const executeHash = await salaryCipherCore.write.executePayroll([companyId], {
+      account: owner.account,
+    })
+    await publicClient.waitForTransactionReceipt({ hash: executeHash })
+
+    const encryptedPending = await salaryCipherCore.read.pendingPayout([
+      companyId,
+      employee.account.address,
+    ]) as string
+
+    expect(await decryptUint128(encryptedPending, salaryCipherCore.address, owner)).to.equal(2580n)
+    expect(await salaryCipherCore.read.lastPayrollTime([companyId])).to.equal(payrollTime)
+  })
+
   it('limits salary proof configuration to admin and generates audit results', async () => {
     const { companyRegistry, salaryCipherCore, owner, hr, employee, outsider, publicClient, companyId }
-      = await loadFixture(createCompanyFixture)
+      = await loadFixture(createSalaryCipherCompanyFixture)
 
     await expect(
       salaryCipherCore.write.setSalaryProofAddress([outsider.account.address], {
@@ -204,13 +174,6 @@ describe('salaryCipherCore', () => {
     )
     await publicClient.waitForTransactionReceipt({ hash: setEmployeeSalaryHash })
 
-    await setMonthlyPayrollConfig(
-      companyId,
-      salaryCipherCore,
-      owner,
-      publicClient,
-    )
-
     const generateAuditHash = await salaryCipherCore.write.generateAudit([companyId], {
       account: owner.account,
     })
@@ -229,9 +192,9 @@ describe('salaryCipherCore', () => {
     expect(auditReport[2]).to.equal(2n)
   })
 
-  it('does not double count salary that was already settled in the latest payroll run', async () => {
+  it('terminates employee and removes them from the company registry and executes leftover salary', async () => {
     const { companyRegistry, salaryCipherCore, owner, employee, publicClient, companyId }
-      = await loadFixture(createCompanyFixture)
+      = await loadFixture(createSalaryCipherCompanyFixture)
 
     const addEmployeeHash = await companyRegistry.write.addEmployee(
       [companyId, employee.account.address, RolesEnum.Employee, 'Alice'],
@@ -256,20 +219,16 @@ describe('salaryCipherCore', () => {
     )
     await publicClient.waitForTransactionReceipt({ hash: setSalaryHash })
 
-    const configuredPayrollTime = await setMonthlyPayrollConfig(
-      companyId,
-      salaryCipherCore,
-      owner,
-      publicClient,
-    )
-
     const depositHash = await salaryCipherCore.write.deposit([companyId, 6000n], {
       account: owner.account,
     })
     await publicClient.waitForTransactionReceipt({ hash: depositHash })
 
-    // 30 days
-    await time.increase(30 * 24 * 60 * 60)
+    const latestBlock = await publicClient.getBlock()
+    const nextPayrollTime = computeNextMonthlyPayrollTimestamp(latestBlock.timestamp, 15)
+    const configuredPayrollTime = computeFollowingMonthlyPayrollTimestamp(nextPayrollTime, 15)
+
+    await time.increaseTo(configuredPayrollTime)
 
     const executeHash = await salaryCipherCore.write.executePayroll([companyId], {
       account: owner.account,
@@ -289,8 +248,5 @@ describe('salaryCipherCore', () => {
     expect(await companyRegistry.read.getUserCompanies([employee.account.address])).to.deep.equal([])
     expect(await salaryCipherCore.read.startDate([companyId, employee.account.address])).to.equal(0n)
     expect(await salaryCipherCore.read.lastPayrollTime([companyId])).to.equal(payrollTimestamp)
-    expect((await salaryCipherCore.read.payrollConfigs([companyId]))[1]).to.equal(
-      computeFollowingMonthlyPayrollTimestamp(configuredPayrollTime, 15),
-    )
   })
 })

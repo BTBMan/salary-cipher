@@ -45,6 +45,14 @@ interface ICompanyRegistry {
         Role role;
     }
 
+    /// @notice Immutable-ish company payroll rule stored alongside company metadata.
+    struct PayrollConfig {
+        // Fixed payroll day in each month.
+        uint8 dayOfMonth;
+        // Whether the company has configured payroll scheduling.
+        bool initialized;
+    }
+
     /// @notice Role set recognized by the registry and downstream contracts.
     enum Role {
         None,
@@ -82,6 +90,8 @@ interface ICompanyRegistry {
         Role oldRole,
         Role newRole
     );
+    /// @notice Emitted when a company payroll day is initialized or updated.
+    event PayrollConfigUpdated(uint256 indexed companyId, uint8 dayOfMonth);
 
     ////////////////////////////////////
     // Errors                         //
@@ -97,6 +107,7 @@ interface ICompanyRegistry {
     error CompanyRegistry__Unauthorized();
     error CompanyRegistry__CannotModifyOwner();
     error CompanyRegistry__InvalidCaller();
+    error CompanyRegistry__InvalidPayrollConfig();
 
     ////////////////////////////////////
     // Modifiers                      //
@@ -111,7 +122,8 @@ interface ICompanyRegistry {
     ////////////////////////////////////
     /// @notice Creates a new company and assigns the caller as owner.
     function createCompany(
-        string memory name
+        string memory name,
+        uint8 payrollDayOfMonth
     ) external returns (uint256 companyId);
 
     /// @notice Adds one employee into the company membership list.
@@ -145,6 +157,9 @@ interface ICompanyRegistry {
         bool authorized
     ) external;
 
+    /// @notice Sets the fixed monthly payroll day for one company.
+    function setPayrollConfig(uint256 companyId, uint8 dayOfMonth) external;
+
     ////////////////////////////////////
     // Getter functions               //
     ////////////////////////////////////
@@ -173,4 +188,9 @@ interface ICompanyRegistry {
     function getCompany(
         uint256 companyId
     ) external view returns (Company memory companyInfo);
+
+    /// @notice Returns the payroll config for a company.
+    function getPayrollConfig(
+        uint256 companyId
+    ) external view returns (PayrollConfig memory payrollConfig);
 }

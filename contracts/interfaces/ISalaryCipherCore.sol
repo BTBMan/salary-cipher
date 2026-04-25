@@ -35,16 +35,6 @@ interface ISalaryCipherCore {
         ebool gapWithinThreshold;
     }
 
-    /// @notice Company-level payroll schedule config used to gate payroll execution.
-    struct PayrollConfig {
-        // Expected payroll day in a month-oriented schedule.
-        uint8 dayOfMonth;
-        // Next timestamp at or after which payroll can be executed.
-        uint64 nextPayrollTime;
-        // Whether payroll config has been initialized for the company.
-        bool initialized;
-    }
-
     ////////////////////////////////////
     // State variables                //
     ////////////////////////////////////
@@ -93,7 +83,6 @@ interface ISalaryCipherCore {
     error SalaryCipherCore__InsufficientBalance();
     error SalaryCipherCore__PayrollConfigNotSet();
     error SalaryCipherCore__PayrollNotDue();
-    error SalaryCipherCore__InvalidPayrollConfig();
 
     ////////////////////////////////////
     // Modifiers                      //
@@ -121,13 +110,6 @@ interface ISalaryCipherCore {
         address employee,
         externalEuint128 encryptedSalary,
         bytes calldata inputProof
-    ) external;
-
-    /// @notice Sets the company payroll schedule used by executePayroll.
-    function setPayrollConfig(
-        uint256 companyId,
-        uint8 dayOfMonth,
-        uint64 nextPayrollTime
     ) external;
 
     /// @notice Sets the plain wallet that will receive future payout claims.

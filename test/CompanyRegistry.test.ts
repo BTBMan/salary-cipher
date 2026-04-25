@@ -1,39 +1,10 @@
 import { loadFixture } from '@nomicfoundation/hardhat-toolbox-viem/network-helpers'
 import { expect } from 'chai'
-import { ignition, viem } from 'hardhat'
-import CompanyRegistryModule from '../ignition/modules/CompanyRegistry'
 import { RolesEnum } from '../src/enums'
+import { createDefaultCompanyFixture, deployCompanyRegistryFixture } from './fixtures'
 import { customErrorPattern, normalizeAddresses } from './utils'
 
 describe('companyRegistry', () => {
-  async function deployCompanyRegistryFixture() {
-    const [owner, hr, employee, outsider, anotherEmployee] = await viem.getWalletClients()
-    const publicClient = await viem.getPublicClient()
-    const { companyRegistry } = await ignition.deploy(CompanyRegistryModule)
-
-    return {
-      companyRegistry,
-      owner,
-      hr,
-      employee,
-      outsider,
-      anotherEmployee,
-      publicClient,
-    }
-  }
-
-  async function createDefaultCompany() {
-    const fixture = await deployCompanyRegistryFixture()
-    const { companyRegistry, owner, publicClient } = fixture
-
-    const hash = await companyRegistry.write.createCompany(['Acme'], {
-      account: owner.account,
-    })
-    await publicClient.waitForTransactionReceipt({ hash })
-
-    return { ...fixture, companyId: 1n }
-  }
-
   describe('deployment', () => {
     it('deploys through ignition', async () => {
       const { companyRegistry } = await loadFixture(deployCompanyRegistryFixture)
@@ -44,7 +15,7 @@ describe('companyRegistry', () => {
 
   describe('createCompany', () => {
     it('stores the company and owner membership', async () => {
-      const { companyRegistry, owner, companyId } = await loadFixture(createDefaultCompany)
+      const { companyRegistry, owner, companyId } = await loadFixture(createDefaultCompanyFixture)
 
       const company = await companyRegistry.read.companies([companyId])
       const ownerEmployee = await companyRegistry.read.companyEmployees([
@@ -55,6 +26,7 @@ describe('companyRegistry', () => {
       const userCompanies = await companyRegistry.read.getUserCompanies([
         owner.account.address,
       ])
+      const payrollConfig = await companyRegistry.read.getPayrollConfig([companyId])
 
       expect(company[0]).to.equal('Acme')
       expect(company[1].toLowerCase()).to.equal(owner.account.address.toLowerCase())
@@ -66,13 +38,15 @@ describe('companyRegistry', () => {
       )
       expect(userCompanies).to.deep.equal([companyId])
       expect(await companyRegistry.read.getEmployeeCount([companyId])).to.equal(1n)
+      expect(payrollConfig.dayOfMonth).to.equal(15)
+      expect(payrollConfig.initialized).to.equal(true)
     })
   })
 
   describe('employee management', () => {
     it('allows owner to add employees and keeps lookup lists in sync', async () => {
       const { companyRegistry, owner, employee, companyId, publicClient }
-        = await loadFixture(createDefaultCompany)
+        = await loadFixture(createDefaultCompanyFixture)
 
       const hash = await companyRegistry.write.addEmployee(
         [companyId, employee.account.address, RolesEnum.Employee, 'Alice'],
@@ -99,7 +73,7 @@ describe('companyRegistry', () => {
 
     it('allows HR to batch add employees after being granted HR role', async () => {
       const { companyRegistry, owner, hr, employee, anotherEmployee, companyId, publicClient }
-        = await loadFixture(createDefaultCompany)
+        = await loadFixture(createDefaultCompanyFixture)
 
       const addHrHash = await companyRegistry.write.addEmployee(
         [companyId, hr.account.address, RolesEnum.HR, 'Helen'],
@@ -137,7 +111,7 @@ describe('companyRegistry', () => {
 
     it('updates role and removes employees while preserving owner constraints', async () => {
       const { companyRegistry, owner, hr, employee, companyId, publicClient }
-        = await loadFixture(createDefaultCompany)
+        = await loadFixture(createDefaultCompanyFixture)
 
       const addHrHash = await companyRegistry.write.addEmployee(
         [companyId, hr.account.address, RolesEnum.HR, 'Helen'],
@@ -179,7 +153,7 @@ describe('companyRegistry', () => {
   describe('access control and validation', () => {
     it('rejects unauthorized actions and invalid employee input', async () => {
       const { companyRegistry, owner, outsider, employee, companyId, publicClient }
-        = await loadFixture(createDefaultCompany)
+        = await loadFixture(createDefaultCompanyFixture)
 
       await expect(
         companyRegistry.write.addEmployee(
