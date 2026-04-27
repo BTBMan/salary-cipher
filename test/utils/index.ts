@@ -1,4 +1,4 @@
-import type { Address, WalletClient } from 'viem'
+import type { Address, PublicClient, WalletClient } from 'viem'
 import { FhevmType } from '@fhevm/hardhat-plugin'
 import dayjs from 'dayjs'
 import utc from 'dayjs/plugin/utc'
@@ -52,6 +52,36 @@ export async function decryptBool(
     contractAddress,
     ethersWrapper(walletClient).ethersSigner()!,
   )
+}
+
+export async function fundVault({
+  underlyingToken,
+  companyTreasuryVault,
+  owner,
+  publicClient,
+  amount,
+}: {
+  underlyingToken: any
+  companyTreasuryVault: any
+  owner: WalletClient
+  publicClient: PublicClient
+  amount: bigint
+}) {
+  const approveHash = await underlyingToken.write.approve(
+    [companyTreasuryVault.address, amount],
+    { account: owner.account },
+  )
+  await publicClient.waitForTransactionReceipt({ hash: approveHash })
+
+  const depositHash = await companyTreasuryVault.write.depositUnderlying([amount], {
+    account: owner.account,
+  })
+  await publicClient.waitForTransactionReceipt({ hash: depositHash })
+
+  const wrapHash = await companyTreasuryVault.write.wrapUnderlying([amount], {
+    account: owner.account,
+  })
+  await publicClient.waitForTransactionReceipt({ hash: wrapHash })
 }
 
 /**

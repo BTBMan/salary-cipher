@@ -3,6 +3,10 @@
     "incremental": true,
     "target": "ESNext",
     "baseUrl": ".",
+    "paths": {
+      "@/*": ["./src/*"],
+      "-/*": ["./*"]
+    },
     "resolveJsonModule": true,
     "allowJs": true,
     "strict": true,

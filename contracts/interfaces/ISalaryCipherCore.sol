@@ -42,22 +42,10 @@ interface ISalaryCipherCore {
     ////////////////////////////////////
     // Events                         //
     ////////////////////////////////////
-    /// @notice Emitted when company funds are added to the encrypted balance ledger.
-    event Deposited(uint256 indexed companyId, uint256 amount);
-    /// @notice Emitted when company funds are removed from the encrypted balance ledger.
-    event Withdrawn(uint256 indexed companyId, uint256 amount);
     /// @notice Emitted when an employee salary handle is updated.
     event SalarySet(uint256 indexed companyId, address indexed employee);
-    /// @notice Emitted when a member updates the wallet used for payout claims.
-    event ReceivingWalletSet(
-        uint256 indexed companyId,
-        address indexed employee,
-        address indexed wallet
-    );
-    /// @notice Emitted when payroll processing moves salaries into pending payouts.
+    /// @notice Emitted when payroll processing executes immediate confidential transfers.
     event PayrollExecuted(uint256 indexed companyId, uint256 count);
-    /// @notice Emitted when a member clears their pending payout balance.
-    event PayoutClaimed(uint256 indexed companyId, address indexed employee);
     /// @notice Emitted when an employee is settled and removed from the company registry.
     event EmployeeTerminated(
         uint256 indexed companyId,
@@ -77,12 +65,11 @@ interface ISalaryCipherCore {
     error SalaryCipherCore__OnlyAdmin();
     error SalaryCipherCore__OnlySalaryProof();
     error SalaryCipherCore__InvalidAddress();
-    error SalaryCipherCore__ReceivingWalletNotSet();
     error SalaryCipherCore__SalaryNotSet();
     error SalaryCipherCore__AuditDoesNotExist();
-    error SalaryCipherCore__InsufficientBalance();
     error SalaryCipherCore__PayrollConfigNotSet();
     error SalaryCipherCore__PayrollNotDue();
+    error SalaryCipherCore__TreasuryVaultNotSet();
 
     ////////////////////////////////////
     // Modifiers                      //
@@ -95,15 +82,6 @@ interface ISalaryCipherCore {
     ////////////////////////////////////
     // Functions                      //
     ////////////////////////////////////
-    /// @notice Adds plain company funds into the encrypted company balance ledger.
-    function deposit(uint256 companyId, uint256 amount) external;
-
-    /// @notice Removes plain company funds from the encrypted company balance ledger.
-    function withdraw(uint256 companyId, uint256 amount) external;
-
-    /// @notice Returns the encrypted company balance handle for an authorized manager.
-    function getBalance(uint256 companyId) external returns (euint128);
-
     /// @notice Stores an employee's encrypted monthly salary and refreshes FHE access.
     function setSalary(
         uint256 companyId,
@@ -112,17 +90,8 @@ interface ISalaryCipherCore {
         bytes calldata inputProof
     ) external;
 
-    /// @notice Sets the plain wallet that will receive future payout claims.
-    function setReceivingWallet(
-        uint256 companyId,
-        address walletAddress
-    ) external;
-
-    /// @notice Executes payroll for the company and moves salary into pending payouts.
+    /// @notice Executes payroll for the company and immediately transfers confidential salary funds.
     function executePayroll(uint256 companyId) external;
-
-    /// @notice Clears the caller's pending payout after a claim.
-    function claimPayout(uint256 companyId) external;
 
     /// @notice Settles an employee, zeros salary state, and removes them from the registry.
     function terminateEmployee(uint256 companyId, address employee) external;

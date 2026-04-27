@@ -31,6 +31,8 @@ interface ICompanyRegistry {
         string displayName;
         // The role of the employee
         Role role;
+        // Wallet that receives payroll transfers for this employee.
+        address payoutWallet;
         // The timestamp when the employee was added
         uint64 addedAt;
     }
@@ -90,8 +92,24 @@ interface ICompanyRegistry {
         Role oldRole,
         Role newRole
     );
+    /// @notice Emitted when an employee payout wallet is updated.
+    event PayoutWalletUpdated(
+        uint256 indexed companyId,
+        address indexed employee,
+        address indexed payoutWallet
+    );
     /// @notice Emitted when a company payroll day is initialized or updated.
     event PayrollConfigUpdated(uint256 indexed companyId, uint8 dayOfMonth);
+    /// @notice Emitted when a company settlement token is configured.
+    event SettlementTokenUpdated(
+        uint256 indexed companyId,
+        address indexed token
+    );
+    /// @notice Emitted when a company treasury vault is configured.
+    event TreasuryVaultUpdated(
+        uint256 indexed companyId,
+        address indexed vault
+    );
 
     ////////////////////////////////////
     // Errors                         //
@@ -108,6 +126,7 @@ interface ICompanyRegistry {
     error CompanyRegistry__CannotModifyOwner();
     error CompanyRegistry__InvalidCaller();
     error CompanyRegistry__InvalidPayrollConfig();
+    error CompanyRegistry__InvalidAddress();
 
     ////////////////////////////////////
     // Modifiers                      //
@@ -160,6 +179,15 @@ interface ICompanyRegistry {
     /// @notice Sets the fixed monthly payroll day for one company.
     function setPayrollConfig(uint256 companyId, uint8 dayOfMonth) external;
 
+    /// @notice Updates the payout wallet used for the caller's payroll receipts.
+    function setPayoutWallet(uint256 companyId, address payoutWallet) external;
+
+    /// @notice Sets the confidential settlement token used by one company.
+    function setSettlementToken(uint256 companyId, address token) external;
+
+    /// @notice Sets the treasury vault responsible for holding one company's funds.
+    function setTreasuryVault(uint256 companyId, address vault) external;
+
     ////////////////////////////////////
     // Getter functions               //
     ////////////////////////////////////
@@ -193,4 +221,26 @@ interface ICompanyRegistry {
     function getPayrollConfig(
         uint256 companyId
     ) external view returns (PayrollConfig memory payrollConfig);
+
+    /// @notice Returns the full employee record for one account.
+    function getEmployee(
+        uint256 companyId,
+        address account
+    ) external view returns (Employee memory employeeInfo);
+
+    /// @notice Returns the payout wallet used by one employee.
+    function getPayoutWallet(
+        uint256 companyId,
+        address account
+    ) external view returns (address payoutWallet);
+
+    /// @notice Returns the configured confidential settlement token for a company.
+    function getSettlementToken(
+        uint256 companyId
+    ) external view returns (address token);
+
+    /// @notice Returns the configured treasury vault for a company.
+    function getTreasuryVault(
+        uint256 companyId
+    ) external view returns (address vault);
 }

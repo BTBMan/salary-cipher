@@ -29,9 +29,12 @@ describe('companyRegistry', () => {
       const payrollConfig = await companyRegistry.read.getPayrollConfig([companyId])
 
       expect(company[0]).to.equal('Acme')
-      expect(company[1].toLowerCase()).to.equal(owner.account.address.toLowerCase())
+      expect(normalizeAddresses([company[1]])).to.deep.equal(normalizeAddresses([owner.account.address]))
       expect(ownerEmployee[0]).to.equal('Owner')
       expect(ownerEmployee[1]).to.equal(RolesEnum.Owner)
+      expect(normalizeAddresses([ownerEmployee[2]])).to.deep.equal(
+        normalizeAddresses([owner.account.address]),
+      )
       expect(await companyRegistry.read.getRole([companyId, owner.account.address])).to.equal(RolesEnum.Owner)
       expect(normalizeAddresses(employees)).to.deep.equal(
         normalizeAddresses([owner.account.address]),
@@ -65,6 +68,9 @@ describe('companyRegistry', () => {
 
       expect(employeeInfo[0]).to.equal('Alice')
       expect(employeeInfo[1]).to.equal(RolesEnum.Employee)
+      expect(normalizeAddresses([employeeInfo[2]])).to.deep.equal(
+        normalizeAddresses([employee.account.address]),
+      )
       expect(normalizeAddresses(employees)).to.deep.equal(
         normalizeAddresses([owner.account.address, employee.account.address]),
       )
@@ -147,6 +153,37 @@ describe('companyRegistry', () => {
       expect(
         await companyRegistry.read.getUserCompanies([employee.account.address]),
       ).to.deep.equal([])
+    })
+
+    it('sets default payout wallet and allows employee to update it later', async () => {
+      const { companyRegistry, owner, employee, outsider, companyId, publicClient }
+        = await loadFixture(createDefaultCompanyFixture)
+
+      const addHash = await companyRegistry.write.addEmployee(
+        [companyId, employee.account.address, RolesEnum.Employee, 'Alice'],
+        { account: owner.account },
+      )
+      await publicClient.waitForTransactionReceipt({ hash: addHash })
+
+      expect(
+        (normalizeAddresses([await companyRegistry.read.getPayoutWallet([companyId, employee.account.address])])),
+      ).to.deep.equal(normalizeAddresses([employee.account.address]))
+
+      await expect(
+        companyRegistry.write.setPayoutWallet([companyId, outsider.account.address], {
+          account: outsider.account,
+        }),
+      ).to.be.rejectedWith(customErrorPattern('CompanyRegistry__EmployeeDoesNotExist'))
+
+      const updateHash = await companyRegistry.write.setPayoutWallet(
+        [companyId, outsider.account.address],
+        { account: employee.account },
+      )
+      await publicClient.waitForTransactionReceipt({ hash: updateHash })
+
+      expect(
+        normalizeAddresses([(await companyRegistry.read.getPayoutWallet([companyId, employee.account.address]))]),
+      ).to.deep.equal(normalizeAddresses([outsider.account.address]))
     })
   })
 

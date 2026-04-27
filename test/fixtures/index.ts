@@ -60,12 +60,64 @@ export async function createDefaultCompanyFixture() {
  */
 export async function createSalaryCipherCompanyFixture() {
   const fixture = await deploySalaryCipherCoreFixture()
-  const { companyRegistry, owner, publicClient } = fixture
+  const { companyRegistry, salaryCipherCore, owner, publicClient } = fixture
 
   const hash = await companyRegistry.write.createCompany(['Acme', 15], {
     account: owner.account,
   })
   await publicClient.waitForTransactionReceipt({ hash })
 
-  return { ...fixture, companyId: 1n }
+  const companyId = 1n
+  const underlyingToken = await viem.deployContract(
+    'MockERC20',
+    ['Mock USD Coin', 'mUSDC', 6],
+    { client: { wallet: owner } },
+  )
+  const settlementToken = await viem.deployContract(
+    'MockConfidentialERC20Wrapper',
+    [underlyingToken.address],
+    { client: { wallet: owner } },
+  )
+  const companyTreasuryVault = await viem.deployContract(
+    'CompanyTreasuryVault',
+    [
+      companyId,
+      companyRegistry.address,
+      underlyingToken.address,
+      settlementToken.address,
+      salaryCipherCore.address,
+    ],
+    { client: { wallet: owner } },
+  )
+
+  const authorizeCoreHash = await companyRegistry.write.setAuthorizedCaller(
+    [companyId, salaryCipherCore.address, true],
+    { account: owner.account },
+  )
+  await publicClient.waitForTransactionReceipt({ hash: authorizeCoreHash })
+
+  const setSettlementTokenHash = await companyRegistry.write.setSettlementToken(
+    [companyId, settlementToken.address],
+    { account: owner.account },
+  )
+  await publicClient.waitForTransactionReceipt({ hash: setSettlementTokenHash })
+
+  const setTreasuryVaultHash = await companyRegistry.write.setTreasuryVault(
+    [companyId, companyTreasuryVault.address],
+    { account: owner.account },
+  )
+  await publicClient.waitForTransactionReceipt({ hash: setTreasuryVaultHash })
+
+  const mintHash = await underlyingToken.write.mint([owner.account.address, 1_000_000n], {
+    account: owner.account,
+  })
+  await publicClient.waitForTransactionReceipt({ hash: mintHash })
+
+  return {
+    ...fixture,
+    companyId,
+    underlyingToken,
+    settlementToken,
+    companyTreasuryVault,
+  }
 }

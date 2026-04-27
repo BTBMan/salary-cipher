@@ -51,6 +51,10 @@ contract CompanyRegistry is ICompanyRegistry {
     // Company-level fixed monthly payroll configuration.
     mapping(uint256 companyId => PayrollConfig payrollConfig)
         private payrollConfigs;
+    // Settlement token used by each company for confidential payroll transfers.
+    mapping(uint256 companyId => address token) private settlementTokens;
+    // Treasury vault that actually holds one company's funds.
+    mapping(uint256 companyId => address vault) private treasuryVaults;
 
     ////////////////////////////////////
     // Events                         //
@@ -113,6 +117,7 @@ contract CompanyRegistry is ICompanyRegistry {
         companyEmployees[companyId][msg.sender] = Employee({
             displayName: "Owner",
             role: Role.Owner,
+            payoutWallet: msg.sender,
             addedAt: _blockTimestamp()
         });
         companyEmployeeAccounts[companyId].push(msg.sender);
@@ -226,6 +231,49 @@ contract CompanyRegistry is ICompanyRegistry {
         emit PayrollConfigUpdated(companyId, dayOfMonth);
     }
 
+    /// @inheritdoc ICompanyRegistry
+    function setPayoutWallet(
+        uint256 companyId,
+        address payoutWallet
+    ) external {
+        _requireExistingEmployee(companyId, msg.sender);
+        if (payoutWallet == address(0)) {
+            revert CompanyRegistry__InvalidAddress();
+        }
+
+        companyEmployees[companyId][msg.sender].payoutWallet = payoutWallet;
+
+        emit PayoutWalletUpdated(companyId, msg.sender, payoutWallet);
+    }
+
+    /// @inheritdoc ICompanyRegistry
+    function setSettlementToken(
+        uint256 companyId,
+        address token
+    ) external onlyOwner(companyId) {
+        if (token == address(0)) {
+            revert CompanyRegistry__InvalidAddress();
+        }
+
+        settlementTokens[companyId] = token;
+
+        emit SettlementTokenUpdated(companyId, token);
+    }
+
+    /// @inheritdoc ICompanyRegistry
+    function setTreasuryVault(
+        uint256 companyId,
+        address vault
+    ) external onlyOwner(companyId) {
+        if (vault == address(0)) {
+            revert CompanyRegistry__InvalidAddress();
+        }
+
+        treasuryVaults[companyId] = vault;
+
+        emit TreasuryVaultUpdated(companyId, vault);
+    }
+
     /// @dev Shared insert path used by both single and batch employee creation.
     function _addEmployee(
         uint256 companyId,
@@ -247,6 +295,7 @@ contract CompanyRegistry is ICompanyRegistry {
         companyEmployees[companyId][account] = Employee({
             displayName: displayName,
             role: role,
+            payoutWallet: account,
             addedAt: _blockTimestamp()
         });
         companyEmployeeAccounts[companyId].push(account);
@@ -413,6 +462,40 @@ contract CompanyRegistry is ICompanyRegistry {
     ) external view returns (PayrollConfig memory payrollConfig) {
         _requireCompanyExists(companyId);
         payrollConfig = payrollConfigs[companyId];
+    }
+
+    /// @inheritdoc ICompanyRegistry
+    function getEmployee(
+        uint256 companyId,
+        address account
+    ) external view returns (Employee memory employeeInfo) {
+        _requireExistingEmployee(companyId, account);
+        employeeInfo = companyEmployees[companyId][account];
+    }
+
+    /// @inheritdoc ICompanyRegistry
+    function getPayoutWallet(
+        uint256 companyId,
+        address account
+    ) external view returns (address payoutWallet) {
+        _requireExistingEmployee(companyId, account);
+        payoutWallet = companyEmployees[companyId][account].payoutWallet;
+    }
+
+    /// @inheritdoc ICompanyRegistry
+    function getSettlementToken(
+        uint256 companyId
+    ) external view returns (address token) {
+        _requireCompanyExists(companyId);
+        token = settlementTokens[companyId];
+    }
+
+    /// @inheritdoc ICompanyRegistry
+    function getTreasuryVault(
+        uint256 companyId
+    ) external view returns (address vault) {
+        _requireCompanyExists(companyId);
+        vault = treasuryVaults[companyId];
     }
 
     /// @dev Returns the current block timestamp in the contract-wide compact format.

@@ -8,6 +8,7 @@ import {ZamaEthereumConfig} from "@fhevm/solidity/config/ZamaConfig.sol";
 /* Interfaces ****/
 import {ICompanyRegistry} from "./interfaces/ICompanyRegistry.sol";
 import {ISalaryCipherCore} from "./interfaces/ISalaryCipherCore.sol";
+import {ICompanyTreasuryVault} from "./interfaces/ICompanyTreasuryVault.sol";
 
 /* Libraries *****/
 import {DateTimeLib} from "solady/src/utils/DateTimeLib.sol";
@@ -15,8 +16,8 @@ import {DateTimeLib} from "solady/src/utils/DateTimeLib.sol";
 /**
  * @title SalaryCipherCore
  * @author BTBMan
- * @notice This is a Salary Cipher Core contract
- * @dev This contract is used to manage the encryption and decryption of salary data
+ * @notice Coordinates payroll calculations, confidential salary storage, and audit generation.
+ * @dev Real fund custody lives in CompanyTreasuryVault; this contract only computes due payroll amounts.
  */
 contract SalaryCipherCore is ISalaryCipherCore, ZamaEthereumConfig {
     using DateTimeLib for uint256;
@@ -33,20 +34,12 @@ contract SalaryCipherCore is ISalaryCipherCore, ZamaEthereumConfig {
     // Contract allowed to request encrypted salary condition checks.
     address public salaryProofAddress;
 
-    // Encrypted bookkeeping balance maintained per company.
-    mapping(uint256 companyId => euint128 balance) public companyBalance;
     // Encrypted monthly salary stored per company member.
     mapping(uint256 companyId => mapping(address account => euint128 salary))
         public monthlySalary;
-    // Encrypted accumulated payout waiting to be claimed by each member.
-    mapping(uint256 companyId => mapping(address account => euint128 payout))
-        public pendingPayout;
-    // Plain payout destination chosen by each member.
-    mapping(uint256 companyId => mapping(address account => address wallet))
-        public receivingWallet;
     // Last payroll execution timestamp for a company.
     mapping(uint256 companyId => uint64 paidAt) public lastPayrollTime;
-    // Employment start date used for termination settlement.
+    // Employment start date used for payroll and termination settlement.
     mapping(uint256 companyId => mapping(address account => uint64 date))
         public startDate;
     // Next audit id to assign for each company.
@@ -71,12 +64,6 @@ contract SalaryCipherCore is ISalaryCipherCore, ZamaEthereumConfig {
     /// @notice Restricts execution to the company owner or HR members.
     modifier onlyOwnerOrHR(uint256 companyId) {
         _requireOwnerOrHR(companyId, msg.sender);
-        _;
-    }
-
-    /// @notice Restricts execution to any active company member.
-    modifier onlyMember(uint256 companyId) {
-        _requireMember(companyId, msg.sender);
         _;
     }
 
@@ -110,56 +97,6 @@ contract SalaryCipherCore is ISalaryCipherCore, ZamaEthereumConfig {
     }
 
     /// @inheritdoc ISalaryCipherCore
-    function deposit(
-        uint256 companyId,
-        uint256 amount
-    ) external onlyOwner(companyId) {
-        _requireCompanyExists(companyId);
-
-        companyBalance[companyId] = FHE.add(
-            companyBalance[companyId],
-            uint128(amount)
-        );
-        _grantBalanceAccess(companyId);
-
-        emit Deposited(companyId, amount);
-    }
-
-    /// @inheritdoc ISalaryCipherCore
-    function withdraw(
-        uint256 companyId,
-        uint256 amount
-    ) external onlyOwner(companyId) {
-        _requireCompanyExists(companyId);
-
-        ebool canWithdraw = FHE.gt(companyBalance[companyId], uint128(amount));
-
-        euint128 nextBalance = FHE.select(
-            canWithdraw,
-            FHE.sub(companyBalance[companyId], uint128(amount)),
-            companyBalance[companyId]
-        );
-        companyBalance[companyId] = nextBalance;
-
-        _grantBalanceAccess(companyId);
-
-        emit Withdrawn(companyId, amount);
-    }
-
-    /// @inheritdoc ISalaryCipherCore
-    function getBalance(
-        uint256 companyId
-    ) external onlyOwnerOrHR(companyId) returns (euint128) {
-        _requireCompanyExists(companyId);
-
-        euint128 balance = companyBalance[companyId];
-        FHE.allowThis(balance);
-        FHE.allow(balance, msg.sender);
-
-        return balance;
-    }
-
-    /// @inheritdoc ISalaryCipherCore
     function setSalary(
         uint256 companyId,
         address employee,
@@ -181,26 +118,18 @@ contract SalaryCipherCore is ISalaryCipherCore, ZamaEthereumConfig {
     }
 
     /// @inheritdoc ISalaryCipherCore
-    function setReceivingWallet(
-        uint256 companyId,
-        address walletAddress
-    ) external onlyMember(companyId) {
-        if (walletAddress == address(0)) {
-            revert SalaryCipherCore__InvalidAddress();
-        }
-
-        receivingWallet[companyId][msg.sender] = walletAddress;
-
-        emit ReceivingWalletSet(companyId, msg.sender, walletAddress);
-    }
-
-    /// @inheritdoc ISalaryCipherCore
-    function executePayroll(uint256 companyId) external onlyOwner(companyId) {
+    function executePayroll(uint256 companyId) external onlyOwnerOrHR(companyId) {
         _requireCompanyExists(companyId);
+
         ICompanyRegistry.PayrollConfig memory payrollConfig = companyRegistry
             .getPayrollConfig(companyId);
         if (!payrollConfig.initialized) {
             revert SalaryCipherCore__PayrollConfigNotSet();
+        }
+
+        address treasuryVault = companyRegistry.getTreasuryVault(companyId);
+        if (treasuryVault == address(0)) {
+            revert SalaryCipherCore__TreasuryVaultNotSet();
         }
 
         address[] memory employees = companyRegistry.getEmployees(companyId);
@@ -236,36 +165,19 @@ contract SalaryCipherCore is ISalaryCipherCore, ZamaEthereumConfig {
                 latestDuePayrollDate,
                 payrollConfig.dayOfMonth
             );
-            pendingPayout[companyId][employee] = FHE.add(
-                pendingPayout[companyId][employee],
-                payout
-            );
-            companyBalance[companyId] = FHE.sub(
-                companyBalance[companyId],
-                payout
-            );
 
-            _grantPendingPayoutAccess(companyId, employee);
+            _transferPayroll(
+                companyId,
+                treasuryVault,
+                employee,
+                payout
+            );
             count++;
         }
 
         lastPayrollTime[companyId] = latestDuePayrollDate;
-        _grantBalanceAccess(companyId);
 
         emit PayrollExecuted(companyId, count);
-    }
-
-    /// @inheritdoc ISalaryCipherCore
-    function claimPayout(uint256 companyId) external onlyMember(companyId) {
-        if (receivingWallet[companyId][msg.sender] == address(0)) {
-            revert SalaryCipherCore__ReceivingWalletNotSet();
-        }
-
-        // This version only clears the encrypted ledger entry. Real token transfer is deferred.
-        pendingPayout[companyId][msg.sender] = FHE.asEuint128(0);
-        _grantPendingPayoutAccess(companyId, msg.sender);
-
-        emit PayoutClaimed(companyId, msg.sender);
     }
 
     /// @inheritdoc ISalaryCipherCore
@@ -284,6 +196,11 @@ contract SalaryCipherCore is ISalaryCipherCore, ZamaEthereumConfig {
             revert SalaryCipherCore__PayrollConfigNotSet();
         }
 
+        address treasuryVault = companyRegistry.getTreasuryVault(companyId);
+        if (treasuryVault == address(0)) {
+            revert SalaryCipherCore__TreasuryVaultNotSet();
+        }
+
         // Termination settlement walks each still-unpaid payroll period and avoids
         // paying any interval that the company-wide payroll already covered.
         euint128 terminationPayout = _calculateTerminationPayout(
@@ -293,14 +210,16 @@ contract SalaryCipherCore is ISalaryCipherCore, ZamaEthereumConfig {
             _floorToDay(_blockTimestamp())
         );
 
-        pendingPayout[companyId][employee] = FHE.add(
-            pendingPayout[companyId][employee],
+        _transferPayroll(
+            companyId,
+            treasuryVault,
+            employee,
             terminationPayout
         );
+
         monthlySalary[companyId][employee] = FHE.asEuint128(0);
         startDate[companyId][employee] = 0;
 
-        _grantPendingPayoutAccess(companyId, employee);
         _grantSalaryAccess(companyId, employee);
 
         companyRegistry.removeEmployee(companyId, employee);
@@ -477,17 +396,6 @@ contract SalaryCipherCore is ISalaryCipherCore, ZamaEthereumConfig {
         }
     }
 
-    /// @dev Reverts unless the account is any active member of the company.
-    function _requireMember(uint256 companyId, address account) private view {
-        _requireCompanyExists(companyId);
-        if (
-            companyRegistry.getRole(companyId, account) ==
-            ICompanyRegistry.Role.None
-        ) {
-            revert SalaryCipherCore__Unauthorized();
-        }
-    }
-
     /// @dev Reverts unless the account is an active non-owner employee entry.
     function _requireActiveEmployee(
         uint256 companyId,
@@ -646,10 +554,27 @@ contract SalaryCipherCore is ISalaryCipherCore, ZamaEthereumConfig {
             );
     }
 
-    /// @dev Refreshes FHE access for the encrypted company balance.
-    function _grantBalanceAccess(uint256 companyId) private {
-        FHE.allowThis(companyBalance[companyId]);
-        _grantManagerAccess(companyId, companyBalance[companyId]);
+    /// @dev Routes one computed encrypted payroll amount to the company's treasury vault and employee payout wallet.
+    function _transferPayroll(
+        uint256 companyId,
+        address treasuryVault,
+        address employee,
+        euint128 payout
+    ) private {
+        address payoutWallet = companyRegistry.getPayoutWallet(
+            companyId,
+            employee
+        );
+        if (payoutWallet == address(0)) {
+            revert SalaryCipherCore__InvalidAddress();
+        }
+
+        // The treasury vault executes downstream FHE operations on this computed payout handle.
+        FHE.allow(payout, treasuryVault);
+        ICompanyTreasuryVault(treasuryVault).payrollTransfer(
+            payoutWallet,
+            payout
+        );
     }
 
     /// @dev Refreshes FHE access for one employee salary handle.
@@ -660,16 +585,6 @@ contract SalaryCipherCore is ISalaryCipherCore, ZamaEthereumConfig {
         if (salaryProofAddress != address(0)) {
             FHE.allow(monthlySalary[companyId][employee], salaryProofAddress);
         }
-    }
-
-    /// @dev Refreshes FHE access for one employee pending payout handle.
-    function _grantPendingPayoutAccess(
-        uint256 companyId,
-        address employee
-    ) private {
-        FHE.allowThis(pendingPayout[companyId][employee]);
-        FHE.allow(pendingPayout[companyId][employee], employee);
-        _grantManagerAccess(companyId, pendingPayout[companyId][employee]);
     }
 
     /// @dev Grants one encrypted handle to all current managers in the company.
@@ -708,7 +623,7 @@ contract SalaryCipherCore is ISalaryCipherCore, ZamaEthereumConfig {
         }
     }
 
-    /// @dev Resolves the current owner address from the registry member list.
+    /// @dev Resolves the current owner address from the registry company record.
     function _companyOwner(uint256 companyId) private view returns (address) {
         ICompanyRegistry.Company memory companyInfo = companyRegistry
             .getCompany(companyId);
