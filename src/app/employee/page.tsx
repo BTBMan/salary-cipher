@@ -14,6 +14,15 @@ import {
 } from 'react-icons/md'
 import { AppLayout } from '@/components/layout/app-layout'
 import { Button } from '@/components/ui/button'
+import { Card, CardContent } from '@/components/ui/card'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table'
 import { cn } from '@/utils'
 
 export default function EmployeeDashboardPage() {
@@ -96,48 +105,50 @@ export default function EmployeeDashboardPage() {
           <div className="lg:col-span-6 space-y-5">
             <div className="flex items-center justify-between px-1">
               <h3 className="font-heading text-xl font-bold text-on-surface tracking-tight">My Salary History</h3>
-              <button className="text-[10px] font-black uppercase tracking-widest text-primary hover:underline">Download CSV</button>
+              <Button variant="link" size="sm" className="px-0 text-[10px] font-black uppercase tracking-widest">Download CSV</Button>
             </div>
-            <div className="bg-surface-container-low rounded-xl overflow-hidden border border-white/5 shadow-2xl">
-              <table className="w-full text-left">
-                <thead>
-                  <tr className="bg-surface-container text-[10px] font-black uppercase tracking-[0.2em] text-outline border-b border-white/5">
-                    <th className="px-6 py-5">Execution Time</th>
-                    <th className="px-6 py-5">Encrypted Amount</th>
-                    <th className="px-6 py-5 text-right">Status</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-white/5">
-                  {[
-                    { date: 'May 01, 2024', tx: '0x98f...e1d', amount: '8,450.00' },
-                    { date: 'April 01, 2024', tx: '0x24a...77b', amount: '8,450.00' },
-                    { date: 'March 01, 2024', tx: '0xc12...89a', amount: '7,920.00' },
-                    { date: 'February 01, 2024', tx: '0xb55...21c', amount: '7,920.00' },
-                  ].map(row => (
-                    <tr key={row.tx} className="hover:bg-surface-container transition-colors group cursor-pointer">
-                      <td className="px-6 py-5">
-                        <div className="flex flex-col">
-                          <span className="text-sm font-bold text-on-surface">{row.date}</span>
-                          <span className="text-[10px] text-outline font-mono mt-1 font-bold uppercase tracking-widest">Tx: {row.tx}</span>
-                        </div>
-                      </td>
-                      <td className="px-6 py-5">
-                        <div className="flex items-center gap-2">
-                          <span className="font-mono text-sm blur-xs text-on-surface-variant font-bold">{row.amount}</span>
-                          <span className="text-[10px] font-black text-outline uppercase tracking-tighter">USDC</span>
-                        </div>
-                      </td>
-                      <td className="px-6 py-5 text-right">
-                        <span className="px-2.5 py-1 bg-primary/10 text-primary text-[9px] font-black rounded-sm border border-primary/20 uppercase tracking-widest">Settled</span>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-              <div className="px-6 py-4 bg-surface-container-lowest/20 text-center border-t border-white/5">
-                <button className="text-[10px] font-black uppercase tracking-[0.2em] text-outline hover:text-on-surface transition-colors">View All History</button>
-              </div>
-            </div>
+            <Card className="overflow-hidden rounded-xl border border-white/5 bg-surface-container-low py-0 shadow-2xl">
+              <CardContent className="px-0">
+                <Table className="text-left">
+                  <TableHeader className="bg-surface-container">
+                    <TableRow className="border-white/5 hover:bg-transparent">
+                      <TableHead className="px-6 py-5 text-[10px] font-black uppercase tracking-[0.2em] text-outline">Execution Time</TableHead>
+                      <TableHead className="px-6 py-5 text-[10px] font-black uppercase tracking-[0.2em] text-outline">Encrypted Amount</TableHead>
+                      <TableHead className="px-6 py-5 text-right text-[10px] font-black uppercase tracking-[0.2em] text-outline">Status</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {[
+                      { date: 'May 01, 2024', tx: '0x98f...e1d', amount: '8,450.00' },
+                      { date: 'April 01, 2024', tx: '0x24a...77b', amount: '8,450.00' },
+                      { date: 'March 01, 2024', tx: '0xc12...89a', amount: '7,920.00' },
+                      { date: 'February 01, 2024', tx: '0xb55...21c', amount: '7,920.00' },
+                    ].map(row => (
+                      <TableRow key={row.tx} className="group cursor-pointer border-white/5 hover:bg-surface-container">
+                        <TableCell className="px-6 py-5">
+                          <div className="flex flex-col">
+                            <span className="text-sm font-bold text-on-surface">{row.date}</span>
+                            <span className="text-[10px] text-outline font-mono mt-1 font-bold uppercase tracking-widest">Tx: {row.tx}</span>
+                          </div>
+                        </TableCell>
+                        <TableCell className="px-6 py-5">
+                          <div className="flex items-center gap-2">
+                            <span className="font-mono text-sm blur-xs text-on-surface-variant font-bold">{row.amount}</span>
+                            <span className="text-[10px] font-black text-outline uppercase tracking-tighter">USDC</span>
+                          </div>
+                        </TableCell>
+                        <TableCell className="px-6 py-5 text-right">
+                          <span className="px-2.5 py-1 bg-primary/10 text-primary text-[9px] font-black rounded-sm border border-primary/20 uppercase tracking-widest">Settled</span>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+                <div className="px-6 py-4 bg-surface-container-lowest/20 text-center border-t border-white/5">
+                  <Button variant="ghost" className="text-[10px] font-black uppercase tracking-[0.2em] text-outline hover:text-on-surface">View All History</Button>
+                </div>
+              </CardContent>
+            </Card>
           </div>
 
           {/* Right: Income Proofs (40%) */}
@@ -145,26 +156,27 @@ export default function EmployeeDashboardPage() {
             <h3 className="font-heading font-black uppercase tracking-[0.2em] text-xs text-on-surface opacity-80 px-1">Proof Center</h3>
 
             {/* Proof CTA Card */}
-            <div className="relative bg-surface-container p-6 rounded-xl overflow-hidden group cursor-pointer border border-white/5 shadow-2xl">
-              <div className="absolute inset-0 bg-linear-to-br from-tertiary/10 via-transparent to-primary/10 opacity-0 group-hover:opacity-100 transition-opacity" />
-              <div className="relative z-10">
-                <div className="w-14 h-14 bg-surface-container-highest rounded-xl flex items-center justify-center mb-6 border border-white/10 shadow-inner">
-                  <VerifiedUserIcon className="text-tertiary size-8 fill-current" />
+            <Card className="group relative overflow-hidden rounded-xl border border-white/5 bg-surface-container p-0 shadow-2xl">
+              <CardContent className="relative p-6">
+                <div className="absolute inset-0 bg-linear-to-br from-tertiary/10 via-transparent to-primary/10 opacity-0 group-hover:opacity-100 transition-opacity" />
+                <div className="relative z-10">
+                  <div className="w-14 h-14 bg-surface-container-highest rounded-xl flex items-center justify-center mb-6 border border-white/10 shadow-inner">
+                    <VerifiedUserIcon className="text-tertiary size-8 fill-current" />
+                  </div>
+                  <h3 className="font-heading text-xl font-bold text-on-surface tracking-tight mb-2">RWA Income Proofs</h3>
+                  <p className="text-on-surface-variant text-xs font-medium leading-relaxed mb-8 opacity-80">
+                    Generate zero-knowledge proofs for mortgage or loan applications without revealing your actual salary.
+                  </p>
+                  <Button className="primary-gradient text-on-primary-container text-sm h-10 px-6 rounded-sm shadow-lg shadow-primary/20 hover:shadow-primary/40 transition-all active:scale-95 flex items-center gap-2 border-none">
+                    <AddIcon className="size-4" />
+                    Generate New Proof
+                  </Button>
                 </div>
-                <h3 className="font-heading text-xl font-bold text-on-surface tracking-tight mb-2">RWA Income Proofs</h3>
-                <p className="text-on-surface-variant text-xs font-medium leading-relaxed mb-8 opacity-80">
-                  Generate zero-knowledge proofs for mortgage or loan applications without revealing your actual salary.
-                </p>
-                <Button className="primary-gradient text-on-primary font-heading font-black text-xs h-10 px-6 rounded-lg shadow-lg shadow-primary/20 hover:shadow-primary/40 transition-all active:scale-95 flex items-center gap-2 border-none">
-                  <AddIcon className="size-4" />
-                  Generate New Proof
-                </Button>
-              </div>
-              {/* Massive background icon */}
-              <div className="absolute -right-6 -bottom-6 opacity-[0.03] group-hover:opacity-10 pointer-events-none transform rotate-12 group-hover:scale-110 transition-all duration-700">
-                <VerifiedUserIcon className="size-48 fill-current" />
-              </div>
-            </div>
+                <div className="absolute -right-6 -bottom-6 opacity-[0.03] group-hover:opacity-10 pointer-events-none transform rotate-12 group-hover:scale-110 transition-all duration-700">
+                  <VerifiedUserIcon className="size-48 fill-current" />
+                </div>
+              </CardContent>
+            </Card>
 
             {/* Recent Proofs List */}
             <div className="space-y-4">
@@ -175,20 +187,22 @@ export default function EmployeeDashboardPage() {
                   { icon: DirectionsCarIcon, title: 'Auto Loan Check', sub: 'Used: Chase Auto', color: 'text-tertiary' },
                   { icon: DescriptionIcon, title: 'Generic Income Level', sub: 'Tier: Platinum (+5k/mo)', color: 'text-emerald-400' },
                 ].map(p => (
-                  <div key={p.title} className="bg-surface-container-low p-4 rounded-xl flex items-center justify-between group hover:bg-surface-container-high transition-all cursor-pointer border border-transparent hover:border-white/5 shadow-lg">
-                    <div className="flex items-center gap-4">
-                      <div className="w-10 h-10 rounded-lg bg-surface-container flex items-center justify-center border border-white/5 group-hover:border-white/10 transition-colors">
-                        <p.icon className={cn('size-5', p.color)} />
+                  <Card key={p.title} className="rounded-xl border border-transparent bg-surface-container-low p-0 shadow-lg transition-all hover:border-white/5 hover:bg-surface-container-high">
+                    <CardContent className="flex items-center justify-between p-4">
+                      <div className="flex items-center gap-4">
+                        <div className="w-10 h-10 rounded-lg bg-surface-container flex items-center justify-center border border-white/5 transition-colors">
+                          <p.icon className={cn('size-5', p.color)} />
+                        </div>
+                        <div>
+                          <p className="text-sm font-bold text-on-surface leading-none">{p.title}</p>
+                          <p className="text-[10px] text-outline font-bold mt-1.5 uppercase tracking-widest">{p.sub}</p>
+                        </div>
                       </div>
-                      <div>
-                        <p className="text-sm font-bold text-on-surface leading-none">{p.title}</p>
-                        <p className="text-[10px] text-outline font-bold mt-1.5 uppercase tracking-widest">{p.sub}</p>
-                      </div>
-                    </div>
-                    <button className="p-2 text-outline group-hover:text-primary transition-colors">
-                      <VisibilityIcon className="size-4" />
-                    </button>
-                  </div>
+                      <Button variant="ghost" size="icon-sm" className="text-outline hover:text-primary">
+                        <VisibilityIcon className="size-4" />
+                      </Button>
+                    </CardContent>
+                  </Card>
                 ))}
               </div>
             </div>

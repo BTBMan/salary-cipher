@@ -52,7 +52,7 @@ export function WalletConnection() {
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger
         render={(
-          <Button className="primary-gradient border-none font-bold gap-2 h-10 px-6 rounded-sm shadow-lg shadow-primary/20 hover:opacity-90 active:scale-95 transition-all">
+          <Button className="primary-gradient border-none text-on-primary-container gap-2 h-10 px-6 rounded-sm shadow-lg shadow-primary/20 hover:opacity-90 active:scale-95 transition-all">
             <HubIcon className="size-4" />
             <span>Connect Vault</span>
           </Button>

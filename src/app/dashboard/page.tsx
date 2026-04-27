@@ -9,6 +9,15 @@ import {
 } from 'react-icons/md'
 import { AppLayout } from '@/components/layout/app-layout'
 import { Button } from '@/components/ui/button'
+import { Card, CardContent } from '@/components/ui/card'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table'
 
 export default function DashboardPage() {
   return (
@@ -76,110 +85,116 @@ export default function DashboardPage() {
               </Button>
             </div>
 
-            <div className="bg-surface-container-low rounded-xl overflow-hidden border border-white/5 shadow-2xl">
-              <table className="w-full text-left border-collapse">
-                <thead>
-                  <tr className="bg-surface-container/50">
-                    <th className="px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em] text-outline">Execution Time</th>
-                    <th className="px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em] text-outline">Batch Amount</th>
-                    <th className="px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em] text-outline text-right">Status</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-white/5">
-                  {[
-                    { date: 'Oct 12, 2023', block: 'Block #18,421,092', amount: '42,850.21' },
-                    { date: 'Sep 28, 2023', block: 'Block #18,310,441', amount: '39,120.00' },
-                    { date: 'Sep 14, 2023', block: 'Block #18,201,889', amount: '41,050.00' },
-                    { date: 'Aug 30, 2023', block: 'Block #18,102,154', amount: '38,900.00' },
-                  ].map(row => (
-                    <tr key={row.block} className="hover:bg-surface-container transition-colors group cursor-pointer">
-                      <td className="px-6 py-5">
-                        <div className="flex flex-col">
-                          <span className="text-on-surface text-sm font-bold">{row.date}</span>
-                          <span className="text-outline text-[10px] font-mono mt-1">{row.block}</span>
-                        </div>
-                      </td>
-                      <td className="px-6 py-5">
-                        <div className="flex items-center gap-2">
-                          <LockIcon className="text-tertiary size-3.5 fill-current" />
-                          <span className="font-mono text-sm blur-xs text-on-surface-variant font-bold">{row.amount}</span>
-                          <span className="text-[10px] font-black text-outline uppercase tracking-tighter">USDC</span>
-                        </div>
-                      </td>
-                      <td className="px-6 py-5 text-right">
-                        <span className="px-2 py-1 bg-primary/10 text-primary text-[9px] font-black rounded-sm border border-primary/20 uppercase tracking-widest">
-                          On-Chain Settled
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            <Card className="overflow-hidden rounded-xl border border-white/5 bg-surface-container-low py-0 shadow-2xl">
+              <CardContent className="px-0">
+                <Table className="text-left border-collapse">
+                  <TableHeader className="bg-surface-container/50">
+                    <TableRow className="border-white/5 hover:bg-transparent">
+                      <TableHead className="px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em] text-outline">Execution Time</TableHead>
+                      <TableHead className="px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em] text-outline">Batch Amount</TableHead>
+                      <TableHead className="px-6 py-4 text-right text-[10px] font-black uppercase tracking-[0.2em] text-outline">Status</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {[
+                      { date: 'Oct 12, 2023', block: 'Block #18,421,092', amount: '42,850.21' },
+                      { date: 'Sep 28, 2023', block: 'Block #18,310,441', amount: '39,120.00' },
+                      { date: 'Sep 14, 2023', block: 'Block #18,201,889', amount: '41,050.00' },
+                      { date: 'Aug 30, 2023', block: 'Block #18,102,154', amount: '38,900.00' },
+                    ].map(row => (
+                      <TableRow key={row.block} className="group cursor-pointer border-white/5 hover:bg-surface-container">
+                        <TableCell className="px-6 py-5">
+                          <div className="flex flex-col">
+                            <span className="text-on-surface text-sm font-bold">{row.date}</span>
+                            <span className="text-outline text-[10px] font-mono mt-1">{row.block}</span>
+                          </div>
+                        </TableCell>
+                        <TableCell className="px-6 py-5">
+                          <div className="flex items-center gap-2">
+                            <LockIcon className="text-tertiary size-3.5 fill-current" />
+                            <span className="font-mono text-sm blur-xs text-on-surface-variant font-bold">{row.amount}</span>
+                            <span className="text-[10px] font-black text-outline uppercase tracking-tighter">USDC</span>
+                          </div>
+                        </TableCell>
+                        <TableCell className="px-6 py-5 text-right">
+                          <span className="px-2 py-1 bg-primary/10 text-primary text-[9px] font-black rounded-sm border border-primary/20 uppercase tracking-widest">
+                            On-Chain Settled
+                          </span>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
           </div>
 
           {/* Right Column (40%) */}
           <div className="lg:col-span-4 space-y-6">
 
             {/* Fund Pool Health */}
-            <div className="bg-surface-container p-6 rounded-xl border border-white/5 shadow-2xl space-y-8">
-              <h3 className="font-heading font-black uppercase tracking-[0.2em] text-xs text-on-surface opacity-80">Fund Pool Health</h3>
+            <Card className="rounded-xl border border-white/5 bg-surface-container p-0 shadow-2xl">
+              <CardContent className="space-y-8 p-6">
+                <h3 className="font-heading font-black uppercase tracking-[0.2em] text-xs text-on-surface opacity-80">Fund Pool Health</h3>
 
-              <div className="space-y-6">
-                <div>
-                  <div className="flex justify-between items-baseline mb-3">
-                    <span className="text-[10px] text-outline font-black uppercase tracking-[0.15em]">Encrypted Balance</span>
-                    <span className="text-[9px] bg-tertiary/10 text-tertiary px-2 py-0.5 rounded-sm font-black uppercase tracking-widest border border-tertiary/20">FHE Secured</span>
+                <div className="space-y-6">
+                  <div>
+                    <div className="flex justify-between items-baseline mb-3">
+                      <span className="text-[10px] text-outline font-black uppercase tracking-[0.15em]">Encrypted Balance</span>
+                      <span className="text-[9px] bg-tertiary/10 text-tertiary px-2 py-0.5 rounded-sm font-black uppercase tracking-widest border border-tertiary/20">FHE Secured</span>
+                    </div>
+                    <div className="flex items-center gap-4">
+                      <div className="w-12 h-12 rounded-xl bg-surface-container-highest flex items-center justify-center border border-white/10 shadow-inner">
+                        <VerifiedUserIcon className="text-tertiary size-6 fill-current" />
+                      </div>
+                      <div>
+                        <p className="text-2xl font-mono text-on-surface leading-none blur-md font-bold">1,240,500.00</p>
+                        <p className="text-[10px] text-outline mt-1.5 font-bold uppercase tracking-wider">~ 1.8 months coverage</p>
+                      </div>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-xl bg-surface-container-highest flex items-center justify-center border border-white/10 shadow-inner">
-                      <VerifiedUserIcon className="text-tertiary size-6 fill-current" />
+
+                  <div className="space-y-3">
+                    <div className="flex justify-between text-[10px] font-black uppercase tracking-widest">
+                      <span className="text-on-surface">Pool Utilization</span>
+                      <span className="text-destructive">82%</span>
                     </div>
-                    <div>
-                      <p className="text-2xl font-mono text-on-surface leading-none blur-md font-bold">1,240,500.00</p>
-                      <p className="text-[10px] text-outline mt-1.5 font-bold uppercase tracking-wider">~ 1.8 months coverage</p>
+                    <div className="h-3 bg-surface-container-lowest rounded-full overflow-hidden border border-white/5 shadow-inner">
+                      <div className="bg-linear-to-r from-primary to-destructive h-full w-[82%] rounded-full" />
                     </div>
+                    <p className="text-[9px] text-outline italic text-right font-medium">Liquidity alert: Top-up recommended within 14 days.</p>
                   </div>
                 </div>
-
-                <div className="space-y-3">
-                  <div className="flex justify-between text-[10px] font-black uppercase tracking-widest">
-                    <span className="text-on-surface">Pool Utilization</span>
-                    <span className="text-destructive">82%</span>
-                  </div>
-                  <div className="h-3 bg-surface-container-lowest rounded-full overflow-hidden border border-white/5 shadow-inner">
-                    <div className="bg-linear-to-r from-primary to-destructive h-full w-[82%] rounded-full" />
-                  </div>
-                  <p className="text-[9px] text-outline italic text-right font-medium">Liquidity alert: Top-up recommended within 14 days.</p>
-                </div>
-              </div>
-            </div>
+              </CardContent>
+            </Card>
 
             {/* Priority Actions */}
-            <div className="bg-surface-container-low p-6 rounded-xl border border-white/5 space-y-5">
-              <h3 className="font-heading font-black uppercase tracking-[0.2em] text-xs text-on-surface opacity-80">Priority Actions</h3>
+            <Card className="rounded-xl border border-white/5 bg-surface-container-low p-0">
+              <CardContent className="space-y-5 p-6">
+                <h3 className="font-heading font-black uppercase tracking-[0.2em] text-xs text-on-surface opacity-80">Priority Actions</h3>
 
-              <div className="space-y-3">
-                <div className="p-4 bg-destructive/5 border border-destructive/10 rounded-lg flex items-start gap-4 hover:bg-destructive/10 transition-colors cursor-pointer">
-                  <WarningIcon className="text-destructive size-5 shrink-0 mt-0.5" />
-                  <div>
-                    <p className="text-sm font-bold text-destructive leading-none">Low funds warning</p>
-                    <p className="text-[10px] text-destructive/70 mt-2 font-medium leading-normal uppercase tracking-wider">Gas vault below 0.5 ETH threshold.</p>
+                <div className="space-y-3">
+                  <div className="p-4 bg-destructive/5 border border-destructive/10 rounded-lg flex items-start gap-4 hover:bg-destructive/10 transition-colors cursor-pointer">
+                    <WarningIcon className="text-destructive size-5 shrink-0 mt-0.5" />
+                    <div>
+                      <p className="text-sm font-bold text-destructive leading-none">Low funds warning</p>
+                      <p className="text-[10px] text-destructive/70 mt-2 font-medium leading-normal uppercase tracking-wider">Gas vault below 0.5 ETH threshold.</p>
+                    </div>
+                  </div>
+
+                  <div className="p-4 bg-surface-container-highest/30 border border-white/5 rounded-lg flex items-start gap-4 hover:bg-surface-container-highest/50 transition-colors cursor-pointer group">
+                    <PendingActionsIcon className="text-tertiary size-5 shrink-0 mt-0.5" />
+                    <div>
+                      <p className="text-sm font-bold text-on-surface leading-none">Pending Negotiation</p>
+                      <p className="text-[10px] text-on-surface-variant mt-2 font-medium leading-normal uppercase tracking-wider">3 employee salary adjustments waiting for approval.</p>
+                      <Button variant="link" size="sm" className="mt-3 h-auto px-0 text-[10px] font-black uppercase tracking-widest">
+                        Review Proposals <ArrowForwardIcon className="size-3 ml-1.5" />
+                      </Button>
+                    </div>
                   </div>
                 </div>
-
-                <div className="p-4 bg-surface-container-highest/30 border border-white/5 rounded-lg flex items-start gap-4 hover:bg-surface-container-highest/50 transition-colors cursor-pointer group">
-                  <PendingActionsIcon className="text-tertiary size-5 shrink-0 mt-0.5" />
-                  <div>
-                    <p className="text-sm font-bold text-on-surface leading-none">Pending Negotiation</p>
-                    <p className="text-[10px] text-on-surface-variant mt-2 font-medium leading-normal uppercase tracking-wider">3 employee salary adjustments waiting for approval.</p>
-                    <button className="mt-3 text-[10px] text-primary font-black uppercase tracking-widest flex items-center group-hover:underline">
-                      Review Proposals <ArrowForwardIcon className="size-3 ml-1.5" />
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
+              </CardContent>
+            </Card>
           </div>
         </div>
       </div>

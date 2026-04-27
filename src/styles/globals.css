@@ -64,6 +64,7 @@
   --color-sidebar: var(--sidebar);
   --color-sidebar-foreground: var(--sidebar-foreground);
   --color-sidebar-border: var(--sidebar-border);
+  --color-brand: var(--brand);
 
   /* Encrypted Identifier */
   --color-encrypted: #8b5cf6;
@@ -134,8 +135,9 @@
   --sidebar-border: #c7c4d7;
 
   --font-sans: 'Inter', system-ui, sans-serif;
-  --font-heading: 'Inter', system-ui, sans-serif;
+  --font-heading: 'Manrope', system-ui, sans-serif;
   --font-mono: 'JetBrains Mono', monospace;
+  --brand: #6366f1;
 }
 
 .dark {
@@ -195,6 +197,7 @@
   --sidebar: #0b1326;
   --sidebar-foreground: #dae2fd;
   --sidebar-border: #464554;
+  --brand: #6366f1;
 
   --font-heading: 'Manrope', system-ui, sans-serif;
 }
@@ -206,6 +209,14 @@
   body {
     @apply bg-background text-foreground font-sans antialiased;
   }
+  [data-slot='button'] {
+    @apply font-heading font-bold;
+  }
+  input,
+  select,
+  textarea {
+    @apply font-sans;
+  }
   button:not(:disabled),
   [role='button']:not(:disabled) {
     cursor: pointer;
@@ -213,11 +224,34 @@
 }
 
 @layer utilities {
+  .font-black {
+    font-weight: 700;
+  }
+  .rounded,
+  .rounded-sm {
+    border-radius: 0.125rem;
+  }
+  .rounded-md,
+  .rounded-lg {
+    border-radius: 0.25rem;
+  }
+  .rounded-xl,
+  .rounded-2xl {
+    border-radius: 0.5rem;
+  }
+  .rounded-3xl,
+  .rounded-4xl,
+  .rounded-full {
+    border-radius: 0.75rem;
+  }
   .encrypted-shadow {
     box-shadow: 0 0 15px -3px rgba(139, 92, 246, 0.3);
   }
   .glass-panel {
     @apply bg-surface-container/60 backdrop-blur-md;
+  }
+  .brand-text {
+    color: var(--brand);
   }
   .primary-gradient {
     background-image: linear-gradient(135deg, var(--primary-container) 0%, var(--primary) 100%);

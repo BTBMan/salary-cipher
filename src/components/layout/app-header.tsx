@@ -19,14 +19,14 @@ export function AppHeader() {
         <SidebarTrigger className="md:hidden" />
 
         {/* Workspace Switcher */}
-        <div className="flex items-center gap-2 px-3 py-1.5 bg-surface-container rounded-sm border border-white/10 cursor-pointer hover:bg-surface-container-high transition-colors group">
+        <div className="flex items-center gap-2 px-3 py-1.5 bg-surface-container rounded-sm border border-outline-variant/15 cursor-pointer hover:bg-surface-container-high transition-colors group">
           <img
             alt="Aura Labs Logo"
             className="size-5 rounded-sm"
             src="https://lh3.googleusercontent.com/aida-public/AB6AXuB8KLSlceWhY_x3ZA6wrO76jymBblR__ShMy_QX1iCKVAt0p9Vn6e5351MzbjTu_4KuKfGSx6mTXadJat_d6TTHkcovKTDb9wxA4TI1d_8KcAgGLMlPcegxiu-XH3vBKT9ADRy1uTmTpwfjYCOUSjd4TuZKZWTNmXUfiD062c4tHIp3gnPpTQvUAFDo75KG6NNoBk8gbfxRALqUFtEw0dd5AGZICn0ShL23ynJjkk3-E_SZP-znIXsedz2K1M6WOu5NI66gSiBG68Y"
           />
           <span className="text-on-surface font-heading font-semibold text-sm">Aura Labs</span>
-          <Badge className="bg-tertiary-container/20 text-tertiary text-[10px] font-bold rounded-sm uppercase tracking-tighter border-none px-1.5 py-0.5">
+          <Badge className="bg-tertiary-container/20 text-tertiary text-[10px] font-bold rounded-sm uppercase tracking-tight border-none px-1.5 py-0.5">
             Owner
           </Badge>
           <UnfoldMoreIcon className="text-outline text-lg group-hover:text-foreground transition-colors" />
@@ -53,10 +53,10 @@ export function AppHeader() {
           </Avatar>
         </div>
 
-        <button className="p-2 text-slate-400 hover:text-foreground hover:bg-surface-container transition-all rounded-lg">
+        <button className="p-2 text-slate-400 hover:text-foreground hover:bg-surface-container transition-all rounded-sm">
           <AccountBalanceWalletIcon className="size-5" />
         </button>
-        <button className="p-2 text-slate-400 hover:text-foreground hover:bg-surface-container transition-all rounded-lg">
+        <button className="p-2 text-slate-400 hover:text-foreground hover:bg-surface-container transition-all rounded-sm">
           <HubIcon className="size-5" />
         </button>
       </div>

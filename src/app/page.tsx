@@ -33,7 +33,7 @@ export default function LandingPage() {
           <Link className="text-sm text-slate-400 hover:text-slate-300 transition-colors" href="#">Docs</Link>
         </div>
         <div className="flex items-center gap-4">
-          <Button size="sm" className="px-5 py-2 text-sm font-semibold rounded-sm primary-gradient text-on-primary-fixed hover:opacity-90 transition-all active:scale-95 border-none">
+          <Button size="sm" className="px-5 py-2 text-sm rounded-sm primary-gradient text-on-primary-container hover:opacity-90 transition-all active:scale-95 border-none">
             Connect Wallet
           </Button>
         </div>
@@ -67,7 +67,7 @@ export default function LandingPage() {
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
             <Button
               size="lg"
-              className="w-full sm:w-auto px-8 py-7 text-base font-semibold rounded-sm primary-gradient text-on-primary-fixed shadow-lg shadow-primary/20 hover:opacity-90 transition-all border-none"
+              className="w-full sm:w-auto px-8 py-7 text-base rounded-sm primary-gradient text-on-primary-container shadow-lg shadow-primary/20 hover:opacity-90 transition-all border-none"
               nativeButton={false}
               render={<Link href="/dashboard">Launch App</Link>}
             >

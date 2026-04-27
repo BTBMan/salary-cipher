@@ -13,6 +13,15 @@ import {
 } from 'react-icons/md'
 import { AppLayout } from '@/components/layout/app-layout'
 import { Button } from '@/components/ui/button'
+import { Card, CardContent } from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { cn } from '@/utils'
 
 export default function CompliancePage() {
@@ -35,57 +44,63 @@ export default function CompliancePage() {
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* Action Card */}
-            <div className="bg-surface-container-low rounded-xl p-8 flex flex-col justify-between min-h-[260px] border border-white/5 shadow-2xl">
-              <div>
-                <h3 className="font-heading text-xl font-bold text-on-surface mb-3">Equity Analysis</h3>
-                <p className="text-on-surface-variant text-sm font-medium leading-relaxed opacity-80">
-                  Run a zero-knowledge aggregate report to verify median salary ranges across departments without exposing individual PII.
-                </p>
-              </div>
-              <Button className="vault-gradient text-on-primary font-heading font-black text-xs h-14 rounded-lg shadow-xl shadow-primary/20 hover:opacity-90 active:scale-95 transition-all border-none flex items-center justify-center gap-3">
-                <AnalyticsIcon className="size-5" />
-                GENERATE REPORT
-              </Button>
-            </div>
+            <Card className="min-h-[260px] rounded-xl border border-white/5 bg-surface-container-low p-0 shadow-2xl">
+              <CardContent className="flex h-full flex-col justify-between p-8">
+                <div>
+                  <h3 className="font-heading text-xl font-bold text-on-surface mb-3">Equity Analysis</h3>
+                  <p className="text-on-surface-variant text-sm font-medium leading-relaxed opacity-80">
+                    Run a zero-knowledge aggregate report to verify median salary ranges across departments without exposing individual PII.
+                  </p>
+                </div>
+                <Button className="vault-gradient text-on-primary-container text-sm h-12 rounded-sm shadow-xl shadow-primary/20 hover:opacity-90 active:scale-95 transition-all border-none flex items-center justify-center gap-3">
+                  <AnalyticsIcon className="size-5" />
+                  Generate Report
+                </Button>
+              </CardContent>
+            </Card>
 
             {/* Processing Card */}
-            <div className="bg-surface-container rounded-xl p-8 flex flex-col items-center justify-center text-center space-y-6 border border-primary/10 shadow-2xl relative overflow-hidden">
-              <div className="relative w-20 h-20">
-                <div className="absolute inset-0 rounded-full border-4 border-primary/5" />
-                <div className="absolute inset-0 rounded-full border-t-4 border-primary animate-spin shadow-[0_0_15px_#c0c1ff]" />
-              </div>
-              <div className="space-y-2 relative z-10">
-                <p className="font-heading font-black text-primary uppercase tracking-widest text-sm">Computing on encrypted data...</p>
-                <p className="text-[10px] text-on-surface-variant font-mono font-bold opacity-60">NODE_HASH: a7f8...e221</p>
-              </div>
-              <div className="absolute inset-0 bg-primary/5 animate-pulse pointer-events-none" />
-            </div>
+            <Card className="relative overflow-hidden rounded-xl border border-primary/10 bg-surface-container p-0 shadow-2xl">
+              <CardContent className="flex flex-col items-center justify-center space-y-6 p-8 text-center">
+                <div className="relative w-20 h-20">
+                  <div className="absolute inset-0 rounded-full border-4 border-primary/5" />
+                  <div className="absolute inset-0 rounded-full border-t-4 border-primary animate-spin shadow-[0_0_15px_#c0c1ff]" />
+                </div>
+                <div className="space-y-2 relative z-10">
+                  <p className="font-heading font-black text-primary uppercase tracking-widest text-sm">Computing on encrypted data...</p>
+                  <p className="text-[10px] text-on-surface-variant font-mono font-bold opacity-60">NODE_HASH: a7f8...e221</p>
+                </div>
+                <div className="absolute inset-0 bg-primary/5 animate-pulse pointer-events-none" />
+              </CardContent>
+            </Card>
 
             {/* Results Card */}
-            <div className="bg-surface-container-highest rounded-xl p-8 flex flex-col gap-8 border border-white/5 shadow-2xl">
-              <div className="flex items-center justify-between">
-                <span className="text-[10px] font-black text-on-surface-variant uppercase tracking-widest">Aggregate Status</span>
-                <span className="px-3 py-1 rounded-full bg-primary/10 text-primary text-[9px] font-black uppercase tracking-widest border border-primary/20">Verified</span>
-              </div>
-              <div className="space-y-6">
-                <div className="space-y-2">
-                  <label className="text-[10px] font-black text-outline uppercase tracking-widest">Engineering Median</label>
-                  <div className="h-12 bg-surface-container-lowest rounded-lg flex items-center px-4 overflow-hidden relative border border-white/5">
-                    <div className="text-on-surface font-heading font-black text-sm relative z-10">Tier 4 Range</div>
-                    <div className="absolute inset-0 bg-linear-to-r from-transparent via-white/5 to-transparent -translate-x-full animate-[shimmer_2s_infinite] opacity-30" />
-                    <div className="ml-auto text-[10px] text-on-surface-variant font-black uppercase tracking-tighter opacity-40 relative z-10">(Confidential)</div>
+            <Card className="rounded-xl border border-white/5 bg-surface-container-highest p-0 shadow-2xl">
+              <CardContent className="flex flex-col gap-8 p-8">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-black text-on-surface-variant uppercase tracking-widest">Aggregate Status</span>
+                  <span className="px-3 py-1 rounded-full bg-primary/10 text-primary text-[9px] font-black uppercase tracking-widest border border-primary/20">Verified</span>
+                </div>
+                <div className="space-y-6">
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black text-outline uppercase tracking-widest">Engineering Median</label>
+                    <div className="h-12 bg-surface-container-lowest rounded-lg flex items-center px-4 overflow-hidden relative border border-white/5">
+                      <div className="text-on-surface font-heading font-black text-sm relative z-10">Tier 4 Range</div>
+                      <div className="absolute inset-0 bg-linear-to-r from-transparent via-white/5 to-transparent -translate-x-full animate-[shimmer_2s_infinite] opacity-30" />
+                      <div className="ml-auto text-[10px] text-on-surface-variant font-black uppercase tracking-tighter opacity-40 relative z-10">(Confidential)</div>
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black text-outline uppercase tracking-widest">Product Median</label>
+                    <div className="h-12 bg-surface-container-lowest rounded-lg flex items-center px-4 overflow-hidden relative border border-white/5">
+                      <div className="text-on-surface font-heading font-black text-sm relative z-10">Tier 3 Range</div>
+                      <div className="absolute inset-0 bg-linear-to-r from-transparent via-white/5 to-transparent -translate-x-full animate-[shimmer_2s_infinite] opacity-30" />
+                      <div className="ml-auto text-[10px] text-on-surface-variant font-black uppercase tracking-tighter opacity-40 relative z-10">(Confidential)</div>
+                    </div>
                   </div>
                 </div>
-                <div className="space-y-2">
-                  <label className="text-[10px] font-black text-outline uppercase tracking-widest">Product Median</label>
-                  <div className="h-12 bg-surface-container-lowest rounded-lg flex items-center px-4 overflow-hidden relative border border-white/5">
-                    <div className="text-on-surface font-heading font-black text-sm relative z-10">Tier 3 Range</div>
-                    <div className="absolute inset-0 bg-linear-to-r from-transparent via-white/5 to-transparent -translate-x-full animate-[shimmer_2s_infinite] opacity-30" />
-                    <div className="ml-auto text-[10px] text-on-surface-variant font-black uppercase tracking-tighter opacity-40 relative z-10">(Confidential)</div>
-                  </div>
-                </div>
-              </div>
-            </div>
+              </CardContent>
+            </Card>
           </div>
         </section>
 
@@ -100,48 +115,58 @@ export default function CompliancePage() {
 
           <div className="grid grid-cols-1 xl:grid-cols-10 gap-8">
             {/* Generation Form (4/10) */}
-            <div className="xl:col-span-4 bg-surface-container-low rounded-xl p-8 space-y-8 border border-white/5 shadow-2xl">
-              <div className="flex items-center gap-4">
-                <div className="w-12 h-12 rounded-xl bg-secondary-container flex items-center justify-center border border-white/10 shadow-inner">
-                  <VerifiedUserIcon className="text-on-secondary-container size-7 fill-current" />
-                </div>
-                <h3 className="font-heading text-xl font-bold text-on-surface">Generate Proof</h3>
-              </div>
-
-              <div className="space-y-6">
-                <div className="space-y-2">
-                  <label className="text-[10px] font-black uppercase tracking-[0.2em] text-on-surface-variant">Proof Type</label>
-                  <div className="relative">
-                    <select className="w-full bg-surface-container-lowest border-none rounded-lg text-on-surface text-sm font-bold py-4 px-5 appearance-none focus:ring-1 focus:ring-tertiary outline-none shadow-inner">
-                      <option>Monthly Salary ≥ 5,000 USDC</option>
-                      <option>Monthly Salary ≥ 10,000 USDC</option>
-                      <option>Employment Duration ≥ 1 Year</option>
-                      <option>Annual Total Compensation Proof</option>
-                    </select>
+            <Card className="xl:col-span-4 rounded-xl border border-white/5 bg-surface-container-low p-0 shadow-2xl">
+              <CardContent className="space-y-8 p-8">
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 rounded-xl bg-secondary-container flex items-center justify-center border border-white/10 shadow-inner">
+                    <VerifiedUserIcon className="text-on-secondary-container size-7 fill-current" />
                   </div>
+                  <h3 className="font-heading text-xl font-bold text-on-surface">Generate Proof</h3>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-6">
                   <div className="space-y-2">
-                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-on-surface-variant">Threshold</label>
-                    <input className="w-full bg-surface-container-lowest border-none rounded-lg text-on-surface font-mono font-bold py-4 px-5 focus:ring-1 focus:ring-tertiary outline-none shadow-inner" type="text" defaultValue="5,000" />
+                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-on-surface-variant">Proof Type</label>
+                    <Select defaultValue="salary-5k">
+                      <SelectTrigger className="h-12 rounded-lg border-none bg-surface-container-lowest px-5 font-bold shadow-inner">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="salary-5k">Monthly Salary ≥ 5,000 USDC</SelectItem>
+                        <SelectItem value="salary-10k">Monthly Salary ≥ 10,000 USDC</SelectItem>
+                        <SelectItem value="employment-1y">Employment Duration ≥ 1 Year</SelectItem>
+                        <SelectItem value="annual-total">Annual Total Compensation Proof</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-on-surface-variant">Validity</label>
-                    <select className="w-full bg-surface-container-lowest border-none rounded-lg text-on-surface text-sm font-bold py-4 px-5 appearance-none focus:ring-1 focus:ring-tertiary outline-none shadow-inner">
-                      <option>30 Days</option>
-                      <option>90 Days</option>
-                      <option>Indefinite</option>
-                    </select>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black uppercase tracking-[0.2em] text-on-surface-variant">Threshold</label>
+                      <Input className="h-12 rounded-lg border-none bg-surface-container-lowest px-5 font-mono font-bold shadow-inner focus-visible:ring-tertiary/30" type="text" defaultValue="5,000" />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black uppercase tracking-[0.2em] text-on-surface-variant">Validity</label>
+                      <Select defaultValue="30">
+                        <SelectTrigger className="h-12 rounded-lg border-none bg-surface-container-lowest px-5 font-bold shadow-inner">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="30">30 Days</SelectItem>
+                          <SelectItem value="90">90 Days</SelectItem>
+                          <SelectItem value="indefinite">Indefinite</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
                   </div>
                 </div>
-              </div>
 
-              <Button className="w-full bg-surface-container-highest border border-white/10 text-on-surface font-heading font-black text-xs tracking-widest h-14 rounded-lg hover:bg-surface-bright transition-all flex items-center justify-center gap-3">
-                <KeyIcon className="size-5" />
-                SIGN & MINT PROOF
-              </Button>
-            </div>
+                <Button className="w-full bg-surface-container-highest border border-white/10 text-on-surface text-sm h-12 rounded-sm hover:bg-surface-bright transition-all flex items-center justify-center gap-3">
+                  <KeyIcon className="size-5" />
+                  Sign & Mint Proof
+                </Button>
+              </CardContent>
+            </Card>
 
             {/* Recent Proofs List (6/10) */}
             <div className="xl:col-span-6 space-y-5">
@@ -172,14 +197,17 @@ export default function CompliancePage() {
                         <span>{p.isExpired ? p.expires : `Expires: ${p.expires}`}</span>
                       </div>
                     </div>
-                    <button className={cn(
-                      'flex items-center gap-2 bg-surface-container-lowest hover:bg-surface-container-highest px-5 py-2.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all border border-white/5',
-                      p.isExpired && 'opacity-50 cursor-not-allowed pointer-events-none',
-                    )}
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className={cn(
+                        'flex items-center gap-2 rounded-lg px-5 text-[10px] font-black uppercase tracking-widest',
+                        p.isExpired && 'opacity-50 cursor-not-allowed pointer-events-none',
+                      )}
                     >
                       {p.isExpired ? <LockIcon className="size-3.5 fill-current" /> : <ContentCopyIcon className="size-3.5" />}
                       {p.isExpired ? 'Expired' : 'Copy Link'}
-                    </button>
+                    </Button>
                   </div>
                 ))}
               </div>

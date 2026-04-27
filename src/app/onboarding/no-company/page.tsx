@@ -85,11 +85,11 @@ export default function NoCompanyPage() {
             </div>
 
             <div className="space-y-3">
-              <Button className="w-full primary-gradient text-on-primary-fixed h-14 rounded-lg font-heading font-extrabold text-sm tracking-wide shadow-lg hover:brightness-110 active:scale-[0.98] transition-all flex items-center justify-center gap-2 group border-none">
+              <Button className="w-full primary-gradient text-on-primary-container h-12 rounded-sm text-sm shadow-lg hover:brightness-110 active:scale-[0.98] transition-all flex items-center justify-center gap-2 group border-none">
                 INITIALIZE SOVEREIGN VAULT
                 <ArrowForwardIcon className="size-4 group-hover:translate-x-1 transition-transform" />
               </Button>
-              <Button variant="ghost" className="w-full h-12 text-xs font-bold text-on-surface-variant hover:text-on-surface transition-colors uppercase tracking-widest flex items-center justify-center gap-2">
+              <Button variant="ghost" className="w-full h-12 text-sm text-on-surface-variant hover:text-on-surface transition-colors flex items-center justify-center gap-2">
                 <HelpIcon className="size-4" />
                 Need Assistance?
               </Button>
