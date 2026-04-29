@@ -2,14 +2,15 @@
 pragma solidity ^0.8.27;
 
 /* Imports *******/
-import {FHE, euint128} from "@fhevm/solidity/lib/FHE.sol";
+import {FHE, euint64} from "@fhevm/solidity/lib/FHE.sol";
 import {ZamaEthereumConfig} from "@fhevm/solidity/config/ZamaConfig.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import {IERC7984ERC20Wrapper} from "@openzeppelin/confidential-contracts/interfaces/IERC7984ERC20Wrapper.sol";
 
 /* Interfaces ****/
 import {ICompanyRegistry} from "./interfaces/ICompanyRegistry.sol";
 import {ICompanyTreasuryVault} from "./interfaces/ICompanyTreasuryVault.sol";
-import {IConfidentialERC20Wrapper} from "./interfaces/IConfidentialERC20Wrapper.sol";
-import {IERC20Minimal} from "./interfaces/IERC20Minimal.sol";
 
 /**
  * @title CompanyTreasuryVault
@@ -18,19 +19,18 @@ import {IERC20Minimal} from "./interfaces/IERC20Minimal.sol";
  * @dev Public ERC20 funds are deposited here, optionally wrapped into a confidential token, then transferred out for payroll.
  */
 contract CompanyTreasuryVault is ICompanyTreasuryVault, ZamaEthereumConfig {
+    using SafeERC20 for IERC20;
+
     // Immutable company namespace served by this vault.
     uint256 public immutable companyId;
     // Registry used to resolve company owner and HR access.
     ICompanyRegistry public immutable companyRegistry;
     // Public ERC20 used as the funding asset before wrapping.
-    IERC20Minimal public immutable underlyingToken;
+    IERC20 public immutable underlyingToken;
     // Confidential wrapper / settlement token used for payroll transfers.
-    IConfidentialERC20Wrapper public immutable settlementToken;
+    IERC7984ERC20Wrapper public immutable settlementToken;
     // The singleton payroll core allowed to move confidential funds out of the vault.
     address public immutable salaryCipherCore;
-
-    // Encrypted bookkeeping balance representing wrapped payroll funds available for future transfers.
-    euint128 public confidentialBalance;
 
     /// @notice Restricts execution to the company owner.
     modifier onlyOwner() {
@@ -74,8 +74,8 @@ contract CompanyTreasuryVault is ICompanyTreasuryVault, ZamaEthereumConfig {
 
         companyId = companyId_;
         companyRegistry = ICompanyRegistry(companyRegistryAddress);
-        underlyingToken = IERC20Minimal(underlyingTokenAddress);
-        settlementToken = IConfidentialERC20Wrapper(settlementTokenAddress);
+        underlyingToken = IERC20(underlyingTokenAddress);
+        settlementToken = IERC7984ERC20Wrapper(settlementTokenAddress);
         salaryCipherCore = salaryCipherCoreAddress;
     }
 
@@ -84,11 +84,7 @@ contract CompanyTreasuryVault is ICompanyTreasuryVault, ZamaEthereumConfig {
         if (amount == 0) {
             revert CompanyTreasuryVault__InvalidAmount();
         }
-        if (
-            !underlyingToken.transferFrom(msg.sender, address(this), amount)
-        ) {
-            revert CompanyTreasuryVault__TransferFailed();
-        }
+        underlyingToken.safeTransferFrom(msg.sender, address(this), amount);
 
         emit UnderlyingDeposited(companyId, msg.sender, amount);
     }
@@ -98,13 +94,9 @@ contract CompanyTreasuryVault is ICompanyTreasuryVault, ZamaEthereumConfig {
         if (amount == 0) {
             revert CompanyTreasuryVault__InvalidAmount();
         }
-        if (!underlyingToken.approve(address(settlementToken), amount)) {
-            revert CompanyTreasuryVault__TransferFailed();
-        }
+        SafeERC20.forceApprove(underlyingToken, address(settlementToken), amount);
 
-        settlementToken.wrap(amount);
-        confidentialBalance = FHE.add(confidentialBalance, uint128(amount));
-        _grantManagerBalanceAccess();
+        settlementToken.wrap(address(this), amount);
 
         emit UnderlyingWrapped(companyId, amount);
     }
@@ -112,18 +104,14 @@ contract CompanyTreasuryVault is ICompanyTreasuryVault, ZamaEthereumConfig {
     /// @inheritdoc ICompanyTreasuryVault
     function payrollTransfer(
         address to,
-        euint128 amount
+        euint64 amount
     ) external onlySalaryCipherCore {
         if (to == address(0)) {
             revert CompanyTreasuryVault__InvalidAddress();
         }
 
-        // The vault mirrors its wrapped balance in encrypted form so managers can inspect remaining payroll funds
-        // without exposing the underlying number publicly.
-        confidentialBalance = FHE.sub(confidentialBalance, amount);
         FHE.allow(amount, address(settlementToken));
         settlementToken.confidentialTransfer(to, amount);
-        _grantManagerBalanceAccess();
 
         emit PayrollTransferred(companyId, to, block.timestamp);
     }
@@ -139,29 +127,20 @@ contract CompanyTreasuryVault is ICompanyTreasuryVault, ZamaEthereumConfig {
         if (to == address(0)) {
             revert CompanyTreasuryVault__InvalidAddress();
         }
-        if (!underlyingToken.transfer(to, amount)) {
-            revert CompanyTreasuryVault__TransferFailed();
-        }
+        underlyingToken.safeTransfer(to, amount);
 
         emit UnusedUnderlyingWithdrawn(companyId, to, amount);
     }
 
     /// @inheritdoc ICompanyTreasuryVault
-    function getConfidentialBalance() external returns (euint128) {
-        euint128 balance = confidentialBalance;
-        FHE.allowThis(balance);
+    function getConfidentialBalance() external returns (euint64) {
+        euint64 balance = settlementToken.confidentialBalanceOf(address(this));
         _grantManagerAccess(balance);
         return balance;
     }
 
-    /// @dev Refreshes FHE access for the encrypted vault balance handle after each state change.
-    function _grantManagerBalanceAccess() private {
-        FHE.allowThis(confidentialBalance);
-        _grantManagerAccess(confidentialBalance);
-    }
-
     /// @dev Grants an encrypted value handle to the current owner and HR members for the company.
-    function _grantManagerAccess(euint128 value) private {
+    function _grantManagerAccess(euint64 value) private {
         address[] memory employees = companyRegistry.getEmployees(companyId);
         for (uint256 i = 0; i < employees.length; i++) {
             address employee = employees[i];

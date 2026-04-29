@@ -2,7 +2,7 @@
 pragma solidity ^0.8.27;
 
 /* Imports *******/
-import {FHE, ebool, euint128, externalEuint128} from "@fhevm/solidity/lib/FHE.sol";
+import {FHE, ebool, euint64, euint128, externalEuint128} from "@fhevm/solidity/lib/FHE.sol";
 import {ZamaEthereumConfig} from "@fhevm/solidity/config/ZamaConfig.sol";
 
 /* Interfaces ****/
@@ -569,11 +569,12 @@ contract SalaryCipherCore is ISalaryCipherCore, ZamaEthereumConfig {
             revert SalaryCipherCore__InvalidAddress();
         }
 
-        // The treasury vault executes downstream FHE operations on this computed payout handle.
-        FHE.allow(payout, treasuryVault);
+        // OpenZeppelin ERC7984 uses euint64 transfer amounts, so the core narrows the payroll handle at the vault boundary.
+        euint64 transferAmount = FHE.asEuint64(payout);
+        FHE.allow(transferAmount, treasuryVault);
         ICompanyTreasuryVault(treasuryVault).payrollTransfer(
             payoutWallet,
-            payout
+            transferAmount
         );
     }
 

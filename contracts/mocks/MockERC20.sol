@@ -1,72 +1,31 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.27;
 
+import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+
 /**
  * @title MockERC20
  * @author BTBMan
- * @notice Minimal ERC20 used in tests for treasury deposit and wrap flows.
+ * @notice Test ERC20 built on OpenZeppelin's implementation for treasury funding flows.
  */
-contract MockERC20 {
-    string public name;
-    string public symbol;
-    uint8 public immutable decimals;
-    uint256 public totalSupply;
+contract MockERC20 is ERC20 {
+    uint8 private immutable tokenDecimals;
 
-    mapping(address account => uint256 balance) public balanceOf;
-    mapping(address owner => mapping(address spender => uint256 amount))
-        public allowance;
-
-    event Transfer(address indexed from, address indexed to, uint256 amount);
-    event Approval(
-        address indexed owner,
-        address indexed spender,
-        uint256 amount
-    );
-
-    constructor(string memory name_, string memory symbol_, uint8 decimals_) {
-        name = name_;
-        symbol = symbol_;
-        decimals = decimals_;
+    constructor(
+        string memory name_,
+        string memory symbol_,
+        uint8 decimals_
+    ) ERC20(name_, symbol_) {
+        tokenDecimals = decimals_;
     }
 
     /// @notice Mints tokens for test setup.
     function mint(address to, uint256 amount) external {
-        totalSupply += amount;
-        balanceOf[to] += amount;
-        emit Transfer(address(0), to, amount);
+        _mint(to, amount);
     }
 
-    function approve(address spender, uint256 amount) external returns (bool) {
-        allowance[msg.sender][spender] = amount;
-        emit Approval(msg.sender, spender, amount);
-        return true;
-    }
-
-    function transfer(address to, uint256 amount) external returns (bool) {
-        _transfer(msg.sender, to, amount);
-        return true;
-    }
-
-    function transferFrom(
-        address from,
-        address to,
-        uint256 amount
-    ) external returns (bool) {
-        uint256 allowed = allowance[from][msg.sender];
-        require(allowed >= amount, "ERC20: insufficient allowance");
-
-        allowance[from][msg.sender] = allowed - amount;
-        _transfer(from, to, amount);
-        return true;
-    }
-
-    function _transfer(address from, address to, uint256 amount) private {
-        require(to != address(0), "ERC20: zero address");
-        require(balanceOf[from] >= amount, "ERC20: insufficient balance");
-
-        balanceOf[from] -= amount;
-        balanceOf[to] += amount;
-
-        emit Transfer(from, to, amount);
+    /// @notice Keeps test token decimals aligned with the configured deployment value.
+    function decimals() public view override returns (uint8) {
+        return tokenDecimals;
     }
 }

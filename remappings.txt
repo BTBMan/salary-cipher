@@ -1,2 +1,4 @@
 @fhevm/=node_modules/@fhevm/
 solady/=node_modules/solady/
+@openzeppelin/=node_modules/@openzeppelin/contracts/
+@openzeppelin/confidential-contracts/=node_modules/@openzeppelin/confidential-contracts/

@@ -6,7 +6,7 @@ import {
   computeFollowingMonthlyPayrollTimestamp,
   computeNextMonthlyPayrollTimestamp,
   customErrorPattern,
-  decryptUint128,
+  decryptUint64,
   encryptUint128,
   fundVault,
   normalizeAddresses,
@@ -53,13 +53,12 @@ describe('salaryCipherCore', () => {
     })
     await publicClient.waitForTransactionReceipt({ hash: executeHash })
 
-    const employeeEncryptedBalance = await settlementToken.read.balances([
+    const employeeEncryptedBalance = await settlementToken.read.confidentialBalanceOf([
       employee.account.address,
     ]) as string
-    const vaultEncryptedBalance = await companyTreasuryVault.read.confidentialBalance() as string
 
-    expect(await decryptUint128(employeeEncryptedBalance, settlementToken.address, employee)).to.equal(5000n)
-    expect(await decryptUint128(vaultEncryptedBalance, companyTreasuryVault.address, owner)).to.equal(7000n)
+    expect(await decryptUint64(employeeEncryptedBalance, settlementToken.address, employee)).to.equal(5000n)
+    expect(await underlyingToken.read.balanceOf([settlementToken.address])).to.equal(12_000n)
     expect(await salaryCipherCore.read.lastPayrollTime([companyId])).to.equal(payrollTime)
   })
 
@@ -111,11 +110,11 @@ describe('salaryCipherCore', () => {
     })
     await publicClient.waitForTransactionReceipt({ hash: executeHash })
 
-    const employeeEncryptedBalance = await settlementToken.read.balances([
+    const employeeEncryptedBalance = await settlementToken.read.confidentialBalanceOf([
       employee.account.address,
     ]) as string
 
-    expect(await decryptUint128(employeeEncryptedBalance, settlementToken.address, employee)).to.equal(2580n)
+    expect(await decryptUint64(employeeEncryptedBalance, settlementToken.address, employee)).to.equal(2580n)
     expect(await salaryCipherCore.read.lastPayrollTime([companyId])).to.equal(payrollTime)
   })
 

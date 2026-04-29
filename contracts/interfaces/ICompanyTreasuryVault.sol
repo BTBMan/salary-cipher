@@ -2,7 +2,7 @@
 pragma solidity ^0.8.27;
 
 /* Imports *******/
-import {euint128} from "@fhevm/solidity/lib/FHE.sol";
+import {euint64} from "@fhevm/solidity/lib/FHE.sol";
 
 interface ICompanyTreasuryVault {
     ////////////////////////////////////
@@ -47,11 +47,11 @@ interface ICompanyTreasuryVault {
     function wrapUnderlying(uint256 amount) external;
 
     /// @notice Transfers confidential payroll funds to one employee payout wallet.
-    function payrollTransfer(address to, euint128 amount) external;
+    function payrollTransfer(address to, euint64 amount) external;
 
     /// @notice Withdraws unused public underlying funds back to a plain address.
     function withdrawUnusedUnderlying(uint256 amount, address to) external;
 
     /// @notice Returns the encrypted balance handle representing wrapped payroll funds held by the vault.
-    function getConfidentialBalance() external returns (euint128);
+    function getConfidentialBalance() external returns (euint64);
 }

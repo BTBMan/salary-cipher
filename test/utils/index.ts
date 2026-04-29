@@ -42,6 +42,19 @@ export async function decryptUint128(
   )
 }
 
+export async function decryptUint64(
+  handle: string,
+  contractAddress: Address,
+  walletClient: WalletClient,
+) {
+  return await fhevm.userDecryptEuint(
+    FhevmType.euint64,
+    handle,
+    contractAddress,
+    ethersWrapper(walletClient).ethersSigner()!,
+  )
+}
+
 export async function decryptBool(
   handle: string,
   contractAddress: Address,
