@@ -69,6 +69,10 @@
   /* Encrypted Identifier */
   --color-encrypted: #8b5cf6;
 
+  --color-eth-main: #5275e2;
+  --color-eth-sepolia: #bb55ea;
+  --color-eth-local: #ffed37;
+
   --radius-sm: 0.125rem;
   --radius-md: 0.25rem;
   --radius-lg: 0.375rem;
@@ -205,6 +209,7 @@
 @layer base {
   * {
     @apply border-border outline-ring/50;
+    scroll-behavior: smooth;
   }
   body {
     @apply bg-background text-foreground font-sans antialiased;

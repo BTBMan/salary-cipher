@@ -49,7 +49,9 @@
     "postcss"
   ],
 
-  "cSpell.words": [],
+  "cSpell.words": [
+    "raugfer"
+  ],
 
   "prettier.documentSelectors": ["**/*.sol"],
 

@@ -1,3 +1,4 @@
+import type { Metadata } from 'next'
 import Link from 'next/link'
 import {
   MdAccountBalance as AccountBalanceIcon,
@@ -10,9 +11,10 @@ import {
   MdSecurity as SecurityIcon,
   MdVerified as VerifiedIcon,
 } from 'react-icons/md'
+import { AppTopNavbar } from '@/components/layout/app-top-navbar'
 import { Button } from '@/components/ui/button'
 
-export const metadata = {
+export const metadata: Metadata = {
   title: 'Salary Cipher | Sovereign HR & Payroll',
   description: 'The world\'s first payroll protocol where sensitive employee data stays encrypted even while being processed.',
 }
@@ -20,26 +22,9 @@ export const metadata = {
 export default function LandingPage() {
   return (
     <div className="bg-surface text-on-surface font-sans selection:bg-primary-container selection:text-on-primary-container flex flex-col min-h-screen">
-      {/* Top Navigation Bar */}
-      <nav className="sticky top-0 z-50 flex justify-between items-center px-6 py-3 w-full bg-[#131b2e]/60 backdrop-blur-xl font-sans antialiased">
-        <div className="flex items-center gap-2">
-          <HubIcon className="text-[#6366F1] size-6" />
-          <span className="text-xl font-bold tracking-tight text-white font-heading">Salary Cipher</span>
-        </div>
-        <div className="hidden md:flex items-center gap-8">
-          <Link className="text-sm font-semibold text-[#6366F1]" href="#">Overview</Link>
-          <Link className="text-sm text-slate-400 hover:text-slate-300 transition-colors" href="#features">Features</Link>
-          <Link className="text-sm text-slate-400 hover:text-slate-300 transition-colors" href="#security">Security</Link>
-          <Link className="text-sm text-slate-400 hover:text-slate-300 transition-colors" href="#">Docs</Link>
-        </div>
-        <div className="flex items-center gap-4">
-          <Button size="sm" className="px-5 py-2 text-sm rounded-sm primary-gradient text-on-primary-container hover:opacity-90 transition-all active:scale-95 border-none">
-            Connect Wallet
-          </Button>
-        </div>
-      </nav>
+      <AppTopNavbar />
 
-      <main className="relative min-h-screen flex flex-col items-center justify-center pt-20 pb-32 overflow-hidden">
+      <main id="overview" className="relative min-h-screen flex flex-col items-center justify-center pt-20 pb-32 overflow-hidden">
         <div
           className="absolute inset-0 pointer-events-none"
           style={{
@@ -47,7 +32,7 @@ export default function LandingPage() {
             backgroundSize: '40px 40px',
           }}
         />
-        <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[800px] h-[400px] bg-primary/10 blur-[120px] rounded-full pointer-events-none" />
+        <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-200 h-100 bg-primary/10 blur-[120px] rounded-full pointer-events-none" />
 
         <div className="relative z-10 max-w-5xl px-6 text-center">
           <div className="inline-flex items-center gap-2 px-3 py-1 mb-8 rounded-full bg-surface-container-low border border-white/5">
@@ -67,12 +52,10 @@ export default function LandingPage() {
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
             <Button
               size="lg"
-              className="w-full sm:w-auto px-8 py-7 text-base rounded-sm primary-gradient text-on-primary-container shadow-lg shadow-primary/20 hover:opacity-90 transition-all border-none"
+              className="w-full sm:w-auto px-8 py-7 text-base rounded-sm primary-gradient text-on-primary-container shadow-lg shadow-primary/20 hover:opacity-90 transition-all border-none font-bold"
               nativeButton={false}
-              render={<Link href="/dashboard">Launch App</Link>}
-            >
-              Launch App
-            </Button>
+              render={<Link href="/dashboard">Launch APP</Link>}
+            />
           </div>
 
           {/* Dashboard Preview */}

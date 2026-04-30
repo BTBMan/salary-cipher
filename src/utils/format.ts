@@ -18,3 +18,15 @@ export function formatNumberToShort(value: number, options?: Intl.NumberFormatOp
     ...options,
   }).format(value)
 }
+
+// 1000 => 1000.00
+export function formatDecimal(value: number, options?: Intl.NumberFormatOptions) {
+  return new Intl.NumberFormat('en-US', {
+    notation: 'standard',
+    compactDisplay: 'short',
+    maximumFractionDigits: 3,
+    minimumFractionDigits: 3,
+    useGrouping: false,
+    ...options,
+  }).format(value)
+}
