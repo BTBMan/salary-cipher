@@ -55,6 +55,14 @@ export async function decryptUint64(
   )
 }
 
+export async function createUnwrapDecryptionProof(handle: Address, clearAmount: bigint) {
+  const decrypted = await fhevm.publicDecrypt([handle])
+  if (decrypted.clearValues[handle] !== clearAmount) {
+    throw new Error(`Unexpected unwrap amount: expected ${clearAmount}, got ${String(decrypted.clearValues[handle])}`)
+  }
+  return decrypted.decryptionProof
+}
+
 export async function decryptBool(
   handle: string,
   contractAddress: Address,

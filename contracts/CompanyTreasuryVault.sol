@@ -11,6 +11,7 @@ import {IERC7984ERC20Wrapper} from "@openzeppelin/confidential-contracts/interfa
 /* Interfaces ****/
 import {ICompanyRegistry} from "./interfaces/ICompanyRegistry.sol";
 import {ICompanyTreasuryVault} from "./interfaces/ICompanyTreasuryVault.sol";
+import {IERC7984ERC20WrapperInternal} from "./interfaces/IERC7984ERC20WrapperInternal.sol";
 
 /**
  * @title CompanyTreasuryVault
@@ -28,13 +29,16 @@ contract CompanyTreasuryVault is ICompanyTreasuryVault, ZamaEthereumConfig {
     // Public ERC20 used as the funding asset before wrapping.
     IERC20 public immutable underlyingToken;
     // Confidential wrapper / settlement token used for payroll transfers.
-    IERC7984ERC20Wrapper public immutable settlementToken;
+    IERC7984ERC20WrapperInternal public immutable settlementToken;
     // The singleton payroll core allowed to move confidential funds out of the vault.
     address public immutable salaryCipherCore;
 
     /// @notice Restricts execution to the company owner.
     modifier onlyOwner() {
-        if (companyRegistry.getRole(companyId, msg.sender) != ICompanyRegistry.Role.Owner) {
+        if (
+            companyRegistry.getRole(companyId, msg.sender) !=
+            ICompanyRegistry.Role.Owner
+        ) {
             revert CompanyTreasuryVault__Unauthorized();
         }
         _;
@@ -75,7 +79,7 @@ contract CompanyTreasuryVault is ICompanyTreasuryVault, ZamaEthereumConfig {
         companyId = companyId_;
         companyRegistry = ICompanyRegistry(companyRegistryAddress);
         underlyingToken = IERC20(underlyingTokenAddress);
-        settlementToken = IERC7984ERC20Wrapper(settlementTokenAddress);
+        settlementToken = IERC7984ERC20WrapperInternal(settlementTokenAddress);
         salaryCipherCore = salaryCipherCoreAddress;
     }
 
@@ -94,7 +98,11 @@ contract CompanyTreasuryVault is ICompanyTreasuryVault, ZamaEthereumConfig {
         if (amount == 0) {
             revert CompanyTreasuryVault__InvalidAmount();
         }
-        SafeERC20.forceApprove(underlyingToken, address(settlementToken), amount);
+        SafeERC20.forceApprove(
+            underlyingToken,
+            address(settlementToken),
+            amount
+        );
 
         settlementToken.wrap(address(this), amount);
 
@@ -133,6 +141,28 @@ contract CompanyTreasuryVault is ICompanyTreasuryVault, ZamaEthereumConfig {
     }
 
     /// @inheritdoc ICompanyTreasuryVault
+    function refundAllWrappedUnderlying()
+        external
+        onlyOwner
+        returns (bytes32 unwrapRequestId)
+    {
+        euint64 wrappedBalance = settlementToken.confidentialBalanceOf(
+            address(this)
+        );
+        if (!FHE.isInitialized(wrappedBalance)) {
+            revert CompanyTreasuryVault__InvalidAmount();
+        }
+
+        unwrapRequestId = settlementToken.unwrap(
+            address(this),
+            msg.sender,
+            wrappedBalance
+        );
+
+        emit UnderlyingUnwrapRequested(companyId, msg.sender, unwrapRequestId);
+    }
+
+    /// @inheritdoc ICompanyTreasuryVault
     function getConfidentialBalance() external returns (euint64) {
         euint64 balance = settlementToken.confidentialBalanceOf(address(this));
         _grantManagerAccess(balance);
@@ -144,7 +174,10 @@ contract CompanyTreasuryVault is ICompanyTreasuryVault, ZamaEthereumConfig {
         address[] memory employees = companyRegistry.getEmployees(companyId);
         for (uint256 i = 0; i < employees.length; i++) {
             address employee = employees[i];
-            ICompanyRegistry.Role role = companyRegistry.getRole(companyId, employee);
+            ICompanyRegistry.Role role = companyRegistry.getRole(
+                companyId,
+                employee
+            );
             if (
                 role == ICompanyRegistry.Role.Owner ||
                 role == ICompanyRegistry.Role.HR

@@ -28,6 +28,12 @@ interface ICompanyTreasuryVault {
         address indexed to,
         uint256 amount
     );
+    /// @notice Emitted when the vault creates an unwrap request for confidential funds.
+    event UnderlyingUnwrapRequested(
+        uint256 indexed companyId,
+        address indexed to,
+        bytes32 indexed unwrapRequestId
+    );
 
     ////////////////////////////////////
     // Errors                         //
@@ -51,6 +57,9 @@ interface ICompanyTreasuryVault {
 
     /// @notice Withdraws unused public underlying funds back to a plain address.
     function withdrawUnusedUnderlying(uint256 amount, address to) external;
+
+    /// @notice Creates an unwrap request that converts the vault's full wrapped balance back into public underlying tokens.
+    function refundAllWrappedUnderlying() external returns (bytes32);
 
     /// @notice Returns the encrypted balance handle representing wrapped payroll funds held by the vault.
     function getConfidentialBalance() external returns (euint64);
