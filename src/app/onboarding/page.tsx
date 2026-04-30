@@ -1,13 +1,14 @@
+import type { Metadata } from 'next'
 import Link from 'next/link'
 import {
   MdAddCircle as AddCircleIcon,
   MdGroups as GroupsIcon,
   MdHelpOutline as HelpIcon,
-  MdHub as HubIcon,
   MdLogout as LogoutIcon,
   MdVerifiedUser as VerifiedUserIcon,
   MdAccountBalanceWallet as WalletIcon,
 } from 'react-icons/md'
+import { Logo } from '@/components/logo'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -42,7 +43,7 @@ const companyList = [
   },
 ]
 
-export const metadata = {
+export const metadata: Metadata = {
   title: 'Salary Cipher | Company Selection',
   description: 'Select a sovereign vault to continue.',
 }
@@ -65,9 +66,7 @@ export default function OnboardingPage() {
           {/* Header Section */}
           <div className="p-8 pb-4 text-center">
             <div className="flex justify-center mb-6">
-              <div className="w-16 h-16 bg-linear-to-br from-primary-container to-primary rounded-lg flex items-center justify-center shadow-lg">
-                <HubIcon className="text-on-primary size-10" />
-              </div>
+              <Logo className="w-16 h-16" />
             </div>
             <h1 className="font-heading text-3xl font-bold tracking-tight text-on-surface mb-2">Welcome to Salary Cipher</h1>
             <p className="text-on-surface-variant text-sm max-w-sm mx-auto">Select a sovereign vault to continue managing your cryptographic payroll and compliance.</p>
@@ -113,7 +112,7 @@ export default function OnboardingPage() {
           <div className="p-8 pt-4">
             <div className="w-full h-px bg-white/5 mb-6" />
             <div className="flex flex-col items-center gap-4">
-              <Link href="/onboarding/no-company" className="group flex items-center gap-2 text-on-surface-variant hover:text-primary font-bold transition-colors duration-200 text-sm">
+              <Link href="/onboarding/create-company" className="group flex items-center gap-2 text-on-surface-variant hover:text-primary font-bold transition-colors duration-200 text-sm">
                 <AddCircleIcon className="size-5 group-hover:scale-110 transition-transform" />
                 Create New Company
               </Link>
