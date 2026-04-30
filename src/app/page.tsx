@@ -5,13 +5,13 @@ import {
   MdAlternateEmail as AlternateEmailIcon,
   MdCheckCircle as CheckCircleIcon,
   MdCode as CodeIcon,
-  MdHub as HubIcon,
   MdLock as LockIcon,
   MdPublic as PublicIcon,
   MdSecurity as SecurityIcon,
   MdVerified as VerifiedIcon,
 } from 'react-icons/md'
 import { AppTopNavbar } from '@/components/layout/app-top-navbar'
+import { Logo } from '@/components/logo'
 import { Button } from '@/components/ui/button'
 
 export const metadata: Metadata = {
@@ -162,7 +162,7 @@ export default function LandingPage() {
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-start gap-12 mb-16">
           <div className="max-w-xs">
             <div className="flex items-center gap-2 mb-6">
-              <HubIcon className="text-[#6366F1] size-6" />
+              <Logo className="w-6 h-6" />
               <span className="text-xl font-bold tracking-tight text-white font-heading">Salary Cipher</span>
             </div>
             <p className="text-on-surface-variant text-sm leading-relaxed">

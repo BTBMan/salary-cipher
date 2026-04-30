@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { useParams } from 'next/navigation'
 import { useEffect, useState } from 'react'
-import { MdShield } from 'react-icons/md'
+import { Logo } from '@/components/logo'
 import { WalletConnection } from '@/components/wallet/wallet-connection'
 import { topNavItems } from '@/configs'
 import { cn } from '@/utils'
@@ -36,9 +36,7 @@ export function AppTopNavbar() {
     >
       <div className="container mx-auto flex items-center justify-between">
         <Link href="/" className="flex items-center gap-2 group">
-          <div className="p-1.5 rounded-lg primary-gradient text-primary-foreground group-hover:scale-110 transition-transform">
-            <MdShield className="size-6" />
-          </div>
+          <Logo className="w-9 h-9 group-hover:scale-110 transition-transform" />
           <span className="text-xl font-heading font-bold tracking-tight">Salary Cipher</span>
         </Link>
 

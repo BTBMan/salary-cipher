@@ -4,11 +4,11 @@ import { useAppKit } from '@reown/appkit/react'
 import { LogOutIcon } from 'lucide-react'
 import { useState } from 'react'
 import {
-  MdHub as HubIcon,
   MdArrowForward,
   MdVerified as VerifiedIcon,
 } from 'react-icons/md'
-import { useConnection, useConnectors } from 'wagmi'
+import { useConnect, useConnection, useConnectors, useDisconnect } from 'wagmi'
+import { Logo } from '@/components/logo'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -25,7 +25,9 @@ interface WalletConnectionProps {
 export function WalletConnection({ direction = 'vertical' }: WalletConnectionProps) {
   const [isOpen, setIsOpen] = useState(false)
   const { open } = useAppKit()
-  const { address, isConnected } = useConnection()
+  const { address, isConnected, connector } = useConnection()
+  const { mutate: disconnect } = useDisconnect()
+  const { mutateAsync: connect } = useConnect()
   const connectors = useConnectors()
 
   const isVertical = direction === 'vertical'
@@ -40,6 +42,7 @@ export function WalletConnection({ direction = 'vertical' }: WalletConnectionPro
             cn('flex items-center gap-3 py-2.5 text-destructive/80 hover:text-destructive transition-colors font-semibold text-sm', isVertical ? 'w-full px-4 justify-start' : 'hover:bg-transparent')
           }
           size={isVertical ? 'default' : 'icon'}
+          onClick={() => disconnect({ connector })}
         >
           <LogOutIcon className="size-5" />
           {isVertical && 'Disconnect'}
@@ -62,9 +65,7 @@ export function WalletConnection({ direction = 'vertical' }: WalletConnectionPro
       <DialogContent className="max-w-md p-0 overflow-hidden bg-surface-container-low/90 backdrop-blur-2xl border-white/10 shadow-[0_40px_80px_-20px_rgba(6,14,32,0.8)] rounded-lg gap-0">
         <div className="p-8">
           <div className="flex flex-col items-center mb-10 text-center">
-            <div className="w-16 h-16 bg-surface-container-highest flex items-center justify-center rounded-xl mb-4 border border-white/5 shadow-inner">
-              <HubIcon className="text-primary size-10" />
-            </div>
+            <Logo className="w-16 h-16 mb-4 border border-white/5 shadow-inner" />
             <h2 className="font-heading text-3xl font-extrabold tracking-tight text-foreground mb-2">Salary Cipher</h2>
             <p className="text-muted-foreground font-medium text-sm">Sovereign Vault Access</p>
           </div>
@@ -79,8 +80,14 @@ export function WalletConnection({ direction = 'vertical' }: WalletConnectionPro
               {connectors.map(connector => connector.icon && (
                 <button
                   key={connector.uid}
-                  onClick={() => {
-                    connector.connect({ isReconnecting: false })
+                  onClick={async () => {
+                    try {
+                      await connect({ connector })
+                      setIsOpen(false)
+                    }
+                    catch {
+                      disconnect()
+                    }
                   }}
                   className="w-full group flex items-center justify-between p-4 bg-surface-container hover:bg-surface-container-high transition-all duration-200 border border-transparent hover:border-white/10 rounded-sm"
                 >

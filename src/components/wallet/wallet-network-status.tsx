@@ -13,11 +13,8 @@ export function WalletNetworkStatus() {
   const [dotColor, setDotColor] = useState('')
 
   useEffect(() => {
-    if (!chain)
-      return
-
     // eslint-disable-next-line react/set-state-in-effect
-    setDotColor(dotColors[chain!.id])
+    setDotColor(chain ? dotColors[chain!.id] : '')
   }, [chain])
 
   return (

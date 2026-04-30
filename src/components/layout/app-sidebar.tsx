@@ -2,9 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import {
-  MdShield,
-} from 'react-icons/md'
+import { Logo } from '@/components/logo'
 import {
   Sidebar,
   SidebarContent,
@@ -26,15 +24,15 @@ export function AppSidebar() {
   return (
     <Sidebar className="bg-surface border-none shadow-[40px_0_80px_-20px_rgba(6,14,32,0.5)]">
       <SidebarHeader className="p-6 pb-10">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-primary-container flex items-center justify-center rounded-lg shadow-lg">
-            <MdShield className="text-on-primary-container size-6 fill-current" />
+        <Link href="/">
+          <div className="flex items-center gap-3">
+            <Logo />
+            <div className="flex flex-col">
+              <h1 className="brand-text font-black italic tracking-wide text-xl leading-none font-heading">Salary Cipher</h1>
+              <span className="text-[10px] uppercase tracking-[0.2em] text-outline font-medium mt-1">Sovereign Vault</span>
+            </div>
           </div>
-          <div className="flex flex-col">
-            <h1 className="brand-text font-black italic tracking-wide text-xl leading-none font-heading">Salary Cipher</h1>
-            <span className="text-[10px] uppercase tracking-[0.2em] text-outline font-medium mt-1">Sovereign Vault</span>
-          </div>
-        </div>
+        </Link>
       </SidebarHeader>
 
       <SidebarContent className="px-4">
