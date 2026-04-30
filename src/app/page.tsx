@@ -10,9 +10,9 @@ import {
   MdSecurity as SecurityIcon,
   MdVerified as VerifiedIcon,
 } from 'react-icons/md'
+import { LaunchApp } from '@/components/landing-page/launch-app'
 import { AppTopNavbar } from '@/components/layout/app-top-navbar'
 import { Logo } from '@/components/logo'
-import { Button } from '@/components/ui/button'
 
 export const metadata: Metadata = {
   title: 'Salary Cipher | Sovereign HR & Payroll',
@@ -49,14 +49,7 @@ export default function LandingPage() {
             The world's first payroll protocol where sensitive employee data stays encrypted even while being processed. Secure, compliant, and fully decentralized.
           </p>
 
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-            <Button
-              size="lg"
-              className="w-full sm:w-auto px-8 py-7 text-base rounded-sm primary-gradient text-on-primary-container shadow-lg shadow-primary/20 hover:opacity-90 transition-all border-none font-bold"
-              nativeButton={false}
-              render={<Link href="/dashboard">Launch APP</Link>}
-            />
-          </div>
+          <LaunchApp />
 
           {/* Dashboard Preview */}
           <div className="mt-24 relative group">
