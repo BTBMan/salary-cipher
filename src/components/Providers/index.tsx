@@ -7,7 +7,9 @@ import { WagmiProvider } from 'wagmi'
 import { Toaster } from '@/components/ui/sonner'
 import { TooltipProvider } from '@/components/ui/tooltip'
 import { wagmiConfig } from '@/configs'
+import { AccessGuardProvider } from './access-guard-provider'
 import { FheProvider } from './fhe-provider'
+import { StoreProvider } from './store-provider'
 
 const queryClient = new QueryClient()
 
@@ -16,17 +18,21 @@ export function Providers({ children }: PropsWithChildren) {
     <WagmiProvider config={wagmiConfig.wagmiConfig}>
       <QueryClientProvider client={queryClient}>
         <FheProvider>
-          <ThemeProvider
-            attribute="class"
-            defaultTheme="dark"
-            enableSystem
-            disableTransitionOnChange
-          >
-            <TooltipProvider>
-              {children}
-              <Toaster richColors position="bottom-right" />
-            </TooltipProvider>
-          </ThemeProvider>
+          <StoreProvider>
+            <ThemeProvider
+              attribute="class"
+              defaultTheme="dark"
+              enableSystem
+              disableTransitionOnChange
+            >
+              <TooltipProvider>
+                <AccessGuardProvider>
+                  {children}
+                </AccessGuardProvider>
+                <Toaster richColors position="bottom-right" />
+              </TooltipProvider>
+            </ThemeProvider>
+          </StoreProvider>
         </FheProvider>
       </QueryClientProvider>
     </WagmiProvider>

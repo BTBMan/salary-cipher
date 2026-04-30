@@ -1,25 +1,42 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
-import { useState } from 'react'
+import { startTransition, useEffect, useRef, useState } from 'react'
 import { useConnection } from 'wagmi'
 import { WalletSelectorDialog } from '@/components/dialogs/wallet-selector-dialog'
 import { Button } from '@/components/ui/button'
+import { useStoreContext } from '@/hooks'
 
 export function LaunchApp() {
   const [open, setOpen] = useState(false)
+  const [pendingLaunch, setPendingLaunch] = useState(false)
   const { isConnected } = useConnection()
+  const { hasCompanies, isReady } = useStoreContext()
   const { push } = useRouter()
+  const isConnectedRef = useRef(isConnected)
 
-  const gotoDashboard = () => {
-    push('/dashboard')
-  }
+  useEffect(() => {
+    isConnectedRef.current = isConnected
+  }, [isConnected])
+
+  // After the wallet connection finishes, route according to company state.
+  useEffect(() => {
+    if (!pendingLaunch || !isReady || !isConnected) {
+      return
+    }
+
+    push(hasCompanies ? '/onboarding' : '/onboarding/create-company')
+    startTransition(() => {
+      setPendingLaunch(false)
+    })
+  }, [hasCompanies, isConnected, isReady, pendingLaunch, push])
 
   const handleLaunchApp = () => {
-    if (isConnected) {
-      gotoDashboard()
+    if (isConnectedRef.current) {
+      push(hasCompanies ? '/onboarding' : '/onboarding/create-company')
     }
     else {
+      setPendingLaunch(true)
       setOpen(true)
     }
   }
@@ -35,7 +52,7 @@ export function LaunchApp() {
           Launch APP
         </Button>
       </div>
-      <WalletSelectorDialog open={open} setOpen={setOpen} onConnected={gotoDashboard} />
+      <WalletSelectorDialog open={open} setOpen={setOpen} />
     </>
   )
 }
