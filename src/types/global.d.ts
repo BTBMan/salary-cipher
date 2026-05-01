@@ -13,6 +13,8 @@ declare global {
       TEST_PRIVATE_KEY2: string
       SEPOLIA_RPC_URL: string
       ETHERSCAN_API_KEY: string
+      NEXT_PUBLIC_COMPANY_REGISTRY_ADDRESS_HARDHAT?: string
+      NEXT_PUBLIC_COMPANY_REGISTRY_ADDRESS_SEPOLIA?: string
     }
   }
 

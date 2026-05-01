@@ -2,15 +2,16 @@
 
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import {
   MdArrowBack as ArrowBackIcon,
   MdBusiness as BusinessIcon,
+  MdCalendarMonth as CalendarIcon,
   MdInfoOutline as InfoIcon,
-  MdLock as LockIcon,
   MdSavings as SavingsIcon,
   MdSync as SyncIcon,
 } from 'react-icons/md'
+import { z } from 'zod'
 import { Button, buttonVariants } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -22,14 +23,48 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
+import { SettlementAssetEnum } from '@/enums'
 import { useStoreContext } from '@/hooks'
 import { cn } from '@/utils'
 
+const createCompanySchema = z.object({
+  name: z.string().trim().min(1, 'Company name is required.').max(100, 'Company name is too long.'),
+  description: z.string().trim(),
+  payrollDayOfMonth: z.coerce.number().int().min(1, 'Payroll day must be between 1 and 28.').max(28, 'Payroll day must be between 1 and 28.'),
+  settlementAsset: z.number().int().refine(
+    value => value === SettlementAssetEnum.USDC || value === SettlementAssetEnum.USDT,
+    'Select a settlement asset.',
+  ) as z.ZodType<SettlementAssetEnum>,
+})
+
+interface CreateCompanyFormValues {
+  name: string
+  description: string
+  payrollDayOfMonth: number
+  settlementAsset: SettlementAssetEnum
+}
+
+type CreateCompanyFormErrors = Partial<Record<keyof CreateCompanyFormValues, string>>
+
+/**
+ * Company creation screen backed by the on-chain CompanyRegistry contract.
+ */
 export function CreateCompanyPageContent() {
   const router = useRouter()
-  const { createCompany } = useStoreContext()
-  const [companyName, setCompanyName] = useState('')
-  const [companyDescription, setCompanyDescription] = useState('')
+  const { createCompany, isCreatingCompany, settlementAssets } = useStoreContext()
+  const [formValues, setFormValues] = useState<CreateCompanyFormValues>({
+    name: '',
+    description: '',
+    payrollDayOfMonth: 15,
+    settlementAsset: SettlementAssetEnum.USDC,
+  })
+  const [formErrors, setFormErrors] = useState<CreateCompanyFormErrors>({})
+
+  const settlementAssetOptions = useMemo(() => settlementAssets, [settlementAssets])
+
+  const selectedSettlementAsset = useMemo(() => {
+    return settlementAssetOptions.find(asset => asset.value === formValues.settlementAsset) ?? null
+  }, [formValues.settlementAsset, settlementAssetOptions])
 
   return (
     <div className="relative min-h-screen overflow-hidden bg-background text-foreground">
@@ -57,8 +92,7 @@ export function CreateCompanyPageContent() {
                   Initialize Sovereign Vault
                 </CardTitle>
                 <CardDescription className="max-w-2xl text-sm leading-6 text-on-surface-variant">
-                  Deploy a new company entity on-chain. This creates the vault used for payroll,
-                  treasury and encrypted salary operations.
+                  Create a company on-chain and bind its monthly payroll rule and settlement token in a single transaction.
                 </CardDescription>
               </div>
             </div>
@@ -67,19 +101,36 @@ export function CreateCompanyPageContent() {
           <CardContent className="px-6 py-6 sm:px-8 sm:py-8">
             <form
               className="space-y-8"
-              onSubmit={(event) => {
+              onSubmit={async (event) => {
                 event.preventDefault()
 
-                const normalizedName = companyName.trim()
-
-                if (!normalizedName) {
+                const parsedForm = createCompanySchema.safeParse(formValues)
+                if (!parsedForm.success) {
+                  const nextErrors: CreateCompanyFormErrors = {}
+                  for (const issue of parsedForm.error.issues) {
+                    const fieldName = issue.path[0]
+                    if (typeof fieldName === 'string') {
+                      nextErrors[fieldName as keyof CreateCompanyFormValues] = issue.message
+                    }
+                  }
+                  setFormErrors(nextErrors)
                   return
                 }
 
-                createCompany({
-                  name: normalizedName,
-                  description: companyDescription,
-                })
+                if (settlementAssetOptions.length === 0) {
+                  setFormErrors({
+                    settlementAsset: 'No settlement asset is enabled on the current network.',
+                  })
+                  return
+                }
+
+                setFormErrors({})
+
+                const createdCompany = await createCompany(parsedForm.data)
+                if (!createdCompany) {
+                  return
+                }
+
                 router.push('/onboarding')
               }}
             >
@@ -97,9 +148,12 @@ export function CreateCompanyPageContent() {
                     id="company-name"
                     placeholder="e.g. Acme Corp LLC"
                     className="h-12 rounded-lg border-outline-variant/12 bg-surface-container-highest/90 px-4 shadow-none"
-                    value={companyName}
-                    onChange={event => setCompanyName(event.target.value)}
+                    value={formValues.name}
+                    onChange={event => setFormValues(prevState => ({ ...prevState, name: event.target.value }))}
                   />
+                  {formErrors.name && (
+                    <p className="text-xs text-destructive">{formErrors.name}</p>
+                  )}
                 </div>
 
                 <div className="space-y-2">
@@ -108,10 +162,10 @@ export function CreateCompanyPageContent() {
                   </label>
                   <Textarea
                     id="company-description"
-                    placeholder="Briefly describe the purpose of this vault..."
+                    placeholder="Optional internal note for the front end."
                     className="min-h-28 rounded-lg border-outline-variant/12 bg-surface-container-highest/90 px-4 py-3 shadow-none"
-                    value={companyDescription}
-                    onChange={event => setCompanyDescription(event.target.value)}
+                    value={formValues.description}
+                    onChange={event => setFormValues(prevState => ({ ...prevState, description: event.target.value }))}
                   />
                 </div>
               </section>
@@ -127,41 +181,60 @@ export function CreateCompanyPageContent() {
                     <label htmlFor="primary-asset" className="text-sm font-medium text-on-surface">
                       Primary Disbursement Asset
                     </label>
-                    <Select defaultValue="usdc">
+                    <Select
+                      value={String(formValues.settlementAsset)}
+                      onValueChange={(value) => {
+                        setFormValues(prevState => ({
+                          ...prevState,
+                          settlementAsset: Number(value) as SettlementAssetEnum,
+                        }))
+                      }}
+                    >
                       <SelectTrigger
                         id="primary-asset"
                         className="h-12 rounded-lg border-outline-variant/12 bg-surface-container-highest/90 px-4 shadow-none"
                       >
-                        <SelectValue />
+                        <SelectValue placeholder="Select settlement asset" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="usdc">USDC (USD Coin)</SelectItem>
-                        <SelectItem value="eth">ETH (Ethereum)</SelectItem>
-                        <SelectItem value="dai">DAI (Dai Stablecoin)</SelectItem>
-                        <SelectItem value="usdt">USDT (Tether)</SelectItem>
+                        {settlementAssetOptions.map(asset => (
+                          <SelectItem key={asset.value} value={String(asset.value)}>
+                            {asset.label}
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
+                    {formErrors.settlementAsset && (
+                      <p className="text-xs text-destructive">{formErrors.settlementAsset}</p>
+                    )}
+                    {selectedSettlementAsset && (
+                      <p className="flex items-center gap-1.5 text-xs text-on-surface-variant">
+                        <InfoIcon className="size-3.5" />
+                        Uses {selectedSettlementAsset.symbol} with {selectedSettlementAsset.decimals} decimals on this network.
+                      </p>
+                    )}
                   </div>
 
                   <div className="space-y-2">
-                    <label htmlFor="initial-deposit" className="flex items-center gap-2 text-sm font-medium text-on-surface">
-                      Initial Liquidity Deposit
-                      <LockIcon className="size-4 text-primary/75" />
+                    <label htmlFor="payroll-day" className="flex items-center gap-2 text-sm font-medium text-on-surface">
+                      Payroll Day of Month
+                      <CalendarIcon className="size-4 text-primary/75" />
                     </label>
-                    <div className="relative">
-                      <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-sm font-medium text-on-surface-variant">
-                        $
-                      </span>
-                      <Input
-                        id="initial-deposit"
-                        type="number"
-                        placeholder="0.00"
-                        className="h-12 rounded-lg border-outline-variant/12 bg-surface-container-highest/90 pl-8 font-mono shadow-none"
-                      />
-                    </div>
+                    <Input
+                      id="payroll-day"
+                      type="number"
+                      min={1}
+                      max={28}
+                      className="h-12 rounded-lg border-outline-variant/12 bg-surface-container-highest/90 px-4 font-mono shadow-none"
+                      value={formValues.payrollDayOfMonth}
+                      onChange={event => setFormValues(prevState => ({ ...prevState, payrollDayOfMonth: Number(event.target.value) }))}
+                    />
+                    {formErrors.payrollDayOfMonth && (
+                      <p className="text-xs text-destructive">{formErrors.payrollDayOfMonth}</p>
+                    )}
                     <p className="flex items-center gap-1.5 text-xs text-on-surface-variant">
                       <InfoIcon className="size-3.5" />
-                      Optional. Requested in the final signing step.
+                      Use 1-28 to avoid invalid dates in short months.
                     </p>
                   </div>
                 </div>
@@ -174,8 +247,8 @@ export function CreateCompanyPageContent() {
                 >
                   Cancel
                 </Link>
-                <Button size="lg" type="submit" className="rounded-lg px-6">
-                  <SyncIcon className="size-4" />
+                <Button size="lg" type="submit" className="rounded-lg px-6" disabled={isCreatingCompany}>
+                  <SyncIcon className={cn('size-4', isCreatingCompany && 'animate-spin')} />
                   Create &amp; Sign
                 </Button>
               </div>
