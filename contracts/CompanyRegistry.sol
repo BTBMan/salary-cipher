@@ -26,6 +26,8 @@ contract CompanyRegistry is ICompanyRegistry {
     ////////////////////////////////////
     // State variables                //
     ////////////////////////////////////
+    // Deployment-time admin used to configure globally supported settlement assets.
+    address public immutable admin;
     // Next company identifier to assign.
     uint256 public nextCompanyId;
 
@@ -51,8 +53,12 @@ contract CompanyRegistry is ICompanyRegistry {
     // Company-level fixed monthly payroll configuration.
     mapping(uint256 companyId => PayrollConfig payrollConfig)
         private payrollConfigs;
-    // Settlement token used by each company for confidential payroll transfers.
-    mapping(uint256 companyId => address token) private settlementTokens;
+    // Settlement asset selected by each company at creation time.
+    mapping(uint256 companyId => SettlementAsset asset)
+        private companySettlementAssets;
+    // Platform-level supported asset configuration for the current network.
+    mapping(SettlementAsset asset => AssetConfig assetConfig)
+        private supportedAssets;
     // Treasury vault that actually holds one company's funds.
     mapping(uint256 companyId => address vault) private treasuryVaults;
 
@@ -79,7 +85,16 @@ contract CompanyRegistry is ICompanyRegistry {
         _;
     }
 
+    /// @notice Restricts execution to the deployment-time admin.
+    modifier onlyAdmin() {
+        if (msg.sender != admin) {
+            revert CompanyRegistry__OnlyAdmin();
+        }
+        _;
+    }
+
     constructor() {
+        admin = msg.sender;
         nextCompanyId = 1;
     }
 
@@ -96,12 +111,14 @@ contract CompanyRegistry is ICompanyRegistry {
      */
     function createCompany(
         string memory name,
-        uint8 payrollDayOfMonth
+        uint8 payrollDayOfMonth,
+        SettlementAsset asset
     ) external returns (uint256 companyId) {
         if (bytes(name).length == 0) {
             revert CompanyRegistry__CompanyNameIsEmpty();
         }
         _validatePayrollDay(payrollDayOfMonth);
+        _requireEnabledAsset(asset);
 
         companyId = nextCompanyId;
 
@@ -114,6 +131,7 @@ contract CompanyRegistry is ICompanyRegistry {
             dayOfMonth: payrollDayOfMonth,
             initialized: true
         });
+        companySettlementAssets[companyId] = asset;
         companyEmployees[companyId][msg.sender] = Employee({
             displayName: "Owner",
             role: Role.Owner,
@@ -131,6 +149,7 @@ contract CompanyRegistry is ICompanyRegistry {
 
         emit CompanyCreated(companyId, msg.sender, name, _blockTimestamp());
         emit PayrollConfigUpdated(companyId, payrollDayOfMonth);
+        emit SettlementAssetSelected(companyId, asset);
     }
 
     /**
@@ -232,10 +251,7 @@ contract CompanyRegistry is ICompanyRegistry {
     }
 
     /// @inheritdoc ICompanyRegistry
-    function setPayoutWallet(
-        uint256 companyId,
-        address payoutWallet
-    ) external {
+    function setPayoutWallet(uint256 companyId, address payoutWallet) external {
         _requireExistingEmployee(companyId, msg.sender);
         if (payoutWallet == address(0)) {
             revert CompanyRegistry__InvalidAddress();
@@ -247,17 +263,34 @@ contract CompanyRegistry is ICompanyRegistry {
     }
 
     /// @inheritdoc ICompanyRegistry
-    function setSettlementToken(
-        uint256 companyId,
-        address token
-    ) external onlyOwner(companyId) {
-        if (token == address(0)) {
+    function setSupportedAsset(
+        SettlementAsset asset,
+        address underlyingToken,
+        address settlementToken,
+        bool enabled,
+        uint8 decimals
+    ) external onlyAdmin {
+        if (underlyingToken == address(0) || settlementToken == address(0)) {
             revert CompanyRegistry__InvalidAddress();
         }
+        if (decimals == 0) {
+            revert CompanyRegistry__InvalidSettlementAsset();
+        }
 
-        settlementTokens[companyId] = token;
+        supportedAssets[asset] = AssetConfig({
+            underlyingToken: underlyingToken,
+            settlementToken: settlementToken,
+            enabled: enabled,
+            decimals: decimals
+        });
 
-        emit SettlementTokenUpdated(companyId, token);
+        emit SupportedAssetUpdated(
+            asset,
+            underlyingToken,
+            settlementToken,
+            enabled,
+            decimals
+        );
     }
 
     /// @inheritdoc ICompanyRegistry
@@ -415,6 +448,13 @@ contract CompanyRegistry is ICompanyRegistry {
         }
     }
 
+    /// @dev Reverts unless the settlement asset is enabled on the current network.
+    function _requireEnabledAsset(SettlementAsset asset) private view {
+        if (!supportedAssets[asset].enabled) {
+            revert CompanyRegistry__AssetNotEnabled();
+        }
+    }
+
     ////////////////////////////////////
     // Getter functions               //
     ////////////////////////////////////
@@ -465,6 +505,21 @@ contract CompanyRegistry is ICompanyRegistry {
     }
 
     /// @inheritdoc ICompanyRegistry
+    function getCompanySettlementAsset(
+        uint256 companyId
+    ) external view returns (SettlementAsset asset) {
+        _requireCompanyExists(companyId);
+        asset = companySettlementAssets[companyId];
+    }
+
+    /// @inheritdoc ICompanyRegistry
+    function getAssetConfig(
+        SettlementAsset asset
+    ) external view returns (AssetConfig memory assetConfig) {
+        assetConfig = supportedAssets[asset];
+    }
+
+    /// @inheritdoc ICompanyRegistry
     function getEmployee(
         uint256 companyId,
         address account
@@ -487,7 +542,17 @@ contract CompanyRegistry is ICompanyRegistry {
         uint256 companyId
     ) external view returns (address token) {
         _requireCompanyExists(companyId);
-        token = settlementTokens[companyId];
+        token = supportedAssets[companySettlementAssets[companyId]]
+            .settlementToken;
+    }
+
+    /// @inheritdoc ICompanyRegistry
+    function getUnderlyingToken(
+        uint256 companyId
+    ) external view returns (address token) {
+        _requireCompanyExists(companyId);
+        token = supportedAssets[companySettlementAssets[companyId]]
+            .underlyingToken;
     }
 
     /// @inheritdoc ICompanyRegistry

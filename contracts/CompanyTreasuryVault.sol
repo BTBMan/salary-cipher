@@ -56,28 +56,32 @@ contract CompanyTreasuryVault is ICompanyTreasuryVault, ZamaEthereumConfig {
      * @notice Creates a dedicated treasury vault for one company.
      * @param companyId_ The company namespace served by this vault.
      * @param companyRegistryAddress The deployed CompanyRegistry address.
-     * @param underlyingTokenAddress The public ERC20 used for funding.
-     * @param settlementTokenAddress The confidential wrapper token used for payroll.
      * @param salaryCipherCoreAddress The payroll core authorized to trigger confidential transfers.
      */
     constructor(
         uint256 companyId_,
         address companyRegistryAddress,
-        address underlyingTokenAddress,
-        address settlementTokenAddress,
         address salaryCipherCoreAddress
     ) {
         if (
             companyRegistryAddress == address(0) ||
-            underlyingTokenAddress == address(0) ||
-            settlementTokenAddress == address(0) ||
             salaryCipherCoreAddress == address(0)
         ) {
             revert CompanyTreasuryVault__InvalidAddress();
         }
 
+        ICompanyRegistry registry = ICompanyRegistry(companyRegistryAddress);
+        address underlyingTokenAddress = registry.getUnderlyingToken(companyId_);
+        address settlementTokenAddress = registry.getSettlementToken(companyId_);
+        if (
+            underlyingTokenAddress == address(0) ||
+            settlementTokenAddress == address(0)
+        ) {
+            revert CompanyTreasuryVault__InvalidAddress();
+        }
+
         companyId = companyId_;
-        companyRegistry = ICompanyRegistry(companyRegistryAddress);
+        companyRegistry = registry;
         underlyingToken = IERC20(underlyingTokenAddress);
         settlementToken = IERC7984ERC20WrapperInternal(settlementTokenAddress);
         salaryCipherCore = salaryCipherCoreAddress;

@@ -1,6 +1,29 @@
 import { ignition, viem } from 'hardhat'
 import CompanyRegistryModule from '../../ignition/modules/CompanyRegistry'
 import SalaryCipherCoreModule from '../../ignition/modules/SalaryCipherCore'
+import { SettlementAssetEnum } from '../../src/enums'
+
+interface DeploymentOptions {
+  useSepoliaAssets?: boolean
+}
+
+interface CompanyFixtureOptions extends DeploymentOptions {
+  asset?: SettlementAssetEnum
+}
+
+function resolveAssetContracts<T extends Pick<Awaited<ReturnType<typeof deployCompanyRegistryFixture>>, 'usdc' | 'usdt' | 'cUsdc' | 'cUsdt'>>(deployment: T, asset: SettlementAssetEnum) {
+  if (asset === SettlementAssetEnum.USDT) {
+    return {
+      underlyingToken: deployment.usdt,
+      settlementToken: deployment.cUsdt,
+    }
+  }
+
+  return {
+    underlyingToken: deployment.usdc,
+    settlementToken: deployment.cUsdc,
+  }
+}
 
 /**
  * Deploys CompanyRegistry through ignition and exposes the default wallet set used in tests.
@@ -8,10 +31,10 @@ import SalaryCipherCoreModule from '../../ignition/modules/SalaryCipherCore'
 export async function deployCompanyRegistryFixture() {
   const [owner, hr, employee, outsider, anotherEmployee] = await viem.getWalletClients()
   const publicClient = await viem.getPublicClient()
-  const { companyRegistry } = await ignition.deploy(CompanyRegistryModule)
+  const deployment = await ignition.deploy(CompanyRegistryModule)
 
   return {
-    companyRegistry,
+    ...deployment,
     owner,
     hr,
     employee,
@@ -27,11 +50,10 @@ export async function deployCompanyRegistryFixture() {
 export async function deploySalaryCipherCoreFixture() {
   const [owner, hr, employee, outsider] = await viem.getWalletClients()
   const publicClient = await viem.getPublicClient()
-  const { companyRegistry, salaryCipherCore } = await ignition.deploy(SalaryCipherCoreModule)
+  const deployment = await ignition.deploy(SalaryCipherCoreModule)
 
   return {
-    companyRegistry,
-    salaryCipherCore,
+    ...deployment,
     owner,
     hr,
     employee,
@@ -43,48 +65,39 @@ export async function deploySalaryCipherCoreFixture() {
 /**
  * Creates a default company used by CompanyRegistry tests.
  */
-export async function createDefaultCompanyFixture() {
+export async function createDefaultCompanyFixture(options: CompanyFixtureOptions = {}) {
   const fixture = await deployCompanyRegistryFixture()
   const { companyRegistry, owner, publicClient } = fixture
+  const asset = options.asset ?? SettlementAssetEnum.USDC
 
-  const hash = await companyRegistry.write.createCompany(['Acme', 15], {
+  const hash = await companyRegistry.write.createCompany(['Acme', 15, asset], {
     account: owner.account,
   })
   await publicClient.waitForTransactionReceipt({ hash })
 
-  return { ...fixture, companyId: 1n }
+  return { ...fixture, companyId: 1n, asset }
 }
 
 /**
- * Creates a default company used by SalaryCipherCore tests.
+ * Creates a default company, treasury vault, and optional local test liquidity.
  */
-export async function createSalaryCipherCompanyFixture() {
+export async function createSalaryCipherCompanyFixture(options: CompanyFixtureOptions = {}) {
   const fixture = await deploySalaryCipherCoreFixture()
   const { companyRegistry, salaryCipherCore, owner, publicClient } = fixture
+  const asset = options.asset ?? SettlementAssetEnum.USDC
 
-  const hash = await companyRegistry.write.createCompany(['Acme', 15], {
+  const createCompanyHash = await companyRegistry.write.createCompany(['Acme', 15, asset], {
     account: owner.account,
   })
-  await publicClient.waitForTransactionReceipt({ hash })
+  await publicClient.waitForTransactionReceipt({ hash: createCompanyHash })
 
   const companyId = 1n
-  const underlyingToken = await viem.deployContract(
-    'MockERC20',
-    ['Mock USD Coin', 'mUSDC', 6],
-    { client: { wallet: owner } },
-  )
-  const settlementToken = await viem.deployContract(
-    'MockConfidentialERC20Wrapper',
-    [underlyingToken.address],
-    { client: { wallet: owner } },
-  )
+  const { underlyingToken, settlementToken } = resolveAssetContracts(fixture, asset)
   const companyTreasuryVault = await viem.deployContract(
     'CompanyTreasuryVault',
     [
       companyId,
       companyRegistry.address,
-      underlyingToken.address,
-      settlementToken.address,
       salaryCipherCore.address,
     ],
     { client: { wallet: owner } },
@@ -96,26 +109,23 @@ export async function createSalaryCipherCompanyFixture() {
   )
   await publicClient.waitForTransactionReceipt({ hash: authorizeCoreHash })
 
-  const setSettlementTokenHash = await companyRegistry.write.setSettlementToken(
-    [companyId, settlementToken.address],
-    { account: owner.account },
-  )
-  await publicClient.waitForTransactionReceipt({ hash: setSettlementTokenHash })
-
   const setTreasuryVaultHash = await companyRegistry.write.setTreasuryVault(
     [companyId, companyTreasuryVault.address],
     { account: owner.account },
   )
   await publicClient.waitForTransactionReceipt({ hash: setTreasuryVaultHash })
 
-  const mintHash = await underlyingToken.write.mint([owner.account.address, 1_000_000n], {
-    account: owner.account,
-  })
-  await publicClient.waitForTransactionReceipt({ hash: mintHash })
+  if (!options.useSepoliaAssets) {
+    const mintHash = await underlyingToken.write.mint([owner.account.address, 2_000_000n], {
+      account: owner.account,
+    })
+    await publicClient.waitForTransactionReceipt({ hash: mintHash })
+  }
 
   return {
     ...fixture,
     companyId,
+    asset,
     underlyingToken,
     settlementToken,
     companyTreasuryVault,

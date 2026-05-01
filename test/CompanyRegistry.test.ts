@@ -1,6 +1,6 @@
 import { loadFixture } from '@nomicfoundation/hardhat-toolbox-viem/network-helpers'
 import { expect } from 'chai'
-import { RolesEnum } from '../src/enums'
+import { RolesEnum, SettlementAssetEnum } from '../src/enums'
 import { createDefaultCompanyFixture, deployCompanyRegistryFixture } from './fixtures'
 import { customErrorPattern, normalizeAddresses } from './utils'
 
@@ -15,7 +15,7 @@ describe('companyRegistry', () => {
 
   describe('createCompany', () => {
     it('stores the company and owner membership', async () => {
-      const { companyRegistry, owner, companyId } = await loadFixture(createDefaultCompanyFixture)
+      const { companyRegistry, owner, companyId, usdc, cUsdc } = await loadFixture(createDefaultCompanyFixture)
 
       const company = await companyRegistry.read.companies([companyId])
       const ownerEmployee = await companyRegistry.read.companyEmployees([
@@ -27,6 +27,9 @@ describe('companyRegistry', () => {
         owner.account.address,
       ])
       const payrollConfig = await companyRegistry.read.getPayrollConfig([companyId])
+      const settlementAsset = await companyRegistry.read.getCompanySettlementAsset([companyId])
+      const settlementToken = await companyRegistry.read.getSettlementToken([companyId])
+      const underlyingToken = await companyRegistry.read.getUnderlyingToken([companyId])
 
       expect(company[0]).to.equal('Acme')
       expect(normalizeAddresses([company[1]])).to.deep.equal(normalizeAddresses([owner.account.address]))
@@ -43,6 +46,9 @@ describe('companyRegistry', () => {
       expect(await companyRegistry.read.getEmployeeCount([companyId])).to.equal(1n)
       expect(payrollConfig.dayOfMonth).to.equal(15)
       expect(payrollConfig.initialized).to.equal(true)
+      expect(settlementAsset).to.equal(SettlementAssetEnum.USDC)
+      expect(normalizeAddresses([settlementToken])).to.deep.equal(normalizeAddresses([cUsdc.address]))
+      expect(normalizeAddresses([underlyingToken])).to.deep.equal(normalizeAddresses([usdc.address]))
     })
   })
 

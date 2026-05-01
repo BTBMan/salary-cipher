@@ -9,7 +9,8 @@ import 'solidity-coverage'
 const SEPOLIA_RPC_URL = vars.get('SEPOLIA_RPC_URL')
 const TEST_PRIVATE_KEY = vars.get('TEST_PRIVATE_KEY')
 const ETHERSCAN_API_KEY = vars.get('ETHERSCAN_API_KEY')
-const COIN_MARKET_KEY = vars.get('COIN_MARKET_KEY', 'xx')
+const COIN_MARKET_KEY = vars.get('COIN_MARKET_KEY')
+const ENABLE_SEPOLIA_FORK = process.env.ENABLE_SEPOLIA_FORK === 'true'
 
 const config: HardhatUserConfig = {
   defaultNetwork: 'hardhat',
@@ -21,6 +22,10 @@ const config: HardhatUserConfig = {
     },
     hardhat: {
       chainId: 31337,
+      forking: {
+        enabled: ENABLE_SEPOLIA_FORK,
+        url: SEPOLIA_RPC_URL,
+      },
     },
   },
   solidity: {

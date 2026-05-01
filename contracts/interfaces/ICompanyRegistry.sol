@@ -55,12 +55,30 @@ interface ICompanyRegistry {
         bool initialized;
     }
 
+    /// @notice Platform-level asset configuration shared by all companies on one network.
+    struct AssetConfig {
+        // The public ERC20 used for funding and plain withdrawals.
+        address underlyingToken;
+        // The confidential settlement wrapper used for payroll transfers.
+        address settlementToken;
+        // Whether the platform currently allows new companies to select this asset.
+        bool enabled;
+        // Token decimals used for UI and off-chain accounting.
+        uint8 decimals;
+    }
+
     /// @notice Role set recognized by the registry and downstream contracts.
     enum Role {
         None,
         Owner,
         HR,
         Employee
+    }
+
+    /// @notice Supported settlement assets a company can choose at creation time.
+    enum SettlementAsset {
+        USDC,
+        USDT
     }
     ////////////////////////////////////
     // State variables                //
@@ -100,10 +118,18 @@ interface ICompanyRegistry {
     );
     /// @notice Emitted when a company payroll day is initialized or updated.
     event PayrollConfigUpdated(uint256 indexed companyId, uint8 dayOfMonth);
-    /// @notice Emitted when a company settlement token is configured.
-    event SettlementTokenUpdated(
+    /// @notice Emitted when a company chooses its settlement asset.
+    event SettlementAssetSelected(
         uint256 indexed companyId,
-        address indexed token
+        SettlementAsset asset
+    );
+    /// @notice Emitted when the platform configures one supported settlement asset.
+    event SupportedAssetUpdated(
+        SettlementAsset indexed asset,
+        address indexed underlyingToken,
+        address indexed settlementToken,
+        bool enabled,
+        uint8 decimals
     );
     /// @notice Emitted when a company treasury vault is configured.
     event TreasuryVaultUpdated(
@@ -127,6 +153,9 @@ interface ICompanyRegistry {
     error CompanyRegistry__InvalidCaller();
     error CompanyRegistry__InvalidPayrollConfig();
     error CompanyRegistry__InvalidAddress();
+    error CompanyRegistry__InvalidSettlementAsset();
+    error CompanyRegistry__AssetNotEnabled();
+    error CompanyRegistry__OnlyAdmin();
 
     ////////////////////////////////////
     // Modifiers                      //
@@ -142,7 +171,8 @@ interface ICompanyRegistry {
     /// @notice Creates a new company and assigns the caller as owner.
     function createCompany(
         string memory name,
-        uint8 payrollDayOfMonth
+        uint8 payrollDayOfMonth,
+        SettlementAsset asset
     ) external returns (uint256 companyId);
 
     /// @notice Adds one employee into the company membership list.
@@ -182,8 +212,14 @@ interface ICompanyRegistry {
     /// @notice Updates the payout wallet used for the caller's payroll receipts.
     function setPayoutWallet(uint256 companyId, address payoutWallet) external;
 
-    /// @notice Sets the confidential settlement token used by one company.
-    function setSettlementToken(uint256 companyId, address token) external;
+    /// @notice Configures one globally supported settlement asset for the current network.
+    function setSupportedAsset(
+        SettlementAsset asset,
+        address underlyingToken,
+        address settlementToken,
+        bool enabled,
+        uint8 decimals
+    ) external;
 
     /// @notice Sets the treasury vault responsible for holding one company's funds.
     function setTreasuryVault(uint256 companyId, address vault) external;
@@ -234,8 +270,23 @@ interface ICompanyRegistry {
         address account
     ) external view returns (address payoutWallet);
 
+    /// @notice Returns the settlement asset selected by a company.
+    function getCompanySettlementAsset(
+        uint256 companyId
+    ) external view returns (SettlementAsset asset);
+
+    /// @notice Returns the platform configuration for one supported asset.
+    function getAssetConfig(
+        SettlementAsset asset
+    ) external view returns (AssetConfig memory assetConfig);
+
     /// @notice Returns the configured confidential settlement token for a company.
     function getSettlementToken(
+        uint256 companyId
+    ) external view returns (address token);
+
+    /// @notice Returns the configured public funding token for a company.
+    function getUnderlyingToken(
         uint256 companyId
     ) external view returns (address token);
 
