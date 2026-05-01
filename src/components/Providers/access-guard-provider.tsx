@@ -12,20 +12,23 @@ export function AccessGuardProvider({ children }: PropsWithChildren) {
   const router = useRouter()
   const { isConnected } = useConnection()
   const { hasCompanies, isReady, selectedCompanyId } = useStoreContext()
+  const isPublicPath = pathname ? PUBLIC_PATHS.has(pathname) : false
 
   useEffect(() => {
-    if (!pathname || !isReady) {
+    if (!pathname) {
+      return
+    }
+
+    if (isPublicPath) {
+      return
+    }
+
+    if (!isReady) {
       return
     }
 
     if (!isConnected) {
-      if (!PUBLIC_PATHS.has(pathname)) {
-        router.replace('/')
-      }
-      return
-    }
-
-    if (PUBLIC_PATHS.has(pathname)) {
+      router.replace('/')
       return
     }
 
@@ -37,21 +40,25 @@ export function AccessGuardProvider({ children }: PropsWithChildren) {
     if (hasCompanies && !AUTH_ONLY_SETUP_PATHS.has(pathname) && !selectedCompanyId) {
       router.replace(ONBOARDING_PATHS)
     }
-  }, [hasCompanies, isConnected, isReady, pathname, router, selectedCompanyId])
+  }, [hasCompanies, isConnected, isPublicPath, isReady, pathname, router, selectedCompanyId])
+
+  if (isPublicPath) {
+    return children
+  }
 
   if (!isReady) {
     return null
   }
 
-  if (!isConnected && !PUBLIC_PATHS.has(pathname)) {
+  if (!isConnected) {
     return null
   }
 
-  if (isConnected && !hasCompanies && pathname !== CREATE_COMPANY_PATH) {
+  if (!hasCompanies && pathname !== CREATE_COMPANY_PATH) {
     return null
   }
 
-  if (isConnected && hasCompanies && !AUTH_ONLY_SETUP_PATHS.has(pathname) && !selectedCompanyId && !PUBLIC_PATHS.has(pathname)) {
+  if (hasCompanies && !AUTH_ONLY_SETUP_PATHS.has(pathname) && !selectedCompanyId) {
     return null
   }
 

@@ -11,7 +11,7 @@ export function LaunchApp() {
   const [open, setOpen] = useState(false)
   const [pendingLaunch, setPendingLaunch] = useState(false)
   const { isConnected } = useConnection()
-  const { hasCompanies, isReady } = useStoreContext()
+  const { hasCompanies, isReady, selectedCompanyId } = useStoreContext()
   const { push } = useRouter()
   const isConnectedRef = useRef(isConnected)
 
@@ -19,21 +19,34 @@ export function LaunchApp() {
     isConnectedRef.current = isConnected
   }, [isConnected])
 
+  const gotoPage = () => {
+    if (!hasCompanies) {
+      push('/onboarding/create-company')
+    }
+    else if (!selectedCompanyId) {
+      push('/onboarding')
+    }
+    else {
+      push('/dashboard')
+    }
+  }
+
   // After the wallet connection finishes, route according to company state.
   useEffect(() => {
     if (!pendingLaunch || !isReady || !isConnected) {
       return
     }
 
-    push(hasCompanies ? '/onboarding' : '/onboarding/create-company')
+    gotoPage()
     startTransition(() => {
       setPendingLaunch(false)
     })
+  // eslint-disable-next-line react/exhaustive-deps
   }, [hasCompanies, isConnected, isReady, pendingLaunch, push])
 
   const handleLaunchApp = () => {
     if (isConnectedRef.current) {
-      push(hasCompanies ? '/onboarding' : '/onboarding/create-company')
+      gotoPage()
     }
     else {
       setPendingLaunch(true)
