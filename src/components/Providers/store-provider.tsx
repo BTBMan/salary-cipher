@@ -4,6 +4,7 @@ import type { CompanySummary, CreateCompanyInput, SettlementAssetOption } from '
 import type { RolesEnum } from '@/enums'
 import type { PropsWithChildren } from 'react'
 import type { Address } from 'viem'
+import { useAppKitAccount } from '@reown/appkit/react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { toast } from 'sonner'
 import { zeroAddress } from 'viem'
@@ -46,7 +47,8 @@ interface SessionState {
  * Centralizes wallet-scoped company state loaded directly from CompanyRegistry.
  */
 export function StoreProvider({ children }: PropsWithChildren) {
-  const { address, isConnected, isConnecting } = useConnection()
+  const { address, isConnecting } = useConnection()
+  const { status, isConnected } = useAppKitAccount()
   const publicClient = usePublicClient()
   const { data: walletClient } = useWalletClient()
 
@@ -171,7 +173,7 @@ export function StoreProvider({ children }: PropsWithChildren) {
         companies: [],
         settlementAssets: [],
         selectedCompanyId: null,
-        isReady: !isConnecting,
+        isReady: status === 'connected',
       })
       return
     }
@@ -214,6 +216,7 @@ export function StoreProvider({ children }: PropsWithChildren) {
   // eslint-disable-next-line react/exhaustive-deps
   }, [
     address,
+    status,
     isConnected,
     isConnecting,
     publicClient,
@@ -232,7 +235,7 @@ export function StoreProvider({ children }: PropsWithChildren) {
           companies: [],
           settlementAssets: [],
           selectedCompanyId: null,
-          isReady: !isConnecting,
+          isReady: status === 'connected',
         })
         return
       }
@@ -300,6 +303,7 @@ export function StoreProvider({ children }: PropsWithChildren) {
   // eslint-disable-next-line react/exhaustive-deps
   }, [
     address,
+    status,
     isConnected,
     isConnecting,
     publicClient,

@@ -4,7 +4,7 @@ import type { PropsWithChildren } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
 import { useEffect } from 'react'
 import { useConnection } from 'wagmi'
-import { AUTH_ONLY_SETUP_PATHS, CREATE_COMPANY_PATH, ONBOARDING_PATHS, PUBLIC_PATHS } from '@/constants'
+import { AUTH_ONLY_SETUP_PATHS, CREATE_COMPANY_PATH, ONBOARDING_PATHS, PUBLIC_PATHS, ROOT_PATH } from '@/constants'
 import { useStoreContext } from '@/hooks'
 
 export function AccessGuardProvider({ children }: PropsWithChildren) {
@@ -28,7 +28,7 @@ export function AccessGuardProvider({ children }: PropsWithChildren) {
     }
 
     if (!isConnected) {
-      router.replace('/')
+      router.replace(ROOT_PATH)
       return
     }
 
