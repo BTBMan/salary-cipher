@@ -8,8 +8,8 @@ import {
   MdBusiness as BusinessIcon,
   MdCalendarMonth as CalendarIcon,
   MdInfoOutline as InfoIcon,
-  MdSavings as SavingsIcon,
-  MdSync as SyncIcon,
+  MdOutlineAccountBalance,
+  MdOutlineRefresh,
 } from 'react-icons/md'
 import { z } from 'zod'
 import { Button, buttonVariants } from '@/components/ui/button'
@@ -22,14 +22,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { Textarea } from '@/components/ui/textarea'
+// import { Textarea } from '@/components/ui/textarea'
 import { SettlementAssetEnum } from '@/enums'
 import { useStoreContext } from '@/hooks'
 import { cn } from '@/utils'
 
 const createCompanySchema = z.object({
   name: z.string().trim().min(1, 'Company name is required.').max(100, 'Company name is too long.'),
-  description: z.string().trim(),
+  // description: z.string().trim(),
   payrollDayOfMonth: z.coerce.number().int().min(1, 'Payroll day must be between 1 and 28.').max(28, 'Payroll day must be between 1 and 28.'),
   settlementAsset: z.number().int().refine(
     value => value === SettlementAssetEnum.USDC || value === SettlementAssetEnum.USDT,
@@ -39,9 +39,9 @@ const createCompanySchema = z.object({
 
 interface CreateCompanyFormValues {
   name: string
-  description: string
+  // description: string
   payrollDayOfMonth: number
-  settlementAsset: SettlementAssetEnum
+  settlementAsset: SettlementAssetEnum | null
 }
 
 type CreateCompanyFormErrors = Partial<Record<keyof CreateCompanyFormValues, string>>
@@ -54,7 +54,7 @@ export function CreateCompanyPageContent() {
   const { createCompany, isCreatingCompany, settlementAssets } = useStoreContext()
   const [formValues, setFormValues] = useState<CreateCompanyFormValues>({
     name: '',
-    description: '',
+    // description: '',
     payrollDayOfMonth: 15,
     settlementAsset: SettlementAssetEnum.USDC,
   })
@@ -141,7 +141,7 @@ export function CreateCompanyPageContent() {
                 </div>
 
                 <div className="space-y-2">
-                  <label htmlFor="company-name" className="text-sm font-medium text-on-surface">
+                  <label htmlFor="company-name" className="flex items-center gap-2 text-sm font-medium text-on-surface">
                     Company Name
                   </label>
                   <Input
@@ -156,7 +156,7 @@ export function CreateCompanyPageContent() {
                   )}
                 </div>
 
-                <div className="space-y-2">
+                {/* <div className="space-y-2">
                   <label htmlFor="company-description" className="text-sm font-medium text-on-surface">
                     Company Description
                   </label>
@@ -167,26 +167,27 @@ export function CreateCompanyPageContent() {
                     value={formValues.description}
                     onChange={event => setFormValues(prevState => ({ ...prevState, description: event.target.value }))}
                   />
-                </div>
+                </div> */}
               </section>
 
               <section className="space-y-5">
                 <div className="flex items-center gap-2 border-b border-outline-variant/16 pb-3">
-                  <SavingsIcon className="size-5 text-tertiary" />
+                  <MdOutlineAccountBalance className="size-5 text-tertiary" />
                   <h2 className="font-heading text-lg font-semibold text-on-surface">Financial Parameters</h2>
                 </div>
 
                 <div className="grid gap-5 md:grid-cols-2">
                   <div className="space-y-2">
-                    <label htmlFor="primary-asset" className="text-sm font-medium text-on-surface">
+                    <label htmlFor="primary-asset" className="flex items-center gap-2 text-sm font-medium text-on-surface">
                       Primary Disbursement Asset
                     </label>
-                    <Select
-                      value={String(formValues.settlementAsset)}
+                    <Select<SettlementAssetEnum>
+                      items={settlementAssetOptions}
+                      value={formValues.settlementAsset}
                       onValueChange={(value) => {
                         setFormValues(prevState => ({
                           ...prevState,
-                          settlementAsset: Number(value) as SettlementAssetEnum,
+                          settlementAsset: value,
                         }))
                       }}
                     >
@@ -198,7 +199,7 @@ export function CreateCompanyPageContent() {
                       </SelectTrigger>
                       <SelectContent>
                         {settlementAssetOptions.map(asset => (
-                          <SelectItem key={asset.value} value={String(asset.value)}>
+                          <SelectItem key={asset.value} value={asset.value} role="button">
                             {asset.label}
                           </SelectItem>
                         ))}
@@ -248,7 +249,7 @@ export function CreateCompanyPageContent() {
                   Cancel
                 </Link>
                 <Button size="lg" type="submit" className="rounded-lg px-6" disabled={isCreatingCompany}>
-                  <SyncIcon className={cn('size-4', isCreatingCompany && 'animate-spin')} />
+                  {isCreatingCompany && <MdOutlineRefresh className={cn('size-4', 'animate-spin')} />}
                   Create &amp; Sign
                 </Button>
               </div>

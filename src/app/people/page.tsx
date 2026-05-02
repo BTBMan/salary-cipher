@@ -57,6 +57,11 @@ function getAvatarFallback(displayName: string, account: string) {
 
 export default function PeoplePage() {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false)
+  const [editingEmployee, setEditingEmployee] = useState<null | {
+    account: `0x${string}`
+    displayName: string
+    role: RolesEnum.HR | RolesEnum.Employee
+  }>(null)
   const [searchQuery, setSearchQuery] = useState('')
   const { selectedCompany } = useStoreContext()
   const canManageEmployees = canManagePeople(selectedCompany?.role)
@@ -68,9 +73,22 @@ export default function PeoplePage() {
     employees,
     isAddingEmployee,
     isLoadingEmployees,
+    isUpdatingEmployee,
     selectedSettlementAsset,
+    updateEmployee,
   } = useCompanyEmployees(selectedCompany)
   const salarySymbol = selectedSettlementAsset?.symbol ?? 'USDC'
+  const editDialogInitialValues = useMemo(() => {
+    if (!editingEmployee) {
+      return undefined
+    }
+
+    return {
+      displayName: editingEmployee.displayName,
+      role: editingEmployee.role,
+      wallet: editingEmployee.account,
+    }
+  }, [editingEmployee])
   const filteredEmployees = useMemo(() => {
     const normalizedQuery = searchQuery.trim().toLowerCase()
     if (!normalizedQuery) {
@@ -97,12 +115,21 @@ export default function PeoplePage() {
 
           {canManageEmployees && (
             <AddEmployeeDialog
+              key={editingEmployee?.account ?? 'add-employee'}
               canEncryptSalary={canEncryptSalary}
-              isSubmitting={isAddingEmployee}
+              initialValues={editDialogInitialValues}
+              isSubmitting={editingEmployee ? isUpdatingEmployee : isAddingEmployee}
+              mode={editingEmployee ? 'edit' : 'add'}
               open={isAddModalOpen}
               salarySymbol={salarySymbol}
-              onOpenChange={setIsAddModalOpen}
-              onSubmit={addEmployee}
+              onOpenChange={(open) => {
+                setIsAddModalOpen(open)
+
+                if (!open) {
+                  setEditingEmployee(null)
+                }
+              }}
+              onSubmit={editingEmployee ? updateEmployee : addEmployee}
             />
           )}
         </div>
@@ -198,7 +225,22 @@ export default function PeoplePage() {
                             <TableCell className="px-6 py-5 text-right">
                               {emp.role !== RolesEnum.Owner && (
                                 <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                  <Button variant="ghost" size="icon-sm" className="text-outline hover:text-primary" disabled><EditIcon className="size-4" /></Button>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon-sm"
+                                    className="text-outline hover:text-primary"
+                                    disabled={isUpdatingEmployee}
+                                    onClick={() => {
+                                      setEditingEmployee({
+                                        account: emp.account,
+                                        displayName: emp.displayName,
+                                        role: emp.role as RolesEnum.HR | RolesEnum.Employee,
+                                      })
+                                      setIsAddModalOpen(true)
+                                    }}
+                                  >
+                                    <EditIcon className="size-4" />
+                                  </Button>
                                   <Button
                                     variant="ghost"
                                     size="icon-sm"
@@ -279,7 +321,7 @@ export default function PeoplePage() {
                   <div>
                     <div className="text-[10px] text-outline uppercase font-black tracking-widest mb-1.5">Payroll Day</div>
                     <div className="text-3xl font-heading font-black text-primary tracking-tighter">
-                      {selectedCompany?.payrollDayOfMonth ? `DAY ${selectedCompany.payrollDayOfMonth}` : '-'}
+                      {selectedCompany?.payrollDayOfMonth ? `${selectedCompany.payrollDayOfMonth}th OF MONTH` : '-'}
                     </div>
                   </div>
                 </div>

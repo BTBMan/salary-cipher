@@ -5,7 +5,7 @@ import { createContext } from 'react'
 
 export interface CreateCompanyInput {
   name: string
-  description: string
+  // description: string
   payrollDayOfMonth: number
   settlementAsset: SettlementAssetEnum
 }

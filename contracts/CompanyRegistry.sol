@@ -223,6 +223,31 @@ contract CompanyRegistry is ICompanyRegistry {
         emit RoleUpdated(companyId, account, oldRole, newRole);
     }
 
+    /// @inheritdoc ICompanyRegistry
+    function updateEmployee(
+        uint256 companyId,
+        address account,
+        Role newRole,
+        string memory displayName
+    ) external onlyOwnerOrHR(companyId) {
+        _requireExistingEmployee(companyId, account);
+        if (account == companies[companyId].owner) {
+            revert CompanyRegistry__CannotModifyOwner();
+        }
+        if (newRole == Role.None || newRole == Role.Owner) {
+            revert CompanyRegistry__InvalidRole();
+        }
+
+        Role oldRole = companyEmployees[companyId][account].role;
+        companyEmployees[companyId][account].role = newRole;
+        companyEmployees[companyId][account].displayName = displayName;
+
+        if (oldRole != newRole) {
+            emit RoleUpdated(companyId, account, oldRole, newRole);
+        }
+        emit EmployeeUpdated(companyId, account, newRole, displayName);
+    }
+
     function setAuthorizedCaller(
         uint256 companyId,
         address caller,

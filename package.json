@@ -27,7 +27,7 @@
     "test": "cross-env ENABLE_SEPOLIA_FORK=false pnpm hh test",
     "test:fork": "cross-env ENABLE_SEPOLIA_FORK=true pnpm hh test",
     "coverage": "cross-env SOLIDITY_COVERAGE=true pnpm hh coverage",
-    "deploy:local": "pnpm hh --network localhost ignition deploy",
+    "deploy:local": "pnpm hh --network localhost ignition deploy --reset",
     "deploy:sepolia": "pnpm hh --network sepolia ignition deploy",
     "verify:sepolia": "pnpm hh verify --network sepolia",
     "vars": "pnpm hh vars",

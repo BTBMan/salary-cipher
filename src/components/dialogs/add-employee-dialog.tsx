@@ -42,9 +42,12 @@ export interface AddEmployeeSubmitInput {
 
 interface AddEmployeeDialogProps {
   canEncryptSalary: boolean
+  initialValues?: Partial<AddEmployeeDraft>
   isSubmitting: boolean
+  mode?: 'add' | 'edit'
   open: boolean
   salarySymbol: string
+  showTrigger?: boolean
   onOpenChange: (open: boolean) => void
   onSubmit: (input: AddEmployeeSubmitInput) => Promise<boolean>
 }
@@ -58,6 +61,8 @@ interface AddEmployeeDraft {
 
 type AddEmployeeFormErrors = Partial<Record<keyof AddEmployeeDraft, string>>
 
+const SALARY_NUMBER_REGEX = /^\d+(\.\d+)?$/
+
 const initialAddEmployeeDraft: AddEmployeeDraft = {
   displayName: '',
   role: RolesEnum.Employee,
@@ -65,33 +70,49 @@ const initialAddEmployeeDraft: AddEmployeeDraft = {
   wallet: '',
 }
 
+function getInitialEmployeeDraft(initialValues?: Partial<AddEmployeeDraft>) {
+  return {
+    ...initialAddEmployeeDraft,
+    ...initialValues,
+  }
+}
+
 const addEmployeeSchema = z.object({
   displayName: z.string().trim().min(1, 'Display name is required.').max(80, 'Display name is too long.'),
   role: z.union([z.literal(RolesEnum.HR), z.literal(RolesEnum.Employee)]),
-  salary: z.string().trim().refine((value) => {
+  salary: z.string().trim().min(1, 'Monthly salary is required.').refine(value => SALARY_NUMBER_REGEX.test(value), 'Monthly salary must be a valid number.').refine((value) => {
     const amount = Number(value)
     return Number.isFinite(amount) && amount > 0
   }, 'Monthly salary must be greater than 0.'),
-  wallet: z.string().trim().refine(value => isAddress(value), 'Wallet address is invalid.'),
+  wallet: z.string().trim().min(1, 'Wallet address is required.').refine(value => isAddress(value), 'Wallet address is invalid.'),
 })
 
 export function AddEmployeeDialog({
   canEncryptSalary,
+  initialValues,
   isSubmitting,
+  mode = 'add',
   open,
   salarySymbol,
+  showTrigger = true,
   onOpenChange,
   onSubmit,
 }: AddEmployeeDialogProps) {
   const [step, setStep] = useState(1)
-  const [draft, setDraft] = useState<AddEmployeeDraft>(initialAddEmployeeDraft)
+  const [draft, setDraft] = useState<AddEmployeeDraft>(() => getInitialEmployeeDraft(initialValues))
   const [formErrors, setFormErrors] = useState<AddEmployeeFormErrors>({})
+  const isEditMode = mode === 'edit'
 
-  const parsedDraft = useMemo(() => addEmployeeSchema.safeParse(draft), [draft])
+  const dialogDraft = useMemo(() => getInitialEmployeeDraft(initialValues), [initialValues])
+
+  const updateDraft = <Field extends keyof AddEmployeeDraft>(field: Field, value: AddEmployeeDraft[Field]) => {
+    setDraft(current => ({ ...current, [field]: value }))
+    setFormErrors(current => ({ ...current, [field]: undefined }))
+  }
 
   const resetDialog = () => {
     setStep(1)
-    setDraft(initialAddEmployeeDraft)
+    setDraft(dialogDraft)
     setFormErrors({})
   }
 
@@ -124,23 +145,25 @@ export function AddEmployeeDialog({
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogTrigger
-        render={(
-          <Button
-            className="primary-gradient text-on-primary-container px-6 py-6 rounded-sm text-sm flex items-center justify-center gap-2 shadow-lg shadow-primary/20 hover:opacity-90 active:scale-95 border-none"
-            disabled={!canEncryptSalary}
-          >
-            <PersonAddIcon className="size-5" />
-            + Add Employee
-          </Button>
-        )}
-      />
+      {showTrigger && (
+        <DialogTrigger
+          render={(
+            <Button
+              className="primary-gradient text-on-primary-container px-6 py-6 rounded-sm text-sm flex items-center justify-center gap-2 shadow-lg shadow-primary/20 hover:opacity-90 active:scale-95 border-none"
+              disabled={!canEncryptSalary}
+            >
+              <PersonAddIcon className="size-5" />
+              + Add Employee
+            </Button>
+          )}
+        />
+      )}
 
       <DialogContent className="max-w-xl p-0 overflow-hidden bg-surface-container border-white/10 shadow-[0_40px_80px_-15px_rgba(6,14,32,0.6)] rounded-lg gap-0">
         <div className="px-8 pt-8 pb-6 bg-surface-container-low/50">
           <div className="flex items-center justify-between mb-8">
             <div>
-              <h2 className="text-xl font-heading font-bold text-foreground">Add New Employee</h2>
+              <h2 className="text-xl font-heading font-bold text-foreground">{isEditMode ? 'Edit Employee' : 'Add New Employee'}</h2>
               <p className="text-sm text-on-surface-variant mt-1">
                 {step === 1 ? 'Step 1 of 2: Identity & Compensation' : 'Step 2 of 2: Confirm encrypted payload'}
               </p>
@@ -194,7 +217,7 @@ export function AddEmployeeDialog({
                       className="h-12 rounded-lg border-none bg-surface-container-lowest px-4 text-sm placeholder:text-outline/40 focus-visible:ring-tertiary/30"
                       placeholder="Alice Chen"
                       value={draft.displayName}
-                      onChange={event => setDraft(current => ({ ...current, displayName: event.target.value }))}
+                      onChange={event => updateDraft('displayName', event.target.value)}
                     />
                     {formErrors.displayName && (
                       <p className="text-xs text-destructive">{formErrors.displayName}</p>
@@ -211,7 +234,8 @@ export function AddEmployeeDialog({
                         className="h-12 rounded-lg border-none bg-surface-container-lowest pl-11 pr-4 font-mono text-sm placeholder:text-outline/40 focus-visible:ring-tertiary/30"
                         placeholder="0x..."
                         value={draft.wallet}
-                        onChange={event => setDraft(current => ({ ...current, wallet: event.target.value }))}
+                        disabled={isEditMode}
+                        onChange={event => updateDraft('wallet', event.target.value)}
                       />
                     </div>
                     {formErrors.wallet && (
@@ -227,7 +251,7 @@ export function AddEmployeeDialog({
                         value={draft.role}
                         onValueChange={(role) => {
                           if (role !== null) {
-                            setDraft(current => ({ ...current, role }))
+                            updateDraft('role', role)
                           }
                         }}
                       >
@@ -258,7 +282,7 @@ export function AddEmployeeDialog({
                           step="0.01"
                           type="number"
                           value={draft.salary}
-                          onChange={event => setDraft(current => ({ ...current, salary: event.target.value }))}
+                          onChange={event => updateDraft('salary', event.target.value)}
                         />
                         <div className="absolute inset-y-0 right-0 pr-4 flex items-center pointer-events-none">
                           <span className="text-[9px] font-black text-tertiary/60 uppercase tracking-tighter">FHE ENCRYPTED</span>
@@ -281,7 +305,7 @@ export function AddEmployeeDialog({
                       <div>
                         <h3 className="font-heading text-sm font-bold text-on-surface">Review Employee Payload</h3>
                         <p className="mt-1 text-xs leading-5 text-on-surface-variant">
-                          Confirm the wallet, role and encrypted compensation details before submitting the transaction.
+                          Confirm the wallet, role and encrypted compensation details before submitting the {isEditMode ? 'update' : 'transaction'}.
                         </p>
                       </div>
                     </div>
@@ -346,9 +370,9 @@ export function AddEmployeeDialog({
             <Button
               type="submit"
               className="primary-gradient text-on-primary-container text-sm h-12 px-8 rounded-sm shadow-lg shadow-primary/20 hover:shadow-primary/40 transition-all active:scale-95 flex items-center gap-2 border-none"
-              disabled={!parsedDraft.success || !canEncryptSalary || isSubmitting}
+              disabled={!canEncryptSalary || isSubmitting}
             >
-              <span>{step === 1 ? 'Continue' : (isSubmitting ? 'Submitting...' : 'Confirm & Add')}</span>
+              <span>{step === 1 ? 'Continue' : (isSubmitting ? 'Submitting...' : (isEditMode ? 'Confirm & Save' : 'Confirm & Add'))}</span>
               {step === 1 ? <ArrowForwardIcon className="size-4" /> : <CheckCircleIcon className="size-4" />}
             </Button>
           </div>

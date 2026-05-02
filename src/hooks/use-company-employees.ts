@@ -20,6 +20,8 @@ export interface AddCompanyEmployeeInput {
   monthlySalary: string
 }
 
+export type UpdateCompanyEmployeeInput = AddCompanyEmployeeInput
+
 export interface CompanyEmployee {
   account: Address
   addedAt: number
@@ -54,6 +56,7 @@ export function useCompanyEmployees(selectedCompany: CompanySummary | null) {
   const [employees, setEmployees] = useState<CompanyEmployee[]>([])
   const [isLoadingEmployees, setIsLoadingEmployees] = useState(false)
   const [isAddingEmployee, setIsAddingEmployee] = useState(false)
+  const [isUpdatingEmployee, setIsUpdatingEmployee] = useState(false)
   const [deletingEmployee, setDeletingEmployee] = useState<Address | null>(null)
 
   const selectedSettlementAsset = useMemo(() => {
@@ -227,6 +230,70 @@ export function useCompanyEmployees(selectedCompany: CompanySummary | null) {
     }
   }, [address, companyId, loadEmployees, publicClient, refreshCompanies, walletClient])
 
+  const updateEmployee = useCallback(async (input: UpdateCompanyEmployeeInput) => {
+    if (!walletClient || !publicClient || !address || !companyId || !selectedSettlementAsset) {
+      toast.error('Wallet, company, or settlement asset is not ready.')
+      return false
+    }
+
+    setIsUpdatingEmployee(true)
+
+    try {
+      const salaryAmount = parseUnits(input.monthlySalary, selectedSettlementAsset.decimals)
+      const encryptedSalary = await encryptWith(builder => builder.add128(salaryAmount))
+
+      if (!encryptedSalary) {
+        toast.error('FHE encryption is not ready.')
+        return false
+      }
+
+      const updateEmployeeHash = await walletClient.writeContract({
+        abi: CompanyRegistry.abi,
+        address: CompanyRegistry.address,
+        functionName: 'updateEmployee',
+        args: [companyId, input.account, input.role, input.displayName],
+        account: address,
+      })
+      await publicClient.waitForTransactionReceipt({ hash: updateEmployeeHash })
+
+      const setSalaryHash = await walletClient.writeContract({
+        abi: SalaryCipherCore.abi,
+        address: SalaryCipherCore.address,
+        functionName: 'setSalary',
+        args: [
+          companyId,
+          input.account,
+          toHex(encryptedSalary.handles[0]),
+          toHex(encryptedSalary.inputProof),
+        ],
+        account: address,
+      })
+      await publicClient.waitForTransactionReceipt({ hash: setSalaryHash })
+
+      await Promise.all([loadEmployees(), refreshCompanies()])
+      toast.success('Employee updated.')
+      return true
+    }
+    catch (error) {
+      console.error(error)
+      toast.error('Failed to update employee.')
+      await loadEmployees()
+      return false
+    }
+    finally {
+      setIsUpdatingEmployee(false)
+    }
+  }, [
+    address,
+    companyId,
+    encryptWith,
+    loadEmployees,
+    publicClient,
+    refreshCompanies,
+    selectedSettlementAsset,
+    walletClient,
+  ])
+
   return {
     canEncryptSalary: canEncrypt,
     deleteEmployee,
@@ -234,8 +301,10 @@ export function useCompanyEmployees(selectedCompany: CompanySummary | null) {
     employees,
     isAddingEmployee,
     isLoadingEmployees,
+    isUpdatingEmployee,
     refreshEmployees: loadEmployees,
     selectedSettlementAsset,
     addEmployee,
+    updateEmployee,
   } as const
 }

@@ -110,6 +110,13 @@ interface ICompanyRegistry {
         Role oldRole,
         Role newRole
     );
+    /// @notice Emitted when editable member metadata changes.
+    event EmployeeUpdated(
+        uint256 indexed companyId,
+        address indexed employee,
+        Role role,
+        string displayName
+    );
     /// @notice Emitted when an employee payout wallet is updated.
     event PayoutWalletUpdated(
         uint256 indexed companyId,
@@ -197,6 +204,14 @@ interface ICompanyRegistry {
         uint256 companyId,
         address account,
         Role newRole
+    ) external;
+
+    /// @notice Updates editable metadata for an existing employee.
+    function updateEmployee(
+        uint256 companyId,
+        address account,
+        Role newRole,
+        string memory displayName
     ) external;
 
     /// @notice Grants or revokes a system contract that can act on behalf of a company.

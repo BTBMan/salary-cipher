@@ -1,9 +1,10 @@
 # Project Contract
 
-## Wagmi Usage
+## Wagmi/Viem Usage
 
 - Use `useConnection` instead of `useAccount`
 - Prefer to use wagmi hooks like `useWriteContract`, `useReadContract`, etc. instead of using viem client directly.
+- Use `Address` type from `viem` instead of `0x${string}`.
 
 ## Component Design
 
@@ -17,3 +18,4 @@
 - Do not use `xx as xxIcon` to import icons, import directly from icon packages.
 - Do not use `* as React` to import React related packages.
 - `hooks`, `configs`, `contexts`, `utils`, `enums`, `constants` should re-export in the `index.ts` file.
+- Usd zod to validate form data.
