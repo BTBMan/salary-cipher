@@ -27,7 +27,7 @@ export function LaunchApp() {
       push('/onboarding')
     }
     else {
-      push('/dashboard')
+      push('/overview')
     }
   }
 

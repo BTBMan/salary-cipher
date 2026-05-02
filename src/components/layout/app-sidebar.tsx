@@ -16,10 +16,14 @@ import {
 } from '@/components/ui/sidebar'
 import { WalletConnection } from '@/components/wallet/wallet-connection'
 import { sidebarMainNavItems } from '@/configs'
+import { hasRoleAccess } from '@/constants'
+import { useStoreContext } from '@/hooks'
 import { cn } from '@/utils'
 
 export function AppSidebar() {
   const pathname = usePathname()
+  const { selectedCompany } = useStoreContext()
+  const visibleMainNavItems = sidebarMainNavItems.filter(item => hasRoleAccess(selectedCompany?.role, item.roles))
 
   return (
     <Sidebar className="bg-surface border-none shadow-[40px_0_80px_-20px_rgba(6,14,32,0.5)]">
@@ -39,7 +43,7 @@ export function AppSidebar() {
         <SidebarGroup>
           <SidebarGroupContent>
             <SidebarMenu className="gap-1">
-              {sidebarMainNavItems.map((item) => {
+              {visibleMainNavItems.map((item) => {
                 const isActive = pathname === item.href
                 return (
                   <SidebarMenuItem key={item.title}>

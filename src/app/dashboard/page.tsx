@@ -18,8 +18,14 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
+import { canManagePayroll, canViewFinance } from '@/constants'
+import { useStoreContext } from '@/hooks'
 
 export default function DashboardPage() {
+  const { selectedCompany } = useStoreContext()
+  const canViewCompanyPayroll = canManagePayroll(selectedCompany?.role)
+  const canViewCompanyFinance = canViewFinance(selectedCompany?.role)
+
   return (
     <AppLayout>
       <div className="flex flex-col gap-8">
@@ -34,29 +40,32 @@ export default function DashboardPage() {
             </div>
           </div>
 
-          {/* Stat 2: Encrypted Payroll */}
-          <div className="bg-[#571bc1] p-5 rounded-lg transition-all shadow-[0_20px_40px_rgba(87,27,193,0.3)] relative overflow-hidden group border-none">
-            {/* Shimmer effect */}
-            <div className="absolute inset-0 bg-linear-to-r from-transparent via-white/5 to-transparent -translate-x-full animate-[shimmer_3s_infinite] pointer-events-none" />
+          {canViewCompanyPayroll && (
+            <div className="bg-[#571bc1] p-5 rounded-lg transition-all shadow-[0_20px_40px_rgba(87,27,193,0.3)] relative overflow-hidden group border-none">
+              {/* Shimmer effect */}
+              <div className="absolute inset-0 bg-linear-to-r from-transparent via-white/5 to-transparent -translate-x-full animate-[shimmer_3s_infinite] pointer-events-none" />
 
-            <p className="text-[#c4abff] text-[10px] font-bold uppercase tracking-widest mb-3 flex items-center gap-1.5">
-              <LockIcon className="size-3 fill-current" /> Total Monthly Payroll
-            </p>
-            <div className="flex items-baseline gap-2 relative z-10">
-              <span className="text-3xl font-mono font-bold blur-[6px] select-none text-white">642,150.00</span>
-              <span className="text-[#c4abff] text-xs font-black uppercase tracking-tighter">USDC</span>
+              <p className="text-[#c4abff] text-[10px] font-bold uppercase tracking-widest mb-3 flex items-center gap-1.5">
+                <LockIcon className="size-3 fill-current" /> Total Monthly Payroll
+              </p>
+              <div className="flex items-baseline gap-2 relative z-10">
+                <span className="text-3xl font-mono font-bold blur-[6px] select-none text-white">642,150.00</span>
+                <span className="text-[#c4abff] text-xs font-black uppercase tracking-tighter">USDC</span>
+              </div>
+              <div className="mt-3 text-[9px] text-[#c4abff]/60 tracking-[0.2em] font-black uppercase">FHE ENCRYPTED VAULT</div>
             </div>
-            <div className="mt-3 text-[9px] text-[#c4abff]/60 tracking-[0.2em] font-black uppercase">FHE ENCRYPTED VAULT</div>
-          </div>
+          )}
 
           {/* Stat 3: Fund Pool Exhaustion */}
-          <div className="bg-surface-container-low p-5 rounded-lg transition-all hover:bg-surface-container border-none group">
-            <p className="text-on-surface-variant text-[10px] font-bold uppercase tracking-widest mb-3">Fund Pool Exhaustion</p>
-            <div className="flex items-baseline gap-2">
-              <span className="text-3xl font-heading font-black text-on-surface">22<span className="text-lg ml-0.5 text-on-surface-variant">d</span></span>
-              <span className="text-destructive text-xs font-bold tracking-tight uppercase">Low Reserve</span>
+          {canViewCompanyFinance && (
+            <div className="bg-surface-container-low p-5 rounded-lg transition-all hover:bg-surface-container border-none group">
+              <p className="text-on-surface-variant text-[10px] font-bold uppercase tracking-widest mb-3">Fund Pool Exhaustion</p>
+              <div className="flex items-baseline gap-2">
+                <span className="text-3xl font-heading font-black text-on-surface">22<span className="text-lg ml-0.5 text-on-surface-variant">d</span></span>
+                <span className="text-destructive text-xs font-bold tracking-tight uppercase">Low Reserve</span>
+              </div>
             </div>
-          </div>
+          )}
 
           {/* Stat 4: Next Payday */}
           <div className="bg-surface-container-low p-5 rounded-lg transition-all hover:bg-surface-container border-none group">
@@ -132,41 +141,42 @@ export default function DashboardPage() {
           {/* Right Column (40%) */}
           <div className="lg:col-span-4 space-y-6">
 
-            {/* Fund Pool Health */}
-            <Card className="rounded-xl border border-white/5 bg-surface-container p-0 shadow-2xl">
-              <CardContent className="space-y-8 p-6">
-                <h3 className="font-heading font-black uppercase tracking-[0.2em] text-xs text-on-surface opacity-80">Fund Pool Health</h3>
+            {canViewCompanyFinance && (
+              <Card className="rounded-xl border border-white/5 bg-surface-container p-0 shadow-2xl">
+                <CardContent className="space-y-8 p-6">
+                  <h3 className="font-heading font-black uppercase tracking-[0.2em] text-xs text-on-surface opacity-80">Fund Pool Health</h3>
 
-                <div className="space-y-6">
-                  <div>
-                    <div className="flex justify-between items-baseline mb-3">
-                      <span className="text-[10px] text-outline font-black uppercase tracking-[0.15em]">Encrypted Balance</span>
-                      <span className="text-[9px] bg-tertiary/10 text-tertiary px-2 py-0.5 rounded-sm font-black uppercase tracking-widest border border-tertiary/20">FHE Secured</span>
+                  <div className="space-y-6">
+                    <div>
+                      <div className="flex justify-between items-baseline mb-3">
+                        <span className="text-[10px] text-outline font-black uppercase tracking-[0.15em]">Encrypted Balance</span>
+                        <span className="text-[9px] bg-tertiary/10 text-tertiary px-2 py-0.5 rounded-sm font-black uppercase tracking-widest border border-tertiary/20">FHE Secured</span>
+                      </div>
+                      <div className="flex items-center gap-4">
+                        <div className="w-12 h-12 rounded-xl bg-surface-container-highest flex items-center justify-center border border-white/10 shadow-inner">
+                          <VerifiedUserIcon className="text-tertiary size-6 fill-current" />
+                        </div>
+                        <div>
+                          <p className="text-2xl font-mono text-on-surface leading-none blur-md font-bold">1,240,500.00</p>
+                          <p className="text-[10px] text-outline mt-1.5 font-bold uppercase tracking-wider">~ 1.8 months coverage</p>
+                        </div>
+                      </div>
                     </div>
-                    <div className="flex items-center gap-4">
-                      <div className="w-12 h-12 rounded-xl bg-surface-container-highest flex items-center justify-center border border-white/10 shadow-inner">
-                        <VerifiedUserIcon className="text-tertiary size-6 fill-current" />
+
+                    <div className="space-y-3">
+                      <div className="flex justify-between text-[10px] font-black uppercase tracking-widest">
+                        <span className="text-on-surface">Pool Utilization</span>
+                        <span className="text-destructive">82%</span>
                       </div>
-                      <div>
-                        <p className="text-2xl font-mono text-on-surface leading-none blur-md font-bold">1,240,500.00</p>
-                        <p className="text-[10px] text-outline mt-1.5 font-bold uppercase tracking-wider">~ 1.8 months coverage</p>
+                      <div className="h-3 bg-surface-container-lowest rounded-full overflow-hidden border border-white/5 shadow-inner">
+                        <div className="bg-linear-to-r from-primary to-destructive h-full w-[82%] rounded-full" />
                       </div>
+                      <p className="text-[9px] text-outline italic text-right font-medium">Liquidity alert: Top-up recommended within 14 days.</p>
                     </div>
                   </div>
-
-                  <div className="space-y-3">
-                    <div className="flex justify-between text-[10px] font-black uppercase tracking-widest">
-                      <span className="text-on-surface">Pool Utilization</span>
-                      <span className="text-destructive">82%</span>
-                    </div>
-                    <div className="h-3 bg-surface-container-lowest rounded-full overflow-hidden border border-white/5 shadow-inner">
-                      <div className="bg-linear-to-r from-primary to-destructive h-full w-[82%] rounded-full" />
-                    </div>
-                    <p className="text-[9px] text-outline italic text-right font-medium">Liquidity alert: Top-up recommended within 14 days.</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
+            )}
 
             {/* Priority Actions */}
             <Card className="rounded-xl border border-white/5 bg-surface-container-low p-0">
@@ -174,13 +184,15 @@ export default function DashboardPage() {
                 <h3 className="font-heading font-black uppercase tracking-[0.2em] text-xs text-on-surface opacity-80">Priority Actions</h3>
 
                 <div className="space-y-3">
-                  <div className="p-4 bg-destructive/5 border border-destructive/10 rounded-lg flex items-start gap-4 hover:bg-destructive/10 transition-colors cursor-pointer">
-                    <WarningIcon className="text-destructive size-5 shrink-0 mt-0.5" />
-                    <div>
-                      <p className="text-sm font-bold text-destructive leading-none">Low funds warning</p>
-                      <p className="text-[10px] text-destructive/70 mt-2 font-medium leading-normal uppercase tracking-wider">Gas vault below 0.5 ETH threshold.</p>
+                  {canViewCompanyFinance && (
+                    <div className="p-4 bg-destructive/5 border border-destructive/10 rounded-lg flex items-start gap-4 hover:bg-destructive/10 transition-colors cursor-pointer">
+                      <WarningIcon className="text-destructive size-5 shrink-0 mt-0.5" />
+                      <div>
+                        <p className="text-sm font-bold text-destructive leading-none">Low funds warning</p>
+                        <p className="text-[10px] text-destructive/70 mt-2 font-medium leading-normal uppercase tracking-wider">Gas vault below 0.5 ETH threshold.</p>
+                      </div>
                     </div>
-                  </div>
+                  )}
 
                   <div className="p-4 bg-surface-container-highest/30 border border-white/5 rounded-lg flex items-start gap-4 hover:bg-surface-container-highest/50 transition-colors cursor-pointer group">
                     <PendingActionsIcon className="text-tertiary size-5 shrink-0 mt-0.5" />

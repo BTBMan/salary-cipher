@@ -19,9 +19,16 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
+import { canSubmitEmployerBudget, canSubmitExpectedSalary } from '@/constants'
+import { useStoreContext } from '@/hooks'
 import { cn } from '@/utils'
 
 export default function SalaryNegotiationPage() {
+  const { selectedCompany } = useStoreContext()
+  const canSetBudget = canSubmitEmployerBudget(selectedCompany?.role)
+  const canSubmitExpectation = canSubmitExpectedSalary(selectedCompany?.role)
+  const activeActionLabel = canSetBudget ? 'Set Budget' : 'Submit Expectation'
+
   return (
     <AppLayout>
       <div className="flex flex-col gap-10">
@@ -35,11 +42,11 @@ export default function SalaryNegotiationPage() {
             </p>
           </div>
           <div className="flex gap-4">
-            <div className="bg-surface-container-low p-4 rounded-xl flex flex-col gap-1 border border-white/5 min-w-[120px]">
+            <div className="bg-surface-container-low p-4 rounded-xl flex flex-col gap-1 border border-white/5 min-w-30">
               <span className="text-[10px] uppercase tracking-[0.2em] text-slate-500 font-black">Active Bids</span>
               <span className="text-3xl font-heading font-black text-primary tracking-tighter">14</span>
             </div>
-            <div className="bg-surface-container-low p-4 rounded-xl flex flex-col gap-1 border border-white/5 min-w-[120px]">
+            <div className="bg-surface-container-low p-4 rounded-xl flex flex-col gap-1 border border-white/5 min-w-30">
               <span className="text-[10px] uppercase tracking-[0.2em] text-slate-500 font-black">Match Rate</span>
               <span className="text-3xl font-heading font-black text-tertiary tracking-tighter">84%</span>
             </div>
@@ -95,7 +102,7 @@ export default function SalaryNegotiationPage() {
                         <TableCell className="px-6 py-5 text-right">
                           {row.active
                             ? (
-                                <Button size="sm" className="bg-primary-container text-on-primary-container h-8 px-4 rounded-sm text-sm hover:opacity-90 border-none">Set Budget</Button>
+                                <Button size="sm" className="bg-primary-container text-on-primary-container h-8 px-4 rounded-sm text-sm hover:opacity-90 border-none">{activeActionLabel}</Button>
                               )
                             : (
                                 <Button variant="link" size="sm" className="h-auto px-0 text-[10px] font-black uppercase tracking-[0.2em] text-outline hover:text-on-surface">
@@ -114,41 +121,42 @@ export default function SalaryNegotiationPage() {
           {/* Right Column (40%) */}
           <div className="lg:col-span-4 space-y-6">
 
-            {/* Set Budget Card */}
-            <Card className="group relative overflow-hidden rounded-xl border border-primary/30 bg-surface-container p-0 shadow-[0_0_40px_rgba(99,102,241,0.15)]">
-              <CardContent className="p-6">
-                <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-full blur-3xl -mr-16 -mt-16 group-hover:bg-primary/10 transition-colors" />
-                <h5 className="font-heading font-black text-on-surface text-lg tracking-tight mb-1">Set Employee Budget</h5>
-                <p className="text-[10px] font-black text-on-surface-variant uppercase tracking-[0.2em] mb-8 opacity-60">Target: 0x71C...9e21</p>
+            {(canSetBudget || canSubmitExpectation) && (
+              <Card className="group relative overflow-hidden rounded-xl border border-primary/30 bg-surface-container p-0 shadow-[0_0_40px_rgba(99,102,241,0.15)]">
+                <CardContent className="p-6">
+                  <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-full blur-3xl -mr-16 -mt-16 group-hover:bg-primary/10 transition-colors" />
+                  <h5 className="font-heading font-black text-on-surface text-lg tracking-tight mb-1">{canSetBudget ? 'Set Employee Budget' : 'Submit Expected Salary'}</h5>
+                  <p className="text-[10px] font-black text-on-surface-variant uppercase tracking-[0.2em] mb-8 opacity-60">Target: 0x71C...9e21</p>
 
-                <div className="space-y-6">
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">Encrypted Salary Bid ($)</label>
-                    <div className="relative">
-                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                        <LockIcon className="size-4 text-tertiary fill-current" />
-                      </div>
-                      <Input
-                        className="h-12 rounded-lg border-none bg-surface-container-lowest px-10 py-4 font-mono font-bold shadow-inner focus-visible:ring-tertiary/30"
-                        placeholder="••••••••"
-                        type="text"
-                      />
-                      <div className="absolute inset-y-0 right-0 pr-3 flex items-center">
-                        <span className="text-[9px] font-black text-tertiary uppercase tracking-tighter opacity-60">FHE SECURE</span>
+                  <div className="space-y-6">
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">{canSetBudget ? 'Encrypted Budget ($)' : 'Encrypted Expected Salary ($)'}</label>
+                      <div className="relative">
+                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                          <LockIcon className="size-4 text-tertiary fill-current" />
+                        </div>
+                        <Input
+                          className="h-12 rounded-lg border-none bg-surface-container-lowest px-10 py-4 font-mono font-bold shadow-inner focus-visible:ring-tertiary/30"
+                          placeholder="••••••••"
+                          type="text"
+                        />
+                        <div className="absolute inset-y-0 right-0 pr-3 flex items-center">
+                          <span className="text-[9px] font-black text-tertiary uppercase tracking-tighter opacity-60">FHE SECURE</span>
+                        </div>
                       </div>
                     </div>
+
+                    <Button className="w-full primary-gradient text-on-primary-container h-12 rounded-sm text-sm shadow-xl shadow-primary/20 active:scale-[0.98] transition-all border-none">
+                      {canSetBudget ? 'Commit Encrypted Budget' : 'Submit Encrypted Expectation'}
+                    </Button>
+
+                    <p className="text-[9px] text-center text-slate-500 font-bold leading-relaxed uppercase tracking-wider px-4">
+                      Your bid is masked using a random salt before being added to the homomorphic pool.
+                    </p>
                   </div>
-
-                  <Button className="w-full primary-gradient text-on-primary-container h-12 rounded-sm text-sm shadow-xl shadow-primary/20 active:scale-[0.98] transition-all border-none">
-                    Commit Encrypted Bid
-                  </Button>
-
-                  <p className="text-[9px] text-center text-slate-500 font-bold leading-relaxed uppercase tracking-wider px-4">
-                    Your bid is masked using a random salt before being added to the homomorphic pool.
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
+            )}
 
             {/* Protocol Status */}
             <Card className="rounded-xl border border-white/5 bg-surface-container-low p-0 shadow-xl">

@@ -36,7 +36,7 @@ export default function FinancePage() {
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
           <div className="lg:col-span-5 flex flex-col gap-6">
-            <Card className="group min-h-[280px] rounded-xl border-y-0 border-r-0 border-l-4 border-primary bg-surface-container-low p-0 shadow-2xl">
+            <Card className="group min-h-70 rounded-xl border-y-0 border-r-0 border-l-4 border-primary bg-surface-container-low p-0 shadow-2xl">
               <CardContent className="relative flex h-full flex-col justify-between p-8">
                 <div className="relative z-10">
                   <span className="text-[10px] font-black text-on-surface-variant tracking-[0.2em] uppercase mb-4 block">Platform Balance</span>

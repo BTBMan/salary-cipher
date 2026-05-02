@@ -41,7 +41,7 @@ export function CompanySelectorDialog({ open, onOpenChange }: CompanySelectorDia
             onSelect={(companyId) => {
               selectCompany(companyId)
               onOpenChange(false)
-              router.push('/dashboard')
+              router.push('/overview')
             }}
           />
         </div>

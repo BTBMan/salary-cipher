@@ -32,61 +32,68 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
+import { canManagePayroll } from '@/constants'
+import { useStoreContext } from '@/hooks'
 import { cn } from '@/utils'
 
 export default function PayrollHistoryPage() {
+  const { selectedCompany } = useStoreContext()
+  const canEditPayrollSettings = canManagePayroll(selectedCompany?.role)
+
   return (
     <AppLayout>
       <div className="flex flex-col gap-10">
 
         {/* Payroll Configuration Section */}
-        <section className="space-y-6">
-          <div className="flex items-center gap-3 px-1">
-            <div className="w-1 h-6 bg-primary rounded-full shadow-[0_0_8px_#c0c1ff]" />
-            <h2 className="font-heading text-2xl font-bold text-on-surface tracking-tight">Payroll Configuration</h2>
-          </div>
-          <Card className="rounded-xl border border-white/5 bg-surface-container-low p-0 shadow-2xl">
-            <CardContent className="p-8">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-10 items-end">
-                <div className="space-y-3">
-                  <label className="text-[10px] font-black uppercase tracking-[0.2em] text-on-surface-variant flex items-center gap-2">
-                    <EventRepeatIcon className="text-tertiary size-4" />
-                    Pay Cycle Frequency
-                  </label>
-                  <Select defaultValue="monthly">
-                    <SelectTrigger className="rounded-lg border-none bg-surface-container-lowest font-bold shadow-inner">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="monthly">Monthly - 1st of month</SelectItem>
-                      <SelectItem value="bi-weekly">Bi-Weekly - Every 15th</SelectItem>
-                      <SelectItem value="weekly">Weekly - Friday</SelectItem>
-                      <SelectItem value="custom">Custom Epoch</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-3">
-                  <label className="text-[10px] font-black uppercase tracking-[0.2em] text-on-surface-variant flex items-center gap-2">
-                    <CurrencyExchangeIcon className="text-tertiary size-4" />
-                    Disbursement Asset
-                  </label>
-                  <div className="flex items-center gap-3 bg-surface-container-lowest p-3 rounded-lg border border-white/5 shadow-inner">
-                    <div className="w-6 h-6 rounded-full bg-indigo-500/20 flex items-center justify-center">
-                      <TokenIcon className="size-3 text-indigo-400" />
+        {canEditPayrollSettings && (
+          <section className="space-y-6">
+            <div className="flex items-center gap-3 px-1">
+              <div className="w-1 h-6 bg-primary rounded-full shadow-[0_0_8px_#c0c1ff]" />
+              <h2 className="font-heading text-2xl font-bold text-on-surface tracking-tight">Payroll Configuration</h2>
+            </div>
+            <Card className="rounded-xl border border-white/5 bg-surface-container-low p-0 shadow-2xl">
+              <CardContent className="p-8">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-10 items-end">
+                  <div className="space-y-3">
+                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-on-surface-variant flex items-center gap-2">
+                      <EventRepeatIcon className="text-tertiary size-4" />
+                      Pay Cycle Frequency
+                    </label>
+                    <Select defaultValue="monthly">
+                      <SelectTrigger className="rounded-lg border-none bg-surface-container-lowest font-bold shadow-inner">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="monthly">Monthly - 1st of month</SelectItem>
+                        <SelectItem value="bi-weekly">Bi-Weekly - Every 15th</SelectItem>
+                        <SelectItem value="weekly">Weekly - Friday</SelectItem>
+                        <SelectItem value="custom">Custom Epoch</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-3">
+                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-on-surface-variant flex items-center gap-2">
+                      <CurrencyExchangeIcon className="text-tertiary size-4" />
+                      Disbursement Asset
+                    </label>
+                    <div className="flex items-center gap-3 bg-surface-container-lowest p-3 rounded-lg border border-white/5 shadow-inner">
+                      <div className="w-6 h-6 rounded-full bg-indigo-500/20 flex items-center justify-center">
+                        <TokenIcon className="size-3 text-indigo-400" />
+                      </div>
+                      <span className="font-mono text-xs font-black tracking-widest text-on-surface">USDC (Base Mainnet)</span>
                     </div>
-                    <span className="font-mono text-xs font-black tracking-widest text-on-surface">USDC (Base Mainnet)</span>
+                  </div>
+                  <div>
+                    <Button className="primary-gradient text-on-primary-container text-sm h-12 px-8 rounded-sm shadow-xl shadow-primary/20 hover:opacity-90 active:scale-95 transition-all border-none flex items-center gap-2">
+                      <SaveIcon className="size-4" />
+                      Save Settings
+                    </Button>
                   </div>
                 </div>
-                <div>
-                  <Button className="primary-gradient text-on-primary-container text-sm h-12 px-8 rounded-sm shadow-xl shadow-primary/20 hover:opacity-90 active:scale-95 transition-all border-none flex items-center gap-2">
-                    <SaveIcon className="size-4" />
-                    Save Settings
-                  </Button>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </section>
+              </CardContent>
+            </Card>
+          </section>
+        )}
 
         {/* Execution History Section */}
         <section className="space-y-6">
@@ -197,26 +204,28 @@ export default function PayrollHistoryPage() {
                 </TableBody>
               </Table>
 
-              <div className="bg-surface-container-highest px-8 py-6 flex flex-col md:flex-row justify-between items-center gap-8 border-t border-white/5">
-                <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-xl bg-surface-container flex items-center justify-center border border-white/10 shadow-inner">
-                    <ShieldPersonIcon className="text-primary size-7 fill-current" />
+              {canEditPayrollSettings && (
+                <div className="bg-surface-container-highest px-8 py-6 flex flex-col md:flex-row justify-between items-center gap-8 border-t border-white/5">
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 rounded-xl bg-surface-container flex items-center justify-center border border-white/10 shadow-inner">
+                      <ShieldPersonIcon className="text-primary size-7 fill-current" />
+                    </div>
+                    <div>
+                      <p className="text-[10px] uppercase tracking-[0.2em] font-black text-on-surface-variant mb-1.5 opacity-60">Vault Liquidity</p>
+                      <p className="font-mono text-lg font-black text-on-surface tracking-tighter">142,500.00 <span className="text-xs text-outline uppercase">USDC</span></p>
+                    </div>
                   </div>
-                  <div>
-                    <p className="text-[10px] uppercase tracking-[0.2em] font-black text-on-surface-variant mb-1.5 opacity-60">Vault Liquidity</p>
-                    <p className="font-mono text-lg font-black text-on-surface tracking-tighter">142,500.00 <span className="text-xs text-outline uppercase">USDC</span></p>
+                  <div className="bg-surface-container-lowest/40 border border-white/5 px-8 py-4 rounded-xl flex flex-col items-center md:items-end group cursor-pointer relative overflow-hidden shadow-2xl max-w-xs w-full transition-all hover:bg-surface-container-lowest/60">
+                    <p className="text-[10px] uppercase tracking-[0.2em] font-black text-tertiary mb-1.5 opacity-80">Total Disbursed (Encrypted Sum)</p>
+                    <div className="flex items-center gap-4 relative z-10">
+                      <span className="font-mono text-2xl font-black text-white blur-[6px] group-hover:blur-0 transition-all duration-700 tracking-tighter">764,212.85 <span className="text-xs text-outline uppercase">USDC</span></span>
+                      <KeyVisualizerIcon className="text-tertiary size-5 fill-current" />
+                    </div>
+                    {/* Shimmer Overlay */}
+                    <div className="absolute inset-0 bg-linear-to-r from-transparent via-white/5 to-transparent -translate-x-full animate-[shimmer_3s_infinite] group-hover:hidden opacity-30" />
                   </div>
                 </div>
-                <div className="bg-surface-container-lowest/40 border border-white/5 px-8 py-4 rounded-xl flex flex-col items-center md:items-end group cursor-pointer relative overflow-hidden shadow-2xl max-w-xs w-full transition-all hover:bg-surface-container-lowest/60">
-                  <p className="text-[10px] uppercase tracking-[0.2em] font-black text-tertiary mb-1.5 opacity-80">Total Disbursed (Encrypted Sum)</p>
-                  <div className="flex items-center gap-4 relative z-10">
-                    <span className="font-mono text-2xl font-black text-white blur-[6px] group-hover:blur-0 transition-all duration-700 tracking-tighter">764,212.85 <span className="text-xs text-outline uppercase">USDC</span></span>
-                    <KeyVisualizerIcon className="text-tertiary size-5 fill-current" />
-                  </div>
-                  {/* Shimmer Overlay */}
-                  <div className="absolute inset-0 bg-linear-to-r from-transparent via-white/5 to-transparent -translate-x-full animate-[shimmer_3s_infinite] group-hover:hidden opacity-30" />
-                </div>
-              </div>
+              )}
             </CardContent>
           </Card>
         </section>

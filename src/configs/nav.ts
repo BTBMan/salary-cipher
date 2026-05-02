@@ -7,14 +7,15 @@ import {
   MdPayments,
   MdSettings,
 } from 'react-icons/md'
+import { ALL_COMPANY_ROLES, OWNER_ONLY_ROLES } from '@/constants'
 
 export const sidebarMainNavItems = [
-  { title: 'Overview', href: '/dashboard', icon: MdDashboard },
-  { title: 'People', href: '/people', icon: MdGroups },
-  { title: 'Payroll', href: '/payroll', icon: MdPayments },
-  { title: 'Negotiate', href: '/negotiate', icon: MdGavel },
-  { title: 'Compliance', href: '/compliance', icon: MdGavel },
-  { title: 'Finance', href: '/finance', icon: MdAccountBalance },
+  { title: 'Overview', href: '/overview', icon: MdDashboard, roles: ALL_COMPANY_ROLES },
+  { title: 'People', href: '/people', icon: MdGroups, roles: ALL_COMPANY_ROLES },
+  { title: 'Payroll', href: '/payroll', icon: MdPayments, roles: ALL_COMPANY_ROLES },
+  { title: 'Negotiate', href: '/negotiate', icon: MdGavel, roles: ALL_COMPANY_ROLES },
+  { title: 'Compliance', href: '/compliance', icon: MdGavel, roles: ALL_COMPANY_ROLES },
+  { title: 'Finance', href: '/finance', icon: MdAccountBalance, roles: OWNER_ONLY_ROLES },
   // { title: 'Settings', href: '/settings', icon: SettingsIcon },
 ]
 

@@ -214,18 +214,19 @@
   body {
     @apply bg-background text-foreground font-sans antialiased;
   }
-  [data-slot='button'] {
-    @apply font-heading font-bold;
-  }
-  input,
-  select,
-  textarea {
-    @apply font-sans;
-  }
-  button:not(:disabled),
-  [role='button']:not(:disabled) {
-    cursor: pointer;
-  }
+}
+
+[data-slot='button'] {
+  @apply font-heading font-bold;
+}
+input,
+select,
+textarea {
+  @apply font-sans;
+}
+button:not(:disabled),
+[role='button']:not(:disabled) {
+  cursor: pointer;
 }
 
 @layer utilities {

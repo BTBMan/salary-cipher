@@ -9,6 +9,7 @@
 - Use **kebab-case** for all main files and folders (except `*.md,` `*.env` files).
 - Export **named function** in a React components which in the `components/` directory.
 - Run `pnpm run shadcn` to add shadcn components (Do not use global shadcn).
+- If use shadcn components that hasn't been added, run `pnpm run shadcn add xxx` to add it, and do not code shadcn components.
 
 ## Code Restrictions
 

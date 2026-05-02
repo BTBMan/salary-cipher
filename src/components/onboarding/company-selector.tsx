@@ -14,7 +14,7 @@ export function CompanySelector() {
         companies={companies}
         onSelect={(companyId) => {
           selectCompany(companyId)
-          router.push('/dashboard')
+          router.push('/overview')
         }}
       />
     </div>
