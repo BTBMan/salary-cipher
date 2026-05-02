@@ -5,10 +5,9 @@ import {
   MdUnfoldMore as UnfoldMoreIcon,
 } from 'react-icons/md'
 import { CompanySelectorDialog } from '@/components/dialogs/company-selector-dialog'
-import { Badge } from '@/components/ui/badge'
+import { RoleBadge } from '@/components/role-badge'
 import { SidebarTrigger } from '@/components/ui/sidebar'
 import { WalletNetworkStatus } from '@/components/wallet/wallet-network-status'
-import { ROLE_LABELS, ROLE_TONES } from '@/constants'
 import { useStoreContext } from '@/hooks'
 
 export function AppHeader() {
@@ -31,9 +30,7 @@ export function AppHeader() {
           </div>
           <span className="text-on-surface font-heading font-semibold text-sm">{selectedCompany?.name ?? 'Company'}</span>
           {selectedCompany && (
-            <Badge className={`${ROLE_TONES[selectedCompany.role]} text-[10px] font-bold rounded-sm uppercase tracking-tight border-none px-1.5 py-0.5`}>
-              {ROLE_LABELS[selectedCompany.role]}
-            </Badge>
+            <RoleBadge role={selectedCompany.role} className="rounded-sm px-1.5 py-0.5 text-[10px] font-bold tracking-tight" />
           )}
           <UnfoldMoreIcon className="text-outline text-lg group-hover:text-foreground transition-colors" />
         </button>

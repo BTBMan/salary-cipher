@@ -5,10 +5,10 @@ import {
   MdGroups as GroupsIcon,
   MdAccountBalanceWallet as WalletIcon,
 } from 'react-icons/md'
+import { RoleBadge } from '@/components/role-badge'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
-import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { ROLE_LABELS, ROLE_TONES } from '@/constants'
+import { formatAddress } from '@/utils'
 
 interface CompanyListProps {
   companies: CompanySummary[]
@@ -32,16 +32,14 @@ export function CompanyList({ companies, onSelect }: CompanyListProps) {
           <div className="grow">
             <div className="mb-1 flex items-center gap-2">
               <span className="font-heading text-lg font-semibold text-on-surface">{company.name}</span>
-              <Badge className={`${ROLE_TONES[company.role]} rounded-sm border-none px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider`}>
-                {ROLE_LABELS[company.role]}
-              </Badge>
+              <RoleBadge role={company.role} className="rounded-sm px-2 py-0.5 text-[10px] font-bold tracking-wider" />
             </div>
             <div className="flex items-center gap-3 text-xs font-medium text-on-surface-variant">
               <span className="flex items-center gap-1">
                 <GroupsIcon className="size-3.5" /> {company.employeeCount} Employees
               </span>
               <span className="flex items-center gap-1 font-mono text-[10px]">
-                <WalletIcon className="size-3.5" /> {company.wallet.slice(0, 6)}...{company.wallet.slice(-4)}
+                <WalletIcon className="size-3.5" /> {formatAddress(company.wallet)}
               </span>
             </div>
           </div>

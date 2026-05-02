@@ -1,5 +1,5 @@
 import { useConnection } from 'wagmi'
-import { cn } from '@/utils'
+import { cn, formatAddress } from '@/utils'
 
 interface WalletAddressProps {
   address?: string
@@ -14,17 +14,13 @@ export function WalletAddress({ address, className, full = false }: WalletAddres
   if (!address)
     return null
 
-  const formattedAddress = full
-    ? address
-    : `${address.slice(0, 6)}...${address.slice(-4)}`
-
   return (
     <div className={cn(
       'font-mono text-sm py-1 bg-surface-high rounded-full text-foreground transition-colors inline-flex items-center gap-1.5',
       className,
     )}
     >
-      {formattedAddress}
+      {formatAddress(address, { full })}
     </div>
   )
 }

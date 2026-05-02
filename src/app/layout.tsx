@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import { Inter, JetBrains_Mono, Manrope } from 'next/font/google'
 import { Providers } from '@/components/providers'
+import { Toaster } from '@/components/ui/sonner'
 import { cn } from '@/utils'
 import '../styles/globals.css'
 
@@ -27,6 +28,7 @@ export default function RootLayout({
               {children}
             </main>
           </div>
+          <Toaster position="top-center" />
         </Providers>
       </body>
     </html>

@@ -2,11 +2,11 @@
 
 import type { AssignableCompanyRole } from '@/constants'
 import type { CompanySummary } from '@/contexts'
-import type { Address } from 'viem'
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import type { Address, Hash } from 'viem'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { parseUnits, toHex } from 'viem'
-import { useConnection, usePublicClient, useWalletClient } from 'wagmi'
+import { useConnection, useReadContract, useReadContracts, useWaitForTransactionReceipt, useWriteContract } from 'wagmi'
 import { CompanyRegistry } from '@/contract-data/company-registry'
 import { SalaryCipherCore } from '@/contract-data/salary-cipher-core'
 import { RolesEnum } from '@/enums'
@@ -37,6 +37,12 @@ interface CompanyEmployeeRecord {
   role: RolesEnum
 }
 
+interface ReceiptWaiter {
+  hash: Hash
+  resolve: () => void
+  reject: (error: Error) => void
+}
+
 function filterEmployees<T extends CompanyEmployee>(value: T | null): value is T {
   return value !== null && value.role !== RolesEnum.Owner
 }
@@ -46,18 +52,70 @@ function filterEmployees<T extends CompanyEmployee>(value: T | null): value is T
  */
 export function useCompanyEmployees(selectedCompany: CompanySummary | null) {
   const { address } = useConnection()
-  const publicClient = usePublicClient()
-  const { data: walletClient } = useWalletClient()
+  const { mutateAsync } = useWriteContract()
   const { settlementAssets, refreshCompanies } = useStoreContext()
   const { canEncrypt, encryptWith } = useFHEEncrypt({
     contractAddress: SalaryCipherCore.address,
   })
 
-  const [employees, setEmployees] = useState<CompanyEmployee[]>([])
-  const [isLoadingEmployees, setIsLoadingEmployees] = useState(false)
+  const receiptWaiterRef = useRef<ReceiptWaiter | null>(null)
+  const [receiptHash, setReceiptHash] = useState<Hash>()
   const [isAddingEmployee, setIsAddingEmployee] = useState(false)
   const [isUpdatingEmployee, setIsUpdatingEmployee] = useState(false)
   const [deletingEmployee, setDeletingEmployee] = useState<Address | null>(null)
+
+  const receiptQuery = useWaitForTransactionReceipt({
+    hash: receiptHash,
+    query: {
+      enabled: Boolean(receiptHash),
+    },
+  })
+
+  useEffect(() => {
+    if (!receiptQuery.data || !receiptWaiterRef.current) {
+      return
+    }
+
+    const waiter = receiptWaiterRef.current
+    if (waiter.hash.toLowerCase() !== receiptQuery.data.transactionHash.toLowerCase()) {
+      return
+    }
+
+    receiptWaiterRef.current = null
+    waiter.resolve()
+  }, [receiptQuery.data])
+
+  useEffect(() => {
+    if (!receiptQuery.error || !receiptWaiterRef.current) {
+      return
+    }
+
+    const waiter = receiptWaiterRef.current
+    receiptWaiterRef.current = null
+    waiter.reject(receiptQuery.error)
+  }, [receiptQuery.error])
+
+  useEffect(() => {
+    return () => {
+      receiptWaiterRef.current?.reject(new Error('Transaction receipt wait was cancelled.'))
+      receiptWaiterRef.current = null
+    }
+  }, [])
+
+  const waitForReceipt = useCallback((hash: Hash) => {
+    if (receiptWaiterRef.current) {
+      return Promise.reject(new Error('Another transaction receipt is already pending.'))
+    }
+
+    return new Promise<void>((resolve, reject) => {
+      receiptWaiterRef.current = {
+        hash,
+        resolve,
+        reject,
+      }
+      setReceiptHash(hash)
+    })
+  }, [])
 
   const selectedSettlementAsset = useMemo(() => {
     if (!selectedCompany) {
@@ -69,65 +127,81 @@ export function useCompanyEmployees(selectedCompany: CompanySummary | null) {
 
   const companyId = selectedCompany ? BigInt(selectedCompany.id) : null
 
-  const loadEmployees = useCallback(async () => {
-    if (!publicClient || !companyId) {
-      setEmployees([])
-      return
+  const {
+    data: employeeAccounts = [],
+    error: employeeAccountsError,
+    isLoading: isLoadingEmployeeAccounts,
+    refetch: refetchEmployeeAccounts,
+  } = useReadContract({
+    abi: CompanyRegistry.abi,
+    address: CompanyRegistry.address,
+    functionName: 'getEmployees',
+    args: companyId ? [companyId] : undefined,
+    query: {
+      enabled: companyId !== null,
+    },
+  })
+
+  const employeeAccountList = useMemo(() => employeeAccounts as Address[], [employeeAccounts])
+
+  const employeeContracts = useMemo(() => {
+    if (!companyId) {
+      return []
     }
 
-    setIsLoadingEmployees(true)
+    return employeeAccountList.map(employeeAccount => ({
+      abi: CompanyRegistry.abi,
+      address: CompanyRegistry.address,
+      functionName: 'getEmployee',
+      args: [companyId, employeeAccount],
+    }) as const)
+  }, [companyId, employeeAccountList])
 
-    try {
-      const employeeAccounts = await publicClient.readContract({
-        abi: CompanyRegistry.abi,
-        address: CompanyRegistry.address,
-        functionName: 'getEmployees',
-        args: [companyId],
-      }) as Address[]
+  const {
+    data: employeeResults,
+    error: employeeRecordsError,
+    isLoading: isLoadingEmployeeRecords,
+    refetch: refetchEmployeeRecords,
+  } = useReadContracts({
+    contracts: employeeContracts,
+    query: {
+      enabled: employeeContracts.length > 0,
+    },
+  })
 
-      const employeeRecords = await Promise.all(
-        employeeAccounts.map(async (employeeAccount) => {
-          try {
-            const employee = await publicClient.readContract({
-              abi: CompanyRegistry.abi,
-              address: CompanyRegistry.address,
-              functionName: 'getEmployee',
-              args: [companyId, employeeAccount],
-            }) as CompanyEmployeeRecord
+  const employees = useMemo(() => {
+    return (employeeResults ?? []).map((employeeResult, index) => {
+      if (employeeResult.status !== 'success') {
+        return null
+      }
 
-            return {
-              account: employeeAccount,
-              addedAt: Number(employee.addedAt),
-              displayName: employee.displayName,
-              payoutWallet: employee.payoutWallet,
-              role: employee.role,
-            } satisfies CompanyEmployee
-          }
-          catch (error) {
-            console.error(error)
-            return null
-          }
-        }),
-      )
+      const employee = employeeResult.result as CompanyEmployeeRecord
+      return {
+        account: employeeAccountList[index],
+        addedAt: Number(employee.addedAt),
+        displayName: employee.displayName,
+        payoutWallet: employee.payoutWallet,
+        role: employee.role,
+      } satisfies CompanyEmployee
+    }).filter(filterEmployees)
+  }, [employeeAccountList, employeeResults])
 
-      setEmployees(employeeRecords.filter(filterEmployees))
-    }
-    catch (error) {
-      console.error(error)
-      toast.error('Failed to load employees from chain.')
-      setEmployees([])
-    }
-    finally {
-      setIsLoadingEmployees(false)
-    }
-  }, [companyId, publicClient])
+  const isLoadingEmployees = isLoadingEmployeeAccounts || isLoadingEmployeeRecords
+
+  const refetchEmployees = useCallback(async () => {
+    await refetchEmployeeAccounts()
+    await refetchEmployeeRecords()
+  }, [refetchEmployeeAccounts, refetchEmployeeRecords])
 
   useEffect(() => {
-    void loadEmployees()
-  }, [loadEmployees])
+    if (employeeAccountsError || employeeRecordsError) {
+      console.error(employeeAccountsError ?? employeeRecordsError)
+      toast.error('Failed to load employees from chain.')
+    }
+  }, [employeeAccountsError, employeeRecordsError])
 
   const addEmployee = useCallback(async (input: AddCompanyEmployeeInput) => {
-    if (!walletClient || !publicClient || !address || !companyId || !selectedSettlementAsset) {
+    if (!address || !companyId || !selectedSettlementAsset) {
       toast.error('Wallet, company, or settlement asset is not ready.')
       return false
     }
@@ -143,17 +217,17 @@ export function useCompanyEmployees(selectedCompany: CompanySummary | null) {
         return false
       }
 
-      const addEmployeeHash = await walletClient.writeContract({
+      const addEmployeeHash = await mutateAsync({
         abi: CompanyRegistry.abi,
         address: CompanyRegistry.address,
         functionName: 'addEmployee',
         args: [companyId, input.account, input.role, input.displayName],
         account: address,
       })
-      await publicClient.waitForTransactionReceipt({ hash: addEmployeeHash })
+      await waitForReceipt(addEmployeeHash)
 
       try {
-        const setSalaryHash = await walletClient.writeContract({
+        const setSalaryHash = await mutateAsync({
           abi: SalaryCipherCore.abi,
           address: SalaryCipherCore.address,
           functionName: 'setSalary',
@@ -165,23 +239,23 @@ export function useCompanyEmployees(selectedCompany: CompanySummary | null) {
           ],
           account: address,
         })
-        await publicClient.waitForTransactionReceipt({ hash: setSalaryHash })
+        await waitForReceipt(setSalaryHash)
       }
       catch (error) {
         console.error(error)
-        await Promise.all([loadEmployees(), refreshCompanies()])
+        await Promise.all([refetchEmployees(), refreshCompanies()])
         toast.error('Employee added, but encrypted salary was not set.')
         return true
       }
 
-      await Promise.all([loadEmployees(), refreshCompanies()])
+      await Promise.all([refetchEmployees(), refreshCompanies()])
       toast.success('Employee added.')
       return true
     }
     catch (error) {
       console.error(error)
       toast.error('Failed to add employee.')
-      await loadEmployees()
+      await refetchEmployees()
       return false
     }
     finally {
@@ -191,15 +265,15 @@ export function useCompanyEmployees(selectedCompany: CompanySummary | null) {
     address,
     companyId,
     encryptWith,
-    loadEmployees,
-    publicClient,
+    refetchEmployees,
     refreshCompanies,
     selectedSettlementAsset,
-    walletClient,
+    mutateAsync,
+    waitForReceipt,
   ])
 
   const deleteEmployee = useCallback(async (employeeAccount: Address) => {
-    if (!walletClient || !publicClient || !address || !companyId) {
+    if (!address || !companyId) {
       toast.error('Wallet or company is not ready.')
       return false
     }
@@ -207,16 +281,16 @@ export function useCompanyEmployees(selectedCompany: CompanySummary | null) {
     setDeletingEmployee(employeeAccount)
 
     try {
-      const hash = await walletClient.writeContract({
+      const hash = await mutateAsync({
         abi: CompanyRegistry.abi,
         address: CompanyRegistry.address,
         functionName: 'removeEmployee',
         args: [companyId, employeeAccount],
         account: address,
       })
-      await publicClient.waitForTransactionReceipt({ hash })
+      await waitForReceipt(hash)
 
-      await Promise.all([loadEmployees(), refreshCompanies()])
+      await Promise.all([refetchEmployees(), refreshCompanies()])
       toast.success('Employee removed.')
       return true
     }
@@ -228,10 +302,10 @@ export function useCompanyEmployees(selectedCompany: CompanySummary | null) {
     finally {
       setDeletingEmployee(null)
     }
-  }, [address, companyId, loadEmployees, publicClient, refreshCompanies, walletClient])
+  }, [address, companyId, refetchEmployees, refreshCompanies, mutateAsync, waitForReceipt])
 
   const updateEmployee = useCallback(async (input: UpdateCompanyEmployeeInput) => {
-    if (!walletClient || !publicClient || !address || !companyId || !selectedSettlementAsset) {
+    if (!address || !companyId || !selectedSettlementAsset) {
       toast.error('Wallet, company, or settlement asset is not ready.')
       return false
     }
@@ -247,16 +321,16 @@ export function useCompanyEmployees(selectedCompany: CompanySummary | null) {
         return false
       }
 
-      const updateEmployeeHash = await walletClient.writeContract({
+      const updateEmployeeHash = await mutateAsync({
         abi: CompanyRegistry.abi,
         address: CompanyRegistry.address,
         functionName: 'updateEmployee',
         args: [companyId, input.account, input.role, input.displayName],
         account: address,
       })
-      await publicClient.waitForTransactionReceipt({ hash: updateEmployeeHash })
+      await waitForReceipt(updateEmployeeHash)
 
-      const setSalaryHash = await walletClient.writeContract({
+      const setSalaryHash = await mutateAsync({
         abi: SalaryCipherCore.abi,
         address: SalaryCipherCore.address,
         functionName: 'setSalary',
@@ -268,16 +342,16 @@ export function useCompanyEmployees(selectedCompany: CompanySummary | null) {
         ],
         account: address,
       })
-      await publicClient.waitForTransactionReceipt({ hash: setSalaryHash })
+      await waitForReceipt(setSalaryHash)
 
-      await Promise.all([loadEmployees(), refreshCompanies()])
+      await Promise.all([refetchEmployees(), refreshCompanies()])
       toast.success('Employee updated.')
       return true
     }
     catch (error) {
       console.error(error)
       toast.error('Failed to update employee.')
-      await loadEmployees()
+      await refetchEmployees()
       return false
     }
     finally {
@@ -287,11 +361,11 @@ export function useCompanyEmployees(selectedCompany: CompanySummary | null) {
     address,
     companyId,
     encryptWith,
-    loadEmployees,
-    publicClient,
+    refetchEmployees,
     refreshCompanies,
     selectedSettlementAsset,
-    walletClient,
+    mutateAsync,
+    waitForReceipt,
   ])
 
   return {
@@ -302,7 +376,7 @@ export function useCompanyEmployees(selectedCompany: CompanySummary | null) {
     isAddingEmployee,
     isLoadingEmployees,
     isUpdatingEmployee,
-    refreshEmployees: loadEmployees,
+    refreshEmployees: refetchEmployees,
     selectedSettlementAsset,
     addEmployee,
     updateEmployee,

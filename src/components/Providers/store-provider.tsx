@@ -3,12 +3,13 @@
 import type { CompanySummary, CreateCompanyInput, SettlementAssetOption } from '@/contexts'
 import type { RolesEnum } from '@/enums'
 import type { PropsWithChildren } from 'react'
-import type { Address } from 'viem'
+import type { Address, Hash } from 'viem'
 import { useAppKitAccount } from '@reown/appkit/react'
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { zeroAddress } from 'viem'
-import { useConnection, usePublicClient, useWalletClient } from 'wagmi'
+import { useConfig, useConnection, useReadContract, useReadContracts, useWaitForTransactionReceipt, useWriteContract } from 'wagmi'
+import { readContracts } from 'wagmi/actions'
 import { StoreContext } from '@/contexts'
 import { CompanyRegistry } from '@/contract-data/company-registry'
 import { SettlementAssetEnum } from '@/enums'
@@ -36,11 +37,24 @@ function getSelectedCompanyStorageKey(address: string) {
   return `${STORAGE_KEY_PREFIX}:selected-company:${address.toLowerCase()}`
 }
 
+interface AssetConfigResult {
+  decimals: number
+  enabled: boolean
+  settlementToken: Address
+  underlyingToken: Address
+}
+
 interface SessionState {
   companies: CompanySummary[]
   settlementAssets: SettlementAssetOption[]
   selectedCompanyId: string | null
   isReady: boolean
+}
+
+interface ReceiptWaiter {
+  hash: Hash
+  resolve: () => void
+  reject: (error: Error) => void
 }
 
 /**
@@ -49,9 +63,11 @@ interface SessionState {
 export function StoreProvider({ children }: PropsWithChildren) {
   const { address, isConnecting } = useConnection()
   const { status, isConnected } = useAppKitAccount()
-  const publicClient = usePublicClient()
-  const { data: walletClient } = useWalletClient()
+  const config = useConfig()
+  const { mutateAsync } = useWriteContract()
 
+  const receiptWaiterRef = useRef<ReceiptWaiter | null>(null)
+  const [receiptHash, setReceiptHash] = useState<Hash>()
   const [sessionState, setSessionState] = useState<SessionState>({
     companies: [],
     settlementAssets: [],
@@ -60,8 +76,86 @@ export function StoreProvider({ children }: PropsWithChildren) {
   })
   const [isCreatingCompany, setIsCreatingCompany] = useState(false)
 
+  const receiptQuery = useWaitForTransactionReceipt({
+    hash: receiptHash,
+    query: {
+      enabled: Boolean(receiptHash),
+    },
+  })
+
+  useEffect(() => {
+    if (!receiptQuery.data || !receiptWaiterRef.current) {
+      return
+    }
+
+    const waiter = receiptWaiterRef.current
+    if (waiter.hash.toLowerCase() !== receiptQuery.data.transactionHash.toLowerCase()) {
+      return
+    }
+
+    receiptWaiterRef.current = null
+    waiter.resolve()
+  }, [receiptQuery.data])
+
+  useEffect(() => {
+    if (!receiptQuery.error || !receiptWaiterRef.current) {
+      return
+    }
+
+    const waiter = receiptWaiterRef.current
+    receiptWaiterRef.current = null
+    waiter.reject(receiptQuery.error)
+  }, [receiptQuery.error])
+
+  useEffect(() => {
+    return () => {
+      receiptWaiterRef.current?.reject(new Error('Transaction receipt wait was cancelled.'))
+      receiptWaiterRef.current = null
+    }
+  }, [])
+
+  const waitForReceipt = useCallback((hash: Hash) => {
+    if (receiptWaiterRef.current) {
+      return Promise.reject(new Error('Another transaction receipt is already pending.'))
+    }
+
+    return new Promise<void>((resolve, reject) => {
+      receiptWaiterRef.current = {
+        hash,
+        resolve,
+        reject,
+      }
+      setReceiptHash(hash)
+    })
+  }, [])
+
   const registryAddress = CompanyRegistry.address
   const companyRegistryAbi = CompanyRegistry.abi
+  const assetConfigContracts = useMemo(() => {
+    return SETTLEMENT_ASSET_PRESETS.map(asset => ({
+      abi: companyRegistryAbi,
+      address: registryAddress,
+      functionName: 'getAssetConfig',
+      args: [asset.value],
+    }) as const)
+  }, [companyRegistryAbi, registryAddress])
+
+  const { refetch: refetchAssetConfigs } = useReadContracts({
+    contracts: assetConfigContracts,
+    query: {
+      enabled: false,
+    },
+  })
+
+  const { refetch: refetchUserCompanyIds } = useReadContract({
+    abi: companyRegistryAbi,
+    address: registryAddress,
+    functionName: 'getUserCompanies',
+    args: address ? [address] : undefined,
+    query: {
+      enabled: false,
+    },
+  })
 
   const readStoredSelectedCompany = useCallback((account: string, companyIds: string[]) => {
     const storedCompanyId = window.localStorage.getItem(getSelectedCompanyStorageKey(account))
@@ -78,80 +172,80 @@ export function StoreProvider({ children }: PropsWithChildren) {
   }, [])
 
   const readSettlementAssets = useCallback(async () => {
-    if (!publicClient || !registryAddress) {
-      return []
-    }
+    const assetConfigsResult = await refetchAssetConfigs()
+    const assetConfigs = assetConfigsResult.data ?? []
 
-    const assetConfigs = await Promise.all(
-      SETTLEMENT_ASSET_PRESETS.map(async (asset) => {
-        const config = await publicClient.readContract({
-          abi: companyRegistryAbi,
-          address: registryAddress,
-          functionName: 'getAssetConfig',
-          args: [asset.value],
-        }) as {
-          underlyingToken: Address
-          settlementToken: Address
-          enabled: boolean
-          decimals: number
-        }
+    return SETTLEMENT_ASSET_PRESETS.map((asset, index) => {
+      const result = assetConfigs[index]
+      if (!result || result.status !== 'success') {
+        return null
+      }
 
-        if (!config.enabled || config.underlyingToken === zeroAddress || config.settlementToken === zeroAddress) {
-          return null
-        }
+      const config = result.result as AssetConfigResult
+      if (!config.enabled || config.underlyingToken === zeroAddress || config.settlementToken === zeroAddress) {
+        return null
+      }
 
-        return {
-          value: asset.value,
-          label: asset.label,
-          symbol: asset.symbol,
-          decimals: Number(config.decimals),
-          underlyingToken: config.underlyingToken,
-          settlementToken: config.settlementToken,
-        } satisfies SettlementAssetOption
-      }),
-    )
-
-    return assetConfigs.filter(isDefined)
-  // eslint-disable-next-line react/exhaustive-deps
-  }, [publicClient, registryAddress])
+      return {
+        value: asset.value,
+        label: asset.label,
+        symbol: asset.symbol,
+        decimals: Number(config.decimals),
+        underlyingToken: config.underlyingToken,
+        settlementToken: config.settlementToken,
+      } satisfies SettlementAssetOption
+    }).filter(isDefined)
+  }, [refetchAssetConfigs])
 
   const readCompanySummary = useCallback(async (companyId: bigint, account: Address) => {
-    if (!publicClient || !registryAddress) {
+    if (!registryAddress) {
       return null
     }
 
-    const [company, role, employeeCount, payrollConfig, settlementAsset] = await Promise.all([
-      publicClient.readContract({
-        abi: companyRegistryAbi,
-        address: registryAddress,
-        functionName: 'getCompany',
-        args: [companyId],
-      }) as Promise<{ name: string, owner: Address, createdAt: bigint }>,
-      publicClient.readContract({
-        abi: companyRegistryAbi,
-        address: registryAddress,
-        functionName: 'getRole',
-        args: [companyId, account],
-      }) as Promise<RolesEnum>,
-      publicClient.readContract({
-        abi: companyRegistryAbi,
-        address: registryAddress,
-        functionName: 'getEmployeeCount',
-        args: [companyId],
-      }) as Promise<bigint>,
-      publicClient.readContract({
-        abi: companyRegistryAbi,
-        address: registryAddress,
-        functionName: 'getPayrollConfig',
-        args: [companyId],
-      }) as Promise<{ dayOfMonth: number, initialized: boolean }>,
-      publicClient.readContract({
-        abi: companyRegistryAbi,
-        address: registryAddress,
-        functionName: 'getCompanySettlementAsset',
-        args: [companyId],
-      }) as Promise<SettlementAssetEnum>,
-    ])
+    const results = await readContracts(config, {
+      contracts: [
+        {
+          abi: companyRegistryAbi,
+          address: registryAddress,
+          functionName: 'getCompany',
+          args: [companyId],
+        },
+        {
+          abi: companyRegistryAbi,
+          address: registryAddress,
+          functionName: 'getRole',
+          args: [companyId, account],
+        },
+        {
+          abi: companyRegistryAbi,
+          address: registryAddress,
+          functionName: 'getEmployeeCount',
+          args: [companyId],
+        },
+        {
+          abi: companyRegistryAbi,
+          address: registryAddress,
+          functionName: 'getPayrollConfig',
+          args: [companyId],
+        },
+        {
+          abi: companyRegistryAbi,
+          address: registryAddress,
+          functionName: 'getCompanySettlementAsset',
+          args: [companyId],
+        },
+      ],
+    })
+
+    if (results.some((result: { status: string }) => result.status !== 'success')) {
+      return null
+    }
+
+    const company = results[0].result as { name: string, owner: Address, createdAt: bigint }
+    const role = results[1].result as RolesEnum
+    const employeeCount = results[2].result as bigint
+    const payrollConfig = results[3].result as { dayOfMonth: number, initialized: boolean }
+    const settlementAsset = results[4].result as SettlementAssetEnum
 
     return {
       id: companyId.toString(),
@@ -164,8 +258,7 @@ export function StoreProvider({ children }: PropsWithChildren) {
       payrollDayOfMonth: Number(payrollConfig.dayOfMonth),
       settlementAsset,
     } satisfies CompanySummary
-  // eslint-disable-next-line react/exhaustive-deps
-  }, [publicClient, registryAddress])
+  }, [companyRegistryAbi, config, registryAddress])
 
   const refreshCompanies = useCallback(async () => {
     if (!isConnected || !address) {
@@ -178,7 +271,7 @@ export function StoreProvider({ children }: PropsWithChildren) {
       return
     }
 
-    if (!publicClient || !registryAddress) {
+    if (!registryAddress) {
       setSessionState({
         companies: [],
         settlementAssets: [],
@@ -190,12 +283,7 @@ export function StoreProvider({ children }: PropsWithChildren) {
 
     const [settlementAssets, companyIds] = await Promise.all([
       readSettlementAssets(),
-      publicClient.readContract({
-        abi: companyRegistryAbi,
-        address: registryAddress,
-        functionName: 'getUserCompanies',
-        args: [address],
-      }) as Promise<bigint[]>,
+      refetchUserCompanyIds().then(result => (result.data ?? []) as bigint[]),
     ])
 
     const companies = (
@@ -219,7 +307,6 @@ export function StoreProvider({ children }: PropsWithChildren) {
     status,
     isConnected,
     isConnecting,
-    publicClient,
     readCompanySummary,
     readSettlementAssets,
     readStoredSelectedCompany,
@@ -248,17 +335,10 @@ export function StoreProvider({ children }: PropsWithChildren) {
       try {
         const [settlementAssets, companyIds] = await Promise.all([
           readSettlementAssets(),
-          publicClient && registryAddress
-            ? publicClient.readContract({
-              abi: companyRegistryAbi,
-              address: registryAddress,
-              functionName: 'getUserCompanies',
-              args: [address],
-            }) as Promise<bigint[]>
-            : Promise.resolve([]),
+          refetchUserCompanyIds().then(result => (result.data ?? []) as bigint[]),
         ])
 
-        const companies = publicClient && registryAddress
+        const companies = registryAddress
           ? (
               await Promise.all(companyIds.map(companyId => readCompanySummary(companyId, address)))
             ).filter(isDefined)
@@ -306,7 +386,6 @@ export function StoreProvider({ children }: PropsWithChildren) {
     status,
     isConnected,
     isConnecting,
-    publicClient,
     readCompanySummary,
     readSettlementAssets,
     readStoredSelectedCompany,
@@ -327,7 +406,7 @@ export function StoreProvider({ children }: PropsWithChildren) {
       isReady: sessionState.isReady,
       isCreatingCompany,
       createCompany: async (input: CreateCompanyInput) => {
-        if (!walletClient || !publicClient || !registryAddress || !address) {
+        if (!registryAddress || !address) {
           toast.error('Wallet or contract is not ready.')
           return null
         }
@@ -335,7 +414,7 @@ export function StoreProvider({ children }: PropsWithChildren) {
         setIsCreatingCompany(true)
 
         try {
-          const hash = await walletClient.writeContract({
+          const hash = await mutateAsync({
             abi: companyRegistryAbi,
             address: registryAddress,
             functionName: 'createCompany',
@@ -343,14 +422,10 @@ export function StoreProvider({ children }: PropsWithChildren) {
             account: address,
           })
 
-          await publicClient.waitForTransactionReceipt({ hash })
+          await waitForReceipt(hash)
 
-          const companyIds = await publicClient.readContract({
-            abi: companyRegistryAbi,
-            address: registryAddress,
-            functionName: 'getUserCompanies',
-            args: [address],
-          }) as bigint[]
+          const companyIdsResult = await refetchUserCompanyIds()
+          const companyIds = (companyIdsResult.data ?? []) as bigint[]
           const companyId = companyIds.at(-1)
 
           if (!companyId) {
@@ -408,7 +483,6 @@ export function StoreProvider({ children }: PropsWithChildren) {
     address,
     isCreatingCompany,
     persistSelectedCompany,
-    publicClient,
     readCompanySummary,
     refreshCompanies,
     registryAddress,
@@ -417,7 +491,9 @@ export function StoreProvider({ children }: PropsWithChildren) {
     sessionState.isReady,
     sessionState.selectedCompanyId,
     sessionState.settlementAssets,
-    walletClient,
+    refetchUserCompanyIds,
+    waitForReceipt,
+    mutateAsync,
   ])
 
   return (

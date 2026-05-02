@@ -10,8 +10,8 @@ import {
 } from 'react-icons/md'
 import { AddEmployeeDialog } from '@/components/dialogs/add-employee-dialog'
 import { AppLayout } from '@/components/layout/app-layout'
+import { RoleBadge } from '@/components/role-badge'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
-import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -23,37 +23,10 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import { canManagePeople, ROLE_LABELS, ROLE_TONES } from '@/constants'
+import { canManagePeople } from '@/constants'
 import { RolesEnum } from '@/enums'
 import { useCompanyEmployees, useStoreContext } from '@/hooks'
-import { cn } from '@/utils'
-
-const WHITESPACE_REGEX = /\s+/
-
-function formatAddress(address: string) {
-  return `${address.slice(0, 6)}...${address.slice(-4)}`
-}
-
-function formatJoinDate(timestamp: number) {
-  if (!timestamp) {
-    return '-'
-  }
-
-  return new Intl.DateTimeFormat('en-US', {
-    day: '2-digit',
-    month: 'short',
-    year: 'numeric',
-  }).format(new Date(timestamp * 1000))
-}
-
-function getAvatarFallback(displayName: string, account: string) {
-  const parts = displayName.trim().split(WHITESPACE_REGEX).filter(Boolean)
-  if (parts.length >= 2) {
-    return `${parts[0][0]}${parts[1][0]}`.toUpperCase()
-  }
-
-  return (parts[0]?.slice(0, 2) || account.slice(2, 4)).toUpperCase()
-}
+import { cn, formatAddress, formatUnixDate, getAvatarFallback } from '@/utils'
 
 export default function PeoplePage() {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false)
@@ -196,9 +169,7 @@ export default function PeoplePage() {
                             </div>
                           </TableCell>
                           <TableCell className="px-6 py-5">
-                            <Badge className={cn(ROLE_TONES[emp.role], 'border-none text-[9px] font-black uppercase tracking-widest rounded-full px-2.5 py-1')}>
-                              {ROLE_LABELS[emp.role]}
-                            </Badge>
+                            <RoleBadge role={emp.role} className="rounded-full px-2.5 py-1 text-[9px] font-black tracking-widest" />
                           </TableCell>
                           <TableCell className="px-6 py-5">
                             {emp.role !== RolesEnum.Owner
@@ -214,7 +185,7 @@ export default function PeoplePage() {
                               {formatAddress(emp.payoutWallet)}
                             </div>
                           </TableCell>
-                          <TableCell className="px-6 py-5 text-on-surface-variant text-xs font-mono font-bold">{formatJoinDate(emp.addedAt)}</TableCell>
+                          <TableCell className="px-6 py-5 text-on-surface-variant text-xs font-mono font-bold">{formatUnixDate(emp.addedAt)}</TableCell>
                           <TableCell className="px-6 py-5">
                             <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-emerald-400">
                               <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.5)]" />
@@ -224,7 +195,7 @@ export default function PeoplePage() {
                           {canManageEmployees && (
                             <TableCell className="px-6 py-5 text-right">
                               {emp.role !== RolesEnum.Owner && (
-                                <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                <div className="flex items-center justify-end gap-1 transition-opacity">
                                   <Button
                                     variant="ghost"
                                     size="icon-sm"

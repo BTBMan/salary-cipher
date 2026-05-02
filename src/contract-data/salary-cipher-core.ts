@@ -4,5 +4,5 @@ import deployedAddress from '../../ignition/deployments/chain-31337/deployed_add
 
 export const SalaryCipherCore = {
   address: deployedAddress['SalaryCipherCoreModule#SalaryCipherCore'] as Address,
-  abi: SalaryCipherCoreArtifact.abi,
+  abi: SalaryCipherCoreArtifact.abi as any,
 } as const
