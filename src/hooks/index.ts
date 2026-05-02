@@ -1,4 +1,5 @@
 export * from './fhevm'
+export * from './use-company-employees'
 export * from './use-controllable-value'
 export * from './use-mobile'
 export * from './use-previous'

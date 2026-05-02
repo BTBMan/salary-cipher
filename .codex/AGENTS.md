@@ -3,6 +3,7 @@
 ## Wagmi Usage
 
 - Use `useConnection` instead of `useAccount`
+- Prefer to use wagmi hooks like `useWriteContract`, `useReadContract`, etc. instead of using viem client directly.
 
 ## Component Design
 

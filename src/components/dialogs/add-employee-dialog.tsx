@@ -1,9 +1,9 @@
 'use client'
 
 import type { AssignableCompanyRole } from '@/constants'
-import { useState } from 'react'
+import type { Address } from 'viem'
+import { useMemo, useState } from 'react'
 import {
-  MdAccountBalanceWallet as AccountBalanceWalletIcon,
   MdArrowBack as ArrowBackIcon,
   MdArrowForward as ArrowForwardIcon,
   MdCheckCircle as CheckCircleIcon,
@@ -12,6 +12,8 @@ import {
   MdPersonAdd as PersonAddIcon,
   MdSecurity as SecurityIcon,
 } from 'react-icons/md'
+import { isAddress } from 'viem'
+import { z } from 'zod'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -31,43 +33,103 @@ import { ASSIGNABLE_COMPANY_ROLE_OPTIONS, ROLE_LABELS } from '@/constants'
 import { RolesEnum } from '@/enums'
 import { cn } from '@/utils'
 
+export interface AddEmployeeSubmitInput {
+  account: Address
+  displayName: string
+  monthlySalary: string
+  role: AssignableCompanyRole
+}
+
 interface AddEmployeeDialogProps {
+  canEncryptSalary: boolean
+  isSubmitting: boolean
   open: boolean
+  salarySymbol: string
   onOpenChange: (open: boolean) => void
+  onSubmit: (input: AddEmployeeSubmitInput) => Promise<boolean>
 }
 
 interface AddEmployeeDraft {
-  role: AssignableCompanyRole | null
+  displayName: string
+  role: AssignableCompanyRole
   salary: string
-  secondaryWallet: string
   wallet: string
 }
 
+type AddEmployeeFormErrors = Partial<Record<keyof AddEmployeeDraft, string>>
+
 const initialAddEmployeeDraft: AddEmployeeDraft = {
+  displayName: '',
   role: RolesEnum.Employee,
   salary: '',
-  secondaryWallet: '',
   wallet: '',
 }
 
-export function AddEmployeeDialog({ open, onOpenChange }: AddEmployeeDialogProps) {
+const addEmployeeSchema = z.object({
+  displayName: z.string().trim().min(1, 'Display name is required.').max(80, 'Display name is too long.'),
+  role: z.union([z.literal(RolesEnum.HR), z.literal(RolesEnum.Employee)]),
+  salary: z.string().trim().refine((value) => {
+    const amount = Number(value)
+    return Number.isFinite(amount) && amount > 0
+  }, 'Monthly salary must be greater than 0.'),
+  wallet: z.string().trim().refine(value => isAddress(value), 'Wallet address is invalid.'),
+})
+
+export function AddEmployeeDialog({
+  canEncryptSalary,
+  isSubmitting,
+  open,
+  salarySymbol,
+  onOpenChange,
+  onSubmit,
+}: AddEmployeeDialogProps) {
   const [step, setStep] = useState(1)
   const [draft, setDraft] = useState<AddEmployeeDraft>(initialAddEmployeeDraft)
+  const [formErrors, setFormErrors] = useState<AddEmployeeFormErrors>({})
+
+  const parsedDraft = useMemo(() => addEmployeeSchema.safeParse(draft), [draft])
+
+  const resetDialog = () => {
+    setStep(1)
+    setDraft(initialAddEmployeeDraft)
+    setFormErrors({})
+  }
 
   const handleOpenChange = (nextOpen: boolean) => {
     onOpenChange(nextOpen)
 
     if (!nextOpen) {
-      setStep(1)
-      setDraft(initialAddEmployeeDraft)
+      resetDialog()
     }
+  }
+
+  const validateDraft = () => {
+    const parsedForm = addEmployeeSchema.safeParse(draft)
+
+    if (parsedForm.success) {
+      setFormErrors({})
+      return parsedForm.data
+    }
+
+    const nextErrors: AddEmployeeFormErrors = {}
+    for (const issue of parsedForm.error.issues) {
+      const fieldName = issue.path[0]
+      if (typeof fieldName === 'string') {
+        nextErrors[fieldName as keyof AddEmployeeDraft] = issue.message
+      }
+    }
+    setFormErrors(nextErrors)
+    return null
   }
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger
         render={(
-          <Button className="primary-gradient text-on-primary-container px-6 py-6 rounded-sm text-sm flex items-center justify-center gap-2 shadow-lg shadow-primary/20 hover:opacity-90 active:scale-95 border-none">
+          <Button
+            className="primary-gradient text-on-primary-container px-6 py-6 rounded-sm text-sm flex items-center justify-center gap-2 shadow-lg shadow-primary/20 hover:opacity-90 active:scale-95 border-none"
+            disabled={!canEncryptSalary}
+          >
             <PersonAddIcon className="size-5" />
             + Add Employee
           </Button>
@@ -98,20 +160,47 @@ export function AddEmployeeDialog({ open, onOpenChange }: AddEmployeeDialogProps
 
         <form
           className="p-8 space-y-6"
-          onSubmit={(event) => {
+          onSubmit={async (event) => {
             event.preventDefault()
+
+            const formValues = validateDraft()
+            if (!formValues) {
+              return
+            }
 
             if (step === 1) {
               setStep(2)
               return
             }
 
-            handleOpenChange(false)
+            const submitted = await onSubmit({
+              account: formValues.wallet as Address,
+              displayName: formValues.displayName.trim(),
+              monthlySalary: formValues.salary.trim(),
+              role: formValues.role,
+            })
+
+            if (submitted) {
+              handleOpenChange(false)
+            }
           }}
         >
           {step === 1
             ? (
                 <>
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-bold uppercase tracking-widest text-on-surface-variant">Display Name</label>
+                    <Input
+                      className="h-12 rounded-lg border-none bg-surface-container-lowest px-4 text-sm placeholder:text-outline/40 focus-visible:ring-tertiary/30"
+                      placeholder="Alice Chen"
+                      value={draft.displayName}
+                      onChange={event => setDraft(current => ({ ...current, displayName: event.target.value }))}
+                    />
+                    {formErrors.displayName && (
+                      <p className="text-xs text-destructive">{formErrors.displayName}</p>
+                    )}
+                  </div>
+
                   <div className="space-y-2">
                     <label className="text-[10px] font-bold uppercase tracking-widest text-on-surface-variant">Employee Wallet Address</label>
                     <div className="relative group">
@@ -125,6 +214,9 @@ export function AddEmployeeDialog({ open, onOpenChange }: AddEmployeeDialogProps
                         onChange={event => setDraft(current => ({ ...current, wallet: event.target.value }))}
                       />
                     </div>
+                    {formErrors.wallet && (
+                      <p className="text-xs text-destructive">{formErrors.wallet}</p>
+                    )}
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -134,7 +226,9 @@ export function AddEmployeeDialog({ open, onOpenChange }: AddEmployeeDialogProps
                         items={ASSIGNABLE_COMPANY_ROLE_OPTIONS}
                         value={draft.role}
                         onValueChange={(role) => {
-                          setDraft(current => ({ ...current, role }))
+                          if (role !== null) {
+                            setDraft(current => ({ ...current, role }))
+                          }
                         }}
                       >
                         <SelectTrigger className="h-12 rounded-lg border-none bg-surface-container-lowest font-medium">
@@ -142,7 +236,7 @@ export function AddEmployeeDialog({ open, onOpenChange }: AddEmployeeDialogProps
                         </SelectTrigger>
                         <SelectContent>
                           {ASSIGNABLE_COMPANY_ROLE_OPTIONS.map(role => (
-                            <SelectItem key={role.value} value={role.value} role="button">
+                            <SelectItem key={role.value} value={role.value}>
                               {role.label}
                             </SelectItem>
                           ))}
@@ -150,14 +244,18 @@ export function AddEmployeeDialog({ open, onOpenChange }: AddEmployeeDialogProps
                       </Select>
                     </div>
                     <div className="space-y-2">
-                      <label className="text-[10px] font-bold uppercase tracking-widest text-on-surface-variant">Monthly Salary (USDC)</label>
+                      <label className="text-[10px] font-bold uppercase tracking-widest text-on-surface-variant">
+                        Monthly Salary ({salarySymbol})
+                      </label>
                       <div className="relative">
                         <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
                           <LockIcon className="size-4 text-tertiary fill-current" />
                         </div>
                         <Input
                           className="h-12 rounded-lg border-none bg-surface-container-lowest pl-11 pr-24 font-mono text-sm focus-visible:ring-tertiary/30"
+                          min="0"
                           placeholder="0.00"
+                          step="0.01"
                           type="number"
                           value={draft.salary}
                           onChange={event => setDraft(current => ({ ...current, salary: event.target.value }))}
@@ -166,24 +264,9 @@ export function AddEmployeeDialog({ open, onOpenChange }: AddEmployeeDialogProps
                           <span className="text-[9px] font-black text-tertiary/60 uppercase tracking-tighter">FHE ENCRYPTED</span>
                         </div>
                       </div>
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <label className="flex items-center justify-between">
-                      <span className="text-[10px] font-bold uppercase tracking-widest text-on-surface-variant">Secondary Receiving Wallet</span>
-                      <span className="text-[9px] text-outline font-bold italic uppercase">Optional</span>
-                    </label>
-                    <div className="relative">
-                      <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-outline">
-                        <AccountBalanceWalletIcon className="size-4" />
-                      </div>
-                      <Input
-                        className="h-12 rounded-lg border-none bg-surface-container-lowest pl-11 pr-4 font-mono text-sm placeholder:text-outline/40"
-                        placeholder="Alternate address..."
-                        value={draft.secondaryWallet}
-                        onChange={event => setDraft(current => ({ ...current, secondaryWallet: event.target.value }))}
-                      />
+                      {formErrors.salary && (
+                        <p className="text-xs text-destructive">{formErrors.salary}</p>
+                      )}
                     </div>
                   </div>
                 </>
@@ -198,13 +281,18 @@ export function AddEmployeeDialog({ open, onOpenChange }: AddEmployeeDialogProps
                       <div>
                         <h3 className="font-heading text-sm font-bold text-on-surface">Review Employee Payload</h3>
                         <p className="mt-1 text-xs leading-5 text-on-surface-variant">
-                          Confirm the wallet, role and encrypted compensation details before submitting the invitation.
+                          Confirm the wallet, role and encrypted compensation details before submitting the transaction.
                         </p>
                       </div>
                     </div>
                   </div>
 
                   <div className="space-y-3">
+                    <div className="rounded-lg bg-surface-container-lowest p-4">
+                      <div className="mb-1 text-[10px] font-black uppercase tracking-widest text-outline">Display Name</div>
+                      <div className="text-sm font-bold text-on-surface">{draft.displayName || 'Not provided'}</div>
+                    </div>
+
                     <div className="rounded-lg bg-surface-container-lowest p-4">
                       <div className="mb-1 text-[10px] font-black uppercase tracking-widest text-outline">Employee Wallet Address</div>
                       <div className="break-all font-mono text-sm font-medium text-on-surface">{draft.wallet || 'Not provided'}</div>
@@ -213,21 +301,14 @@ export function AddEmployeeDialog({ open, onOpenChange }: AddEmployeeDialogProps
                     <div className="grid gap-3 md:grid-cols-2">
                       <div className="rounded-lg bg-surface-container-lowest p-4">
                         <div className="mb-1 text-[10px] font-black uppercase tracking-widest text-outline">Internal Role</div>
-                        <div className="text-sm font-bold text-on-surface">{ROLE_LABELS[draft.role!]}</div>
+                        <div className="text-sm font-bold text-on-surface">{ROLE_LABELS[draft.role]}</div>
                       </div>
                       <div className="rounded-lg bg-surface-container-lowest p-4">
                         <div className="mb-1 flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-outline">
                           Monthly Salary
                           <LockIcon className="size-3 text-tertiary fill-current" />
                         </div>
-                        <div className="font-mono text-sm font-bold text-tertiary">{draft.salary || '0.00'} USDC</div>
-                      </div>
-                    </div>
-
-                    <div className="rounded-lg bg-surface-container-lowest p-4">
-                      <div className="mb-1 text-[10px] font-black uppercase tracking-widest text-outline">Secondary Receiving Wallet</div>
-                      <div className="break-all font-mono text-sm font-medium text-on-surface">
-                        {draft.secondaryWallet || 'Use employee wallet'}
+                        <div className="font-mono text-sm font-bold text-tertiary">{draft.salary || '0.00'} {salarySymbol}</div>
                       </div>
                     </div>
                   </div>
@@ -255,6 +336,7 @@ export function AddEmployeeDialog({ open, onOpenChange }: AddEmployeeDialogProps
                     variant="ghost"
                     type="button"
                     className="font-bold text-on-surface-variant hover:text-on-surface"
+                    disabled={isSubmitting}
                     onClick={() => setStep(1)}
                   >
                     <ArrowBackIcon className="size-4" />
@@ -264,8 +346,9 @@ export function AddEmployeeDialog({ open, onOpenChange }: AddEmployeeDialogProps
             <Button
               type="submit"
               className="primary-gradient text-on-primary-container text-sm h-12 px-8 rounded-sm shadow-lg shadow-primary/20 hover:shadow-primary/40 transition-all active:scale-95 flex items-center gap-2 border-none"
+              disabled={!parsedDraft.success || !canEncryptSalary || isSubmitting}
             >
-              <span>{step === 1 ? 'Continue' : 'Confirm & Add'}</span>
+              <span>{step === 1 ? 'Continue' : (isSubmitting ? 'Submitting...' : 'Confirm & Add')}</span>
               {step === 1 ? <ArrowForwardIcon className="size-4" /> : <CheckCircleIcon className="size-4" />}
             </Button>
           </div>
