@@ -3,6 +3,7 @@
 import {
   MdAccountBalance as AccountBalanceIcon,
   MdAdd as AddIcon,
+  MdAutorenew as AutorenewIcon,
   MdDescription as DescriptionIcon,
   MdDirectionsCar as DirectionsCarIcon,
   MdGeneratingTokens as EncryptedIcon,
@@ -23,9 +24,27 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import { cn } from '@/utils'
+import { useOverviewChainData, useStoreContext } from '@/hooks'
+import { cn, formatAddress, formatUnixDate } from '@/utils'
+
+function formatTokenAmount(value: string | null, fallback = '••••••••') {
+  if (!value) {
+    return fallback
+  }
+
+  return new Intl.NumberFormat('en-US', {
+    maximumFractionDigits: 2,
+    minimumFractionDigits: 2,
+  }).format(Number(value))
+}
 
 export default function EmployeeDashboardPage() {
+  const { selectedCompany } = useStoreContext()
+  const overview = useOverviewChainData(selectedCompany)
+  const salarySymbol = overview.selectedSettlementAsset?.symbol ?? 'USDC'
+  const daysLeft = overview.payrollSchedule?.daysLeft ?? 0
+  const periodProgress = overview.payrollSchedule?.periodProgress ?? 0
+
   return (
     <AppLayout>
       <div className="flex flex-col gap-8">
@@ -36,7 +55,7 @@ export default function EmployeeDashboardPage() {
         </section>
 
         {/* Stats Cards Section */}
-        <section className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <section className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {/* Monthly Salary */}
           <div className="bg-surface-container p-5 rounded-lg border-l-2 border-primary group hover:bg-surface-container-high transition-all cursor-pointer border-y-none border-r-none">
             <div className="flex justify-between items-start mb-3">
@@ -44,29 +63,45 @@ export default function EmployeeDashboardPage() {
               <LockIcon className="text-primary size-3.5 fill-current" />
             </div>
             <div className="flex items-baseline gap-1.5">
-              <span className="font-mono text-2xl font-black blur-[6px] select-none text-white opacity-40">8,450.00</span>
-              <span className="font-mono text-[10px] font-black text-outline uppercase tracking-tighter">USDC</span>
+              <span className={overview.employeeMonthlySalary ? 'font-mono text-2xl font-black text-white' : 'font-mono text-2xl font-black blur-[6px] select-none text-white opacity-40'}>
+                {formatTokenAmount(overview.employeeMonthlySalary)}
+              </span>
+              <span className="font-mono text-[10px] font-black text-outline uppercase tracking-tighter">{salarySymbol}</span>
             </div>
-            <p className="mt-3 text-[9px] text-slate-500 font-black uppercase tracking-widest">Auto-renewing on 1st</p>
+            <div className="mt-3 flex items-center justify-between gap-2">
+              <p className="text-[9px] text-slate-500 font-black uppercase tracking-widest">
+                {overview.employeeMonthlySalary ? 'DECRYPTED LOCALLY' : 'FHE ENCRYPTED'}
+              </p>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-7 px-2 text-[9px] font-black uppercase tracking-widest text-primary"
+                disabled={!overview.canDecryptSalary || overview.isDecryptingSalary}
+                onClick={overview.decryptSalary}
+              >
+                {overview.isDecryptingSalary ? <AutorenewIcon className="size-3 mr-1 animate-spin" /> : <VisibilityIcon className="size-3 mr-1" />}
+                Decrypt
+              </Button>
+            </div>
           </div>
 
           {/* Earned This Period */}
-          <div className="bg-surface-container p-5 rounded-lg border-l-2 border-tertiary group hover:bg-surface-container-high transition-all cursor-pointer border-y-none border-r-none">
+          {/* <div className="bg-surface-container p-5 rounded-lg border-l-2 border-tertiary group hover:bg-surface-container-high transition-all cursor-pointer border-y-none border-r-none">
             <div className="flex justify-between items-start mb-3">
               <span className="text-[10px] font-black text-on-surface-variant tracking-[0.15em] uppercase">Earned This Period</span>
               <EncryptedIcon className="text-tertiary size-3.5 fill-current" />
             </div>
             <div className="flex items-baseline gap-1.5">
-              <span className="font-mono text-2xl font-black blur-[6px] select-none text-white opacity-40">3,212.45</span>
-              <span className="font-mono text-[10px] font-black text-outline uppercase tracking-tighter">USDC</span>
+              <span className="font-mono text-2xl font-black text-on-surface-variant">N/A</span>
+              <span className="font-mono text-[10px] font-black text-outline uppercase tracking-tighter">{salarySymbol}</span>
             </div>
             <div className="mt-3 flex items-center gap-2">
               <div className="h-1 flex-1 bg-surface-container-low rounded-full overflow-hidden shadow-inner">
-                <div className="h-full w-[65%] bg-tertiary rounded-full" />
+                <div className="h-full bg-tertiary rounded-full" style={{ width: `${periodProgress}%` }} />
               </div>
-              <span className="text-[9px] font-black font-mono text-tertiary">65%</span>
+              <span className="text-[9px] font-black font-mono text-tertiary">{periodProgress}%</span>
             </div>
-          </div>
+          </div> */}
 
           {/* Total Received */}
           <div className="bg-surface-container p-5 rounded-lg border-l-2 border-[#d0bcff] group hover:bg-surface-container-high transition-all cursor-pointer border-y-none border-r-none">
@@ -75,10 +110,10 @@ export default function EmployeeDashboardPage() {
               <AccountBalanceIcon className="text-[#d0bcff] size-3.5 fill-current" />
             </div>
             <div className="flex items-baseline gap-1.5">
-              <span className="font-mono text-2xl font-black blur-[6px] select-none text-white opacity-40">101,400.00</span>
-              <span className="font-mono text-[10px] font-black text-outline uppercase tracking-tighter">USDC</span>
+              <span className="font-mono text-2xl font-black text-on-surface-variant">N/A</span>
+              <span className="font-mono text-[10px] font-black text-outline uppercase tracking-tighter">{salarySymbol}</span>
             </div>
-            <p className="mt-3 text-[9px] text-slate-500 font-black uppercase tracking-widest">Fiscal Year 2024</p>
+            <p className="mt-3 text-[9px] text-slate-500 font-black uppercase tracking-widest">No history getter</p>
           </div>
 
           {/* Next Payday */}
@@ -88,14 +123,41 @@ export default function EmployeeDashboardPage() {
               <ScheduleIcon className="text-primary-container size-3.5 fill-current" />
             </div>
             <div className="flex items-baseline gap-2">
-              <span className="text-4xl font-heading font-black text-on-surface tracking-tighter">5</span>
+              <span className="text-4xl font-heading font-black text-on-surface tracking-tighter">{daysLeft}</span>
               <span className="text-[10px] font-black text-on-surface-variant uppercase tracking-widest">Days Left</span>
             </div>
-            <div className="flex gap-1 mt-3.5">
-              {[1, 2, 3, 4, 5].map(i => <div key={i} className="h-1 flex-1 bg-primary-container rounded-full shadow-[0_0_4px_#8083ff]" />)}
-              {[1, 2].map(i => <div key={i} className="h-1 flex-1 bg-surface-container-lowest rounded-full" />)}
+            <div className="h-1 mt-3.5 bg-surface-container-lowest rounded-full overflow-hidden">
+              <div className="h-full bg-primary-container rounded-full shadow-[0_0_4px_#8083ff]" style={{ width: `${periodProgress}%` }} />
             </div>
+            <p className="mt-3 text-[9px] text-slate-500 font-black uppercase tracking-widest">{overview.payrollSchedule?.nextPayrollDate ?? 'Payroll day not set'}</p>
           </div>
+        </section>
+
+        <section className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <Card className="rounded-xl border border-white/5 bg-surface-container-low p-0">
+            <CardContent className="p-5">
+              <p className="text-[10px] font-black uppercase tracking-[0.2em] text-outline">Payout Wallet</p>
+              <p className="mt-3 font-mono text-sm font-bold text-on-surface">
+                {overview.currentEmployee ? formatAddress(overview.currentEmployee.payoutWallet) : '-'}
+              </p>
+            </CardContent>
+          </Card>
+          <Card className="rounded-xl border border-white/5 bg-surface-container-low p-0">
+            <CardContent className="p-5">
+              <p className="text-[10px] font-black uppercase tracking-[0.2em] text-outline">Start Date</p>
+              <p className="mt-3 font-mono text-sm font-bold text-on-surface">
+                {overview.employeeStartDate ? formatUnixDate(overview.employeeStartDate) : '-'}
+              </p>
+            </CardContent>
+          </Card>
+          <Card className="rounded-xl border border-white/5 bg-surface-container-low p-0">
+            <CardContent className="p-5">
+              <p className="text-[10px] font-black uppercase tracking-[0.2em] text-outline">Salary Handle</p>
+              <p className="mt-3 font-mono text-sm font-bold text-on-surface">
+                {overview.employeeSalaryHandle ? formatAddress(overview.employeeSalaryHandle) : 'Not set'}
+              </p>
+            </CardContent>
+          </Card>
         </section>
 
         {/* Content Grid: 6:4 Asymmetric Split */}
@@ -118,30 +180,11 @@ export default function EmployeeDashboardPage() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {[
-                      { date: 'May 01, 2024', tx: '0x98f...e1d', amount: '8,450.00' },
-                      { date: 'April 01, 2024', tx: '0x24a...77b', amount: '8,450.00' },
-                      { date: 'March 01, 2024', tx: '0xc12...89a', amount: '7,920.00' },
-                      { date: 'February 01, 2024', tx: '0xb55...21c', amount: '7,920.00' },
-                    ].map(row => (
-                      <TableRow key={row.tx} className="group cursor-pointer border-white/5 hover:bg-surface-container">
-                        <TableCell className="px-6 py-5">
-                          <div className="flex flex-col">
-                            <span className="text-sm font-bold text-on-surface">{row.date}</span>
-                            <span className="text-[10px] text-outline font-mono mt-1 font-bold uppercase tracking-widest">Tx: {row.tx}</span>
-                          </div>
-                        </TableCell>
-                        <TableCell className="px-6 py-5">
-                          <div className="flex items-center gap-2">
-                            <span className="font-mono text-sm blur-xs text-on-surface-variant font-bold">{row.amount}</span>
-                            <span className="text-[10px] font-black text-outline uppercase tracking-tighter">USDC</span>
-                          </div>
-                        </TableCell>
-                        <TableCell className="px-6 py-5 text-right">
-                          <span className="px-2.5 py-1 bg-primary/10 text-primary text-[9px] font-black rounded-sm border border-primary/20 uppercase tracking-widest">Settled</span>
-                        </TableCell>
-                      </TableRow>
-                    ))}
+                    <TableRow className="border-white/5 hover:bg-transparent">
+                      <TableCell className="px-6 py-12 text-center text-xs font-bold uppercase tracking-widest text-outline" colSpan={3}>
+                        Salary history needs event indexing or an on-chain history getter.
+                      </TableCell>
+                    </TableRow>
                   </TableBody>
                 </Table>
                 <div className="px-6 py-4 bg-surface-container-lowest/20 text-center border-t border-white/5">
@@ -165,11 +208,11 @@ export default function EmployeeDashboardPage() {
                   </div>
                   <h3 className="font-heading text-xl font-bold text-on-surface tracking-tight mb-2">RWA Income Proofs</h3>
                   <p className="text-on-surface-variant text-xs font-medium leading-relaxed mb-8 opacity-80">
-                    Generate zero-knowledge proofs for mortgage or loan applications without revealing your actual salary.
+                    Proof generation is not connected yet. Current contract only exposes salary condition verification for a future proof contract.
                   </p>
-                  <Button className="primary-gradient text-on-primary-container text-sm h-10 px-6 rounded-sm shadow-lg shadow-primary/20 hover:shadow-primary/40 transition-all active:scale-95 flex items-center gap-2 border-none">
+                  <Button disabled className="primary-gradient text-on-primary-container text-sm h-10 px-6 rounded-sm shadow-lg shadow-primary/20 hover:shadow-primary/40 transition-all active:scale-95 flex items-center gap-2 border-none">
                     <AddIcon className="size-4" />
-                    Generate New Proof
+                    Proof Contract Missing
                   </Button>
                 </div>
                 <div className="absolute -right-6 -bottom-6 opacity-[0.03] group-hover:opacity-10 pointer-events-none transform rotate-12 group-hover:scale-110 transition-all duration-700">
@@ -183,9 +226,9 @@ export default function EmployeeDashboardPage() {
               <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-on-surface-variant px-1">Active Proof Sessions</h4>
               <div className="space-y-2.5">
                 {[
-                  { icon: HomeIcon, title: 'Mortgage Eligibility', sub: 'Used: Wells Fargo API', color: 'text-primary' },
-                  { icon: DirectionsCarIcon, title: 'Auto Loan Check', sub: 'Used: Chase Auto', color: 'text-tertiary' },
-                  { icon: DescriptionIcon, title: 'Generic Income Level', sub: 'Tier: Platinum (+5k/mo)', color: 'text-emerald-400' },
+                  { icon: HomeIcon, title: 'Mortgage Eligibility', sub: 'Needs SalaryProof workflow', color: 'text-primary' },
+                  { icon: DirectionsCarIcon, title: 'Auto Loan Check', sub: 'No proof session storage', color: 'text-tertiary' },
+                  { icon: DescriptionIcon, title: 'Generic Income Level', sub: 'No request history getter', color: 'text-emerald-400' },
                 ].map(p => (
                   <Card key={p.title} className="rounded-xl border border-transparent bg-surface-container-low p-0 shadow-lg transition-all hover:border-white/5 hover:bg-surface-container-high">
                     <CardContent className="flex items-center justify-between p-4">

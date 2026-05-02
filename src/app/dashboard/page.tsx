@@ -2,9 +2,12 @@
 
 import {
   MdArrowForward as ArrowForwardIcon,
+  MdAutorenew as AutorenewIcon,
+  MdCheckCircle as CheckCircleIcon,
   MdLock as LockIcon,
   MdPendingActions as PendingActionsIcon,
   MdVerifiedUser as VerifiedUserIcon,
+  MdVisibility as VisibilityIcon,
   MdWarningAmber as WarningIcon,
 } from 'react-icons/md'
 import { AppLayout } from '@/components/layout/app-layout'
@@ -19,12 +22,28 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { canManagePayroll, canViewFinance } from '@/constants'
-import { useStoreContext } from '@/hooks'
+import { useOverviewChainData, useStoreContext } from '@/hooks'
+import { formatAddress, formatUnixDate } from '@/utils'
+
+function formatTokenAmount(value: string | null, fallback = '••••••••') {
+  if (!value) {
+    return fallback
+  }
+
+  return new Intl.NumberFormat('en-US', {
+    maximumFractionDigits: 2,
+    minimumFractionDigits: 2,
+  }).format(Number(value))
+}
 
 export default function DashboardPage() {
   const { selectedCompany } = useStoreContext()
+  const overview = useOverviewChainData(selectedCompany)
   const canViewCompanyPayroll = canManagePayroll(selectedCompany?.role)
   const canViewCompanyFinance = canViewFinance(selectedCompany?.role)
+  const salarySymbol = overview.selectedSettlementAsset?.symbol ?? 'USDC'
+  const daysLeft = overview.payrollSchedule?.daysLeft ?? 0
+  const periodProgress = overview.payrollSchedule?.periodProgress ?? 0
 
   return (
     <AppLayout>
@@ -35,8 +54,8 @@ export default function DashboardPage() {
           <div className="bg-surface-container-low p-5 rounded-lg transition-all hover:bg-surface-container border-b-2 border-transparent hover:border-primary/20 group">
             <p className="text-on-surface-variant text-[10px] font-bold uppercase tracking-widest mb-3">Managing Employees</p>
             <div className="flex items-baseline gap-2">
-              <span className="text-3xl font-heading font-black text-on-surface">124</span>
-              <span className="text-primary text-xs font-bold tracking-tight">+3 this mo.</span>
+              <span className="text-3xl font-heading font-black text-on-surface">{overview.employees.length}</span>
+              <span className="text-primary text-xs font-bold tracking-tight">On-chain active</span>
             </div>
           </div>
 
@@ -49,20 +68,40 @@ export default function DashboardPage() {
                 <LockIcon className="size-3 fill-current" /> Total Monthly Payroll
               </p>
               <div className="flex items-baseline gap-2 relative z-10">
-                <span className="text-3xl font-mono font-bold blur-[6px] select-none text-white">642,150.00</span>
-                <span className="text-[#c4abff] text-xs font-black uppercase tracking-tighter">USDC</span>
+                <span className={overview.totalMonthlyPayroll ? 'text-3xl font-mono font-bold text-white' : 'text-3xl font-mono font-bold blur-[6px] select-none text-white'}>
+                  {formatTokenAmount(overview.totalMonthlyPayroll)}
+                </span>
+                <span className="text-[#c4abff] text-xs font-black uppercase tracking-tighter">{salarySymbol}</span>
               </div>
-              <div className="mt-3 text-[9px] text-[#c4abff]/60 tracking-[0.2em] font-black uppercase">FHE ENCRYPTED VAULT</div>
+              <div className="mt-3 flex items-center justify-between gap-3 relative z-10">
+                <div className="text-[9px] text-[#c4abff]/60 tracking-[0.2em] font-black uppercase">
+                  {overview.totalMonthlyPayroll ? 'DECRYPTED LOCALLY' : 'FHE ENCRYPTED'}
+                </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 px-2 text-[9px] font-black uppercase tracking-widest text-[#c4abff] hover:text-white"
+                  disabled={!overview.canDecryptSalary || overview.isDecryptingSalary}
+                  onClick={overview.decryptSalary}
+                >
+                  {overview.isDecryptingSalary ? <AutorenewIcon className="size-3 mr-1 animate-spin" /> : <VisibilityIcon className="size-3 mr-1" />}
+                  Decrypt
+                </Button>
+              </div>
             </div>
           )}
 
           {/* Stat 3: Fund Pool Exhaustion */}
           {canViewCompanyFinance && (
             <div className="bg-surface-container-low p-5 rounded-lg transition-all hover:bg-surface-container border-none group">
-              <p className="text-on-surface-variant text-[10px] font-bold uppercase tracking-widest mb-3">Fund Pool Exhaustion</p>
+              <p className="text-on-surface-variant text-[10px] font-bold uppercase tracking-widest mb-3">Treasury Vault</p>
               <div className="flex items-baseline gap-2">
-                <span className="text-3xl font-heading font-black text-on-surface">22<span className="text-lg ml-0.5 text-on-surface-variant">d</span></span>
-                <span className="text-destructive text-xs font-bold tracking-tight uppercase">Low Reserve</span>
+                <span className="text-3xl font-heading font-black text-on-surface">
+                  {overview.treasuryVaultConfigured ? 'Ready' : 'None'}
+                </span>
+                <span className={overview.treasuryVaultConfigured ? 'text-emerald-400 text-xs font-bold tracking-tight uppercase' : 'text-destructive text-xs font-bold tracking-tight uppercase'}>
+                  {overview.treasuryVaultConfigured ? 'Configured' : 'Missing'}
+                </span>
               </div>
             </div>
           )}
@@ -71,11 +110,14 @@ export default function DashboardPage() {
           <div className="bg-surface-container-low p-5 rounded-lg transition-all hover:bg-surface-container border-none group">
             <p className="text-on-surface-variant text-[10px] font-bold uppercase tracking-widest mb-3">Next Payday Arrival</p>
             <div className="flex items-center gap-4">
-              <span className="text-3xl font-heading font-black text-primary">05<span className="text-lg ml-0.5 opacity-60">d</span></span>
+              <span className="text-3xl font-heading font-black text-primary">{daysLeft}<span className="text-lg ml-0.5 opacity-60">d</span></span>
               <div className="flex-1 bg-surface-container-highest h-1.5 rounded-full overflow-hidden">
-                <div className="bg-primary h-full w-[80%] rounded-full shadow-[0_0_8px_#c0c1ff]" />
+                <div className="bg-primary h-full rounded-full shadow-[0_0_8px_#c0c1ff]" style={{ width: `${periodProgress}%` }} />
               </div>
             </div>
+            <p className="mt-3 text-[9px] text-outline font-black uppercase tracking-widest">
+              {overview.payrollSchedule?.nextPayrollDate ?? 'Payroll day not set'}
+            </p>
           </div>
         </div>
 
@@ -105,33 +147,11 @@ export default function DashboardPage() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {[
-                      { date: 'Oct 12, 2023', block: 'Block #18,421,092', amount: '42,850.21' },
-                      { date: 'Sep 28, 2023', block: 'Block #18,310,441', amount: '39,120.00' },
-                      { date: 'Sep 14, 2023', block: 'Block #18,201,889', amount: '41,050.00' },
-                      { date: 'Aug 30, 2023', block: 'Block #18,102,154', amount: '38,900.00' },
-                    ].map(row => (
-                      <TableRow key={row.block} className="group cursor-pointer border-white/5 hover:bg-surface-container">
-                        <TableCell className="px-6 py-5">
-                          <div className="flex flex-col">
-                            <span className="text-on-surface text-sm font-bold">{row.date}</span>
-                            <span className="text-outline text-[10px] font-mono mt-1">{row.block}</span>
-                          </div>
-                        </TableCell>
-                        <TableCell className="px-6 py-5">
-                          <div className="flex items-center gap-2">
-                            <LockIcon className="text-tertiary size-3.5 fill-current" />
-                            <span className="font-mono text-sm blur-xs text-on-surface-variant font-bold">{row.amount}</span>
-                            <span className="text-[10px] font-black text-outline uppercase tracking-tighter">USDC</span>
-                          </div>
-                        </TableCell>
-                        <TableCell className="px-6 py-5 text-right">
-                          <span className="px-2 py-1 bg-primary/10 text-primary text-[9px] font-black rounded-sm border border-primary/20 uppercase tracking-widest">
-                            On-Chain Settled
-                          </span>
-                        </TableCell>
-                      </TableRow>
-                    ))}
+                    <TableRow className="border-white/5 hover:bg-transparent">
+                      <TableCell className="px-6 py-12 text-center text-xs font-bold uppercase tracking-widest text-outline" colSpan={3}>
+                        Payroll history needs event indexing or an on-chain history getter.
+                      </TableCell>
+                    </TableRow>
                   </TableBody>
                 </Table>
               </CardContent>
@@ -149,29 +169,33 @@ export default function DashboardPage() {
                   <div className="space-y-6">
                     <div>
                       <div className="flex justify-between items-baseline mb-3">
-                        <span className="text-[10px] text-outline font-black uppercase tracking-[0.15em]">Encrypted Balance</span>
-                        <span className="text-[9px] bg-tertiary/10 text-tertiary px-2 py-0.5 rounded-sm font-black uppercase tracking-widest border border-tertiary/20">FHE Secured</span>
+                        <span className="text-[10px] text-outline font-black uppercase tracking-[0.15em]">Vault Address</span>
+                        <span className="text-[9px] bg-tertiary/10 text-tertiary px-2 py-0.5 rounded-sm font-black uppercase tracking-widest border border-tertiary/20">Registry</span>
                       </div>
                       <div className="flex items-center gap-4">
                         <div className="w-12 h-12 rounded-xl bg-surface-container-highest flex items-center justify-center border border-white/10 shadow-inner">
                           <VerifiedUserIcon className="text-tertiary size-6 fill-current" />
                         </div>
                         <div>
-                          <p className="text-2xl font-mono text-on-surface leading-none blur-md font-bold">1,240,500.00</p>
-                          <p className="text-[10px] text-outline mt-1.5 font-bold uppercase tracking-wider">~ 1.8 months coverage</p>
+                          <p className="text-2xl font-mono text-on-surface leading-none font-bold">
+                            {overview.treasuryVaultConfigured ? formatAddress(overview.treasuryVault) : 'Not set'}
+                          </p>
+                          <p className="text-[10px] text-outline mt-1.5 font-bold uppercase tracking-wider">
+                            Confidential balance has no read-only dashboard getter.
+                          </p>
                         </div>
                       </div>
                     </div>
 
                     <div className="space-y-3">
                       <div className="flex justify-between text-[10px] font-black uppercase tracking-widest">
-                        <span className="text-on-surface">Pool Utilization</span>
-                        <span className="text-destructive">82%</span>
+                        <span className="text-on-surface">Last Payroll</span>
+                        <span className="text-primary">{overview.lastPayrollTime ? formatUnixDate(overview.lastPayrollTime) : 'Never'}</span>
                       </div>
                       <div className="h-3 bg-surface-container-lowest rounded-full overflow-hidden border border-white/5 shadow-inner">
-                        <div className="bg-linear-to-r from-primary to-destructive h-full w-[82%] rounded-full" />
+                        <div className="bg-linear-to-r from-primary to-tertiary h-full rounded-full" style={{ width: `${periodProgress}%` }} />
                       </div>
-                      <p className="text-[9px] text-outline italic text-right font-medium">Liquidity alert: Top-up recommended within 14 days.</p>
+                      <p className="text-[9px] text-outline italic text-right font-medium">Next payroll: {overview.payrollSchedule?.nextPayrollDate ?? '-'}</p>
                     </div>
                   </div>
                 </CardContent>
@@ -185,23 +209,29 @@ export default function DashboardPage() {
 
                 <div className="space-y-3">
                   {canViewCompanyFinance && (
-                    <div className="p-4 bg-destructive/5 border border-destructive/10 rounded-lg flex items-start gap-4 hover:bg-destructive/10 transition-colors cursor-pointer">
-                      <WarningIcon className="text-destructive size-5 shrink-0 mt-0.5" />
+                    <div className="p-4 bg-destructive/5 border border-destructive/10 rounded-lg flex items-start gap-4 hover:bg-destructive/10 transition-colors">
+                      {overview.treasuryVaultConfigured ? <CheckCircleIcon className="text-emerald-400 size-5 shrink-0 mt-0.5" /> : <WarningIcon className="text-destructive size-5 shrink-0 mt-0.5" />}
                       <div>
-                        <p className="text-sm font-bold text-destructive leading-none">Low funds warning</p>
-                        <p className="text-[10px] text-destructive/70 mt-2 font-medium leading-normal uppercase tracking-wider">Gas vault below 0.5 ETH threshold.</p>
+                        <p className={overview.treasuryVaultConfigured ? 'text-sm font-bold text-emerald-400 leading-none' : 'text-sm font-bold text-destructive leading-none'}>
+                          {overview.treasuryVaultConfigured ? 'Treasury vault configured' : 'Treasury vault missing'}
+                        </p>
+                        <p className="text-[10px] text-on-surface-variant mt-2 font-medium leading-normal uppercase tracking-wider">
+                          {overview.treasuryVaultConfigured ? formatAddress(overview.treasuryVault) : 'Company cannot execute payroll until vault is set.'}
+                        </p>
                       </div>
                     </div>
                   )}
 
-                  <div className="p-4 bg-surface-container-highest/30 border border-white/5 rounded-lg flex items-start gap-4 hover:bg-surface-container-highest/50 transition-colors cursor-pointer group">
+                  <div className="p-4 bg-surface-container-highest/30 border border-white/5 rounded-lg flex items-start gap-4 hover:bg-surface-container-highest/50 transition-colors group">
                     <PendingActionsIcon className="text-tertiary size-5 shrink-0 mt-0.5" />
                     <div>
-                      <p className="text-sm font-bold text-on-surface leading-none">Pending Negotiation</p>
-                      <p className="text-[10px] text-on-surface-variant mt-2 font-medium leading-normal uppercase tracking-wider">3 employee salary adjustments waiting for approval.</p>
-                      <Button variant="link" size="sm" className="mt-3 h-auto px-0 text-[10px] font-black uppercase tracking-widest">
-                        Review Proposals <ArrowForwardIcon className="size-3 ml-1.5" />
-                      </Button>
+                      <p className="text-sm font-bold text-on-surface leading-none">Salary setup</p>
+                      <p className="text-[10px] text-on-surface-variant mt-2 font-medium leading-normal uppercase tracking-wider">
+                        {overview.missingSalaryCount === 0 ? 'All active employees have encrypted salary handles.' : `${overview.missingSalaryCount} employee salary handle(s) missing.`}
+                      </p>
+                      {overview.salaryDecryptError && (
+                        <p className="mt-3 text-[10px] font-bold text-destructive">{overview.salaryDecryptError}</p>
+                      )}
                     </div>
                   </div>
                 </div>
