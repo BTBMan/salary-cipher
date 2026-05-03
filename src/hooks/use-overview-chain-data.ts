@@ -4,7 +4,7 @@ import type { CompanySummary } from '@/contexts'
 import type { Address, Hex } from 'viem'
 import dayjs from 'dayjs'
 import { useCallback, useMemo } from 'react'
-import { formatUnits, zeroAddress, zeroHash } from 'viem'
+import { formatUnits, isAddress, zeroAddress, zeroHash } from 'viem'
 import { useConnection, useContractEvents, useReadContracts, useWatchContractEvent } from 'wagmi'
 import { CompanyRegistry } from '@/contract-data/company-registry'
 import { CompanyTreasuryVault } from '@/contract-data/company-treasury-vault'
@@ -27,9 +27,18 @@ export interface EmployeePayrollHistoryItem {
   transactionHash: Hex
 }
 
+export interface CompanyPayrollHistoryItem {
+  amountHandle: Hex | null
+  executedAt: number
+  recipient: Address
+  recipientName: string | null
+  transactionHash: Hex
+}
+
 interface PayrollTransferredLog {
   args: {
     executedAt?: bigint
+    to?: Address
   }
   transactionHash: Hex
 }
@@ -37,6 +46,7 @@ interface PayrollTransferredLog {
 interface ConfidentialTransferLog {
   args: {
     amount?: Hex
+    to?: Address
   }
   transactionHash: Hex
 }
@@ -92,6 +102,14 @@ function toBigIntAmount(value: string | bigint | boolean | undefined) {
     return BigInt(value)
   }
   return 0n
+}
+
+function getTransferKey(transactionHash: string, recipient: Address) {
+  return `${transactionHash.toLowerCase()}-${recipient.toLowerCase()}`
+}
+
+function toEventAddress(value: unknown): Address | null {
+  return typeof value === 'string' && isAddress(value) ? value : null
 }
 
 export function useOverviewChainData(selectedCompany: CompanySummary | null) {
@@ -226,6 +244,12 @@ export function useOverviewChainData(selectedCompany: CompanySummary | null) {
     return result?.status === 'success' && typeof result.result === 'string' ? result.result : zeroAddress
   }, [overviewResults])
   const treasuryVaultConfigured = treasuryVault !== zeroAddress
+  const canReadCompanyPayrollHistory = Boolean(
+    companyId
+    && selectedSettlementAsset?.settlementToken
+    && treasuryVaultConfigured
+    && selectedCompany?.role !== RolesEnum.Employee,
+  )
   const canReadEmployeePayrollHistory = Boolean(
     companyId
     && currentEmployee?.payoutWallet
@@ -242,6 +266,15 @@ export function useOverviewChainData(selectedCompany: CompanySummary | null) {
       to: currentEmployee.payoutWallet,
     }
   }, [companyId, currentEmployee?.payoutWallet])
+  const companyPayrollHistoryEventArgs = useMemo(() => {
+    if (!companyId) {
+      return undefined
+    }
+
+    return {
+      companyId,
+    }
+  }, [companyId])
   const transferHistoryEventArgs = useMemo(() => {
     if (!currentEmployee?.payoutWallet || !treasuryVaultConfigured) {
       return undefined
@@ -252,6 +285,15 @@ export function useOverviewChainData(selectedCompany: CompanySummary | null) {
       to: currentEmployee.payoutWallet,
     }
   }, [currentEmployee?.payoutWallet, treasuryVault, treasuryVaultConfigured])
+  const companyTransferHistoryEventArgs = useMemo(() => {
+    if (!treasuryVaultConfigured) {
+      return undefined
+    }
+
+    return {
+      from: treasuryVault as Address,
+    }
+  }, [treasuryVault, treasuryVaultConfigured])
   const {
     data: payrollEventLogs,
     error: payrollEventLogsError,
@@ -284,6 +326,38 @@ export function useOverviewChainData(selectedCompany: CompanySummary | null) {
       enabled: canReadEmployeePayrollHistory,
     },
   })
+  const {
+    data: companyPayrollEventLogs,
+    error: companyPayrollEventLogsError,
+    isLoading: isLoadingCompanyPayrollEventLogs,
+    refetch: refetchCompanyPayrollEventLogs,
+  } = useContractEvents({
+    abi: CompanyTreasuryVault.abi,
+    address: treasuryVaultConfigured ? treasuryVault as Address : undefined,
+    eventName: 'PayrollTransferred',
+    args: companyPayrollHistoryEventArgs,
+    fromBlock: 0n,
+    toBlock: 'latest',
+    query: {
+      enabled: canReadCompanyPayrollHistory,
+    },
+  })
+  const {
+    data: companyTransferEventLogs,
+    error: companyTransferEventLogsError,
+    isLoading: isLoadingCompanyTransferEventLogs,
+    refetch: refetchCompanyTransferEventLogs,
+  } = useContractEvents({
+    abi: ERC7984Wrapper.abi,
+    address: selectedSettlementAsset?.settlementToken as Address | undefined,
+    eventName: 'ConfidentialTransfer',
+    args: companyTransferHistoryEventArgs,
+    fromBlock: 0n,
+    toBlock: 'latest',
+    query: {
+      enabled: canReadCompanyPayrollHistory,
+    },
+  })
   const refetchEmployeePayrollHistory = useCallback(async () => {
     if (!canReadEmployeePayrollHistory) {
       return
@@ -294,6 +368,16 @@ export function useOverviewChainData(selectedCompany: CompanySummary | null) {
       refetchTransferEventLogs(),
     ])
   }, [canReadEmployeePayrollHistory, refetchPayrollEventLogs, refetchTransferEventLogs])
+  const refetchCompanyPayrollHistory = useCallback(async () => {
+    if (!canReadCompanyPayrollHistory) {
+      return
+    }
+
+    await Promise.all([
+      refetchCompanyPayrollEventLogs(),
+      refetchCompanyTransferEventLogs(),
+    ])
+  }, [canReadCompanyPayrollHistory, refetchCompanyPayrollEventLogs, refetchCompanyTransferEventLogs])
 
   useWatchContractEvent({
     abi: CompanyTreasuryVault.abi,
@@ -303,6 +387,16 @@ export function useOverviewChainData(selectedCompany: CompanySummary | null) {
     enabled: canReadEmployeePayrollHistory,
     onLogs: () => {
       void refetchEmployeePayrollHistory()
+    },
+  })
+  useWatchContractEvent({
+    abi: CompanyTreasuryVault.abi,
+    address: treasuryVaultConfigured ? treasuryVault as Address : undefined,
+    eventName: 'PayrollTransferred',
+    args: companyPayrollHistoryEventArgs,
+    enabled: canReadCompanyPayrollHistory,
+    onLogs: () => {
+      void refetchCompanyPayrollHistory()
     },
   })
   useWatchContractEvent({
@@ -316,6 +410,16 @@ export function useOverviewChainData(selectedCompany: CompanySummary | null) {
       void refetchBalanceHandle()
     },
   })
+  useWatchContractEvent({
+    abi: ERC7984Wrapper.abi,
+    address: selectedSettlementAsset?.settlementToken as Address | undefined,
+    eventName: 'ConfidentialTransfer',
+    args: companyTransferHistoryEventArgs,
+    enabled: canReadCompanyPayrollHistory,
+    onLogs: () => {
+      void refetchCompanyPayrollHistory()
+    },
+  })
 
   const employeePayrollHistory = useMemo(() => {
     if (!canReadEmployeePayrollHistory) {
@@ -324,18 +428,22 @@ export function useOverviewChainData(selectedCompany: CompanySummary | null) {
 
     const decodedTransferLogs = (transferEventLogs ?? []) as ConfidentialTransferLog[]
     const decodedPayrollLogs = (payrollEventLogs ?? []) as PayrollTransferredLog[]
-    const transferByTransactionHash = new Map<Hex, Hex>()
+    const transferByTransactionHash = new Map<string, Hex>()
 
     for (const transferLog of decodedTransferLogs) {
       const amount = transferLog.args.amount
-      if (isActiveSalaryHandle(amount)) {
-        transferByTransactionHash.set(transferLog.transactionHash, amount)
+      const recipient = toEventAddress(transferLog.args.to)
+      if (isActiveSalaryHandle(amount) && recipient) {
+        transferByTransactionHash.set(getTransferKey(transferLog.transactionHash, recipient), amount)
       }
     }
 
     return decodedPayrollLogs
       .map((payrollLog) => {
-        const amountHandle = transferByTransactionHash.get(payrollLog.transactionHash) ?? null
+        const recipient = toEventAddress(payrollLog.args.to) ?? currentEmployee?.payoutWallet
+        const amountHandle = recipient
+          ? transferByTransactionHash.get(getTransferKey(payrollLog.transactionHash, recipient)) ?? null
+          : null
         return {
           amount: null,
           amountHandle,
@@ -344,9 +452,50 @@ export function useOverviewChainData(selectedCompany: CompanySummary | null) {
         } satisfies EmployeePayrollHistoryItem
       })
       .sort((a, b) => b.executedAt - a.executedAt)
-  }, [canReadEmployeePayrollHistory, payrollEventLogs, transferEventLogs])
+  }, [canReadEmployeePayrollHistory, currentEmployee?.payoutWallet, payrollEventLogs, transferEventLogs])
+  const companyPayrollHistory = useMemo(() => {
+    if (!canReadCompanyPayrollHistory) {
+      return []
+    }
+
+    const decodedTransferLogs = (companyTransferEventLogs ?? []) as ConfidentialTransferLog[]
+    const decodedPayrollLogs = (companyPayrollEventLogs ?? []) as PayrollTransferredLog[]
+    const employeeByPayoutWallet = new Map(
+      employees.map(employee => [employee.payoutWallet.toLowerCase(), employee.displayName]),
+    )
+    const transferByTransactionAndRecipient = new Map<string, Hex>()
+
+    for (const transferLog of decodedTransferLogs) {
+      const amount = transferLog.args.amount
+      const recipient = toEventAddress(transferLog.args.to)
+      if (isActiveSalaryHandle(amount) && recipient) {
+        transferByTransactionAndRecipient.set(getTransferKey(transferLog.transactionHash, recipient), amount)
+      }
+    }
+
+    return decodedPayrollLogs
+      .map((payrollLog) => {
+        const recipient = toEventAddress(payrollLog.args.to) ?? zeroAddress
+        const amountHandle = recipient !== zeroAddress
+          ? transferByTransactionAndRecipient.get(getTransferKey(payrollLog.transactionHash, recipient)) ?? null
+          : null
+
+        return {
+          amountHandle,
+          executedAt: Number(payrollLog.args.executedAt ?? 0),
+          recipient,
+          recipientName: recipient !== zeroAddress ? employeeByPayoutWallet.get(recipient.toLowerCase()) ?? null : null,
+          transactionHash: payrollLog.transactionHash,
+        } satisfies CompanyPayrollHistoryItem
+      })
+      .sort((a, b) => b.executedAt - a.executedAt)
+  }, [canReadCompanyPayrollHistory, companyPayrollEventLogs, companyTransferEventLogs, employees])
   const isLoadingEmployeePayrollHistory = isLoadingPayrollEventLogs || isLoadingTransferEventLogs
   const employeePayrollHistoryError = payrollEventLogsError || transferEventLogsError
+    ? 'Failed to load payroll history events.'
+    : null
+  const isLoadingCompanyPayrollHistory = isLoadingCompanyPayrollEventLogs || isLoadingCompanyTransferEventLogs
+  const companyPayrollHistoryError = companyPayrollEventLogsError || companyTransferEventLogsError
     ? 'Failed to load payroll history events.'
     : null
 
@@ -465,6 +614,8 @@ export function useOverviewChainData(selectedCompany: CompanySummary | null) {
 
   return {
     canDecryptSalary: salaryDecrypt.canDecrypt,
+    companyPayrollHistory,
+    companyPayrollHistoryError,
     currentEmployee,
     decryptSalary: salaryDecrypt.decrypt,
     decryptedSalaryRows,
@@ -478,12 +629,14 @@ export function useOverviewChainData(selectedCompany: CompanySummary | null) {
     employeeTotalReceived,
     employees,
     isDecryptingSalary: salaryDecrypt.isDecrypting,
-    isLoading: isLoadingEmployees || isLoadingOverview || isLoadingSalaryHandles || isLoadingBalanceHandle || isLoadingEmployeePayrollHistory,
+    isLoading: isLoadingEmployees || isLoadingOverview || isLoadingSalaryHandles || isLoadingBalanceHandle || isLoadingEmployeePayrollHistory || isLoadingCompanyPayrollHistory,
+    isLoadingCompanyPayrollHistory,
     isLoadingEmployeePayrollHistory,
     lastPayrollTime,
     missingSalaryCount,
     payrollSchedule,
     refetchBalanceHandle,
+    refetchCompanyPayrollHistory,
     refetchEmployeePayrollHistory,
     selectedSettlementAsset,
     salaryDecryptError: salaryDecrypt.error,

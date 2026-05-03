@@ -142,18 +142,79 @@ export default function DashboardPage() {
                   <TableHeader className="bg-surface-container/50">
                     <TableRow className="border-white/5 hover:bg-transparent">
                       <TableHead className="px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em] text-outline">Execution Time</TableHead>
-                      <TableHead className="px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em] text-outline">Batch Amount</TableHead>
+                      <TableHead className="px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em] text-outline">Recipient</TableHead>
+                      <TableHead className="px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em] text-outline">Encrypted Amount</TableHead>
                       <TableHead className="px-6 py-4 text-right text-[10px] font-black uppercase tracking-[0.2em] text-outline">Status</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    <TableRow className="border-white/5 hover:bg-transparent">
-                      <TableCell className="px-6 py-12 text-center text-xs font-bold uppercase tracking-widest text-outline" colSpan={3}>
-                        Payroll history needs event indexing or an on-chain history getter.
-                      </TableCell>
-                    </TableRow>
+                    {overview.isLoadingCompanyPayrollHistory
+                      ? (
+                          <TableRow className="border-white/5 hover:bg-transparent">
+                            <TableCell className="px-6 py-12 text-center text-xs font-bold uppercase tracking-widest text-outline" colSpan={4}>
+                              <div className="flex items-center justify-center gap-2">
+                                <AutorenewIcon className="size-4 animate-spin" />
+                                Loading payroll events
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        )
+                      : overview.companyPayrollHistory.length === 0
+                        ? (
+                            <TableRow className="border-white/5 hover:bg-transparent">
+                              <TableCell className="px-6 py-12 text-center text-xs font-bold uppercase tracking-widest text-outline" colSpan={4}>
+                                No payroll history events found.
+                              </TableCell>
+                            </TableRow>
+                          )
+                        : overview.companyPayrollHistory.map(row => (
+                            <TableRow key={`${row.transactionHash}-${row.recipient}-${row.executedAt}`} className="group border-white/5 hover:bg-surface-container">
+                              <TableCell className="px-6 py-5">
+                                <div className="flex flex-col">
+                                  <span className="text-sm font-bold text-on-surface">{formatUnixDate(row.executedAt)}</span>
+                                  <span className="text-[10px] text-outline font-mono mt-1 font-bold uppercase tracking-widest">Tx: {formatAddress(row.transactionHash)}</span>
+                                </div>
+                              </TableCell>
+                              <TableCell className="px-6 py-5">
+                                <div className="flex flex-col">
+                                  <span className="text-sm font-bold text-on-surface">{row.recipientName ?? 'Unknown employee'}</span>
+                                  <span className="text-[10px] text-outline font-mono mt-1 font-bold uppercase tracking-widest">{formatAddress(row.recipient)}</span>
+                                </div>
+                              </TableCell>
+                              <TableCell className="px-6 py-5">
+                                <div className="flex items-center gap-2">
+                                  <span className="font-mono text-sm text-on-surface-variant font-bold">
+                                    {row.amountHandle ? formatAddress(row.amountHandle) : 'Handle missing'}
+                                  </span>
+                                  <span className="text-[10px] font-black text-outline uppercase tracking-tighter">{salarySymbol}</span>
+                                </div>
+                              </TableCell>
+                              <TableCell className="px-6 py-5 text-right">
+                                <span className="px-2.5 py-1 bg-primary/10 text-primary text-[9px] font-black rounded-sm border border-primary/20 uppercase tracking-widest">
+                                  {row.amountHandle ? 'Encrypted' : 'Pending'}
+                                </span>
+                              </TableCell>
+                            </TableRow>
+                          ))}
                   </TableBody>
                 </Table>
+                {overview.companyPayrollHistoryError && (
+                  <div className="px-6 py-3 border-t border-white/5 text-[10px] font-bold uppercase tracking-widest text-destructive">
+                    {overview.companyPayrollHistoryError}
+                  </div>
+                )}
+                <div className="px-6 py-4 bg-surface-container-lowest/20 text-center border-t border-white/5">
+                  <Button
+                    variant="ghost"
+                    className="text-[10px] font-black uppercase tracking-[0.2em] text-outline hover:text-on-surface"
+                    disabled={overview.isLoadingCompanyPayrollHistory}
+                    onClick={() => {
+                      void overview.refetchCompanyPayrollHistory()
+                    }}
+                  >
+                    Refresh History
+                  </Button>
+                </div>
               </CardContent>
             </Card>
           </div>
