@@ -7,9 +7,9 @@ import {
   MdLock as LockIcon,
   MdPendingActions as PendingActionsIcon,
   MdVerifiedUser as VerifiedUserIcon,
-  MdVisibility as VisibilityIcon,
   MdWarningAmber as WarningIcon,
 } from 'react-icons/md'
+import { EncryptedField } from '@/components/encrypted-field'
 import { AppLayout } from '@/components/layout/app-layout'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
@@ -23,7 +23,7 @@ import {
 } from '@/components/ui/table'
 import { canManagePayroll, canViewFinance } from '@/constants'
 import { useOverviewChainData, useStoreContext } from '@/hooks'
-import { formatAddress, formatUnixDate } from '@/utils'
+import { formatAddress, formatUnixDate, getConfidentialTokenSymbol } from '@/utils'
 
 function formatTokenAmount(value: string | null, fallback = '••••••••') {
   if (!value) {
@@ -41,7 +41,7 @@ export default function DashboardPage() {
   const overview = useOverviewChainData(selectedCompany)
   const canViewCompanyPayroll = canManagePayroll(selectedCompany?.role)
   const canViewCompanyFinance = canViewFinance(selectedCompany?.role)
-  const salarySymbol = overview.selectedSettlementAsset?.symbol ?? 'USDC'
+  const confidentialTokenSymbol = getConfidentialTokenSymbol(overview.selectedSettlementAsset)
   const daysLeft = overview.payrollSchedule?.daysLeft ?? 0
   const periodProgress = overview.payrollSchedule?.periodProgress ?? 0
 
@@ -68,25 +68,19 @@ export default function DashboardPage() {
                 <LockIcon className="size-3 fill-current" /> Total Monthly Payroll
               </p>
               <div className="flex items-baseline gap-2 relative z-10">
-                <span className={overview.totalMonthlyPayroll ? 'text-3xl font-mono font-bold text-white' : 'text-3xl font-mono font-bold blur-[6px] select-none text-white'}>
-                  {formatTokenAmount(overview.totalMonthlyPayroll)}
-                </span>
-                <span className="text-[#c4abff] text-xs font-black uppercase tracking-tighter">{salarySymbol}</span>
+                <EncryptedField
+                  canDecrypt={overview.canDecryptSalary}
+                  className="space-y-0"
+                  isDecrypting={overview.isDecryptingSalary}
+                  isEncrypted={!overview.totalMonthlyPayroll}
+                  value={formatTokenAmount(overview.totalMonthlyPayroll)}
+                  valueClassName="text-3xl font-mono font-bold text-white"
+                  onDecrypt={overview.decryptSalary}
+                />
+                <span className="text-[#c4abff] text-xs font-black uppercase tracking-tighter">{confidentialTokenSymbol}</span>
               </div>
-              <div className="mt-3 flex items-center justify-between gap-3 relative z-10">
-                <div className="text-[9px] text-[#c4abff]/60 tracking-[0.2em] font-black uppercase">
-                  {overview.totalMonthlyPayroll ? 'DECRYPTED LOCALLY' : 'FHE ENCRYPTED'}
-                </div>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-7 px-2 text-[9px] font-black uppercase tracking-widest text-[#c4abff] hover:text-white"
-                  disabled={!overview.canDecryptSalary || overview.isDecryptingSalary}
-                  onClick={overview.decryptSalary}
-                >
-                  {overview.isDecryptingSalary ? <AutorenewIcon className="size-3 mr-1 animate-spin" /> : <VisibilityIcon className="size-3 mr-1" />}
-                  Decrypt
-                </Button>
+              <div className="mt-3 text-[9px] text-[#c4abff]/60 tracking-[0.2em] font-black uppercase relative z-10">
+                {overview.totalMonthlyPayroll ? 'DECRYPTED LOCALLY' : 'FHE ENCRYPTED'}
               </div>
             </div>
           )}
@@ -183,10 +177,13 @@ export default function DashboardPage() {
                               </TableCell>
                               <TableCell className="px-6 py-5">
                                 <div className="flex items-center gap-2">
-                                  <span className="font-mono text-sm text-on-surface-variant font-bold">
-                                    {row.amountHandle ? formatAddress(row.amountHandle) : 'Handle missing'}
-                                  </span>
-                                  <span className="text-[10px] font-black text-outline uppercase tracking-tighter">{salarySymbol}</span>
+                                  <EncryptedField
+                                    className="space-y-0"
+                                    isEncrypted={Boolean(row.amountHandle)}
+                                    value={row.amountHandle ? formatAddress(row.amountHandle) : 'Handle missing'}
+                                    valueClassName="font-mono text-sm text-on-surface-variant font-bold"
+                                  />
+                                  <span className="text-[10px] font-black text-outline uppercase tracking-tighter">{confidentialTokenSymbol}</span>
                                 </div>
                               </TableCell>
                               <TableCell className="px-6 py-5 text-right">

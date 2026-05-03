@@ -24,7 +24,7 @@ import {
 // import { Textarea } from '@/components/ui/textarea'
 import { SettlementAssetEnum } from '@/enums'
 import { useStoreContext } from '@/hooks'
-import { cn } from '@/utils'
+import { cn, getUnderlyingTokenSymbol } from '@/utils'
 
 const createCompanySchema = z.object({
   name: z.string().trim().min(1, 'Company name is required.').max(100, 'Company name is too long.'),
@@ -211,7 +211,7 @@ export function CreateCompanyPageContent() {
                     {selectedSettlementAsset && (
                       <p className="flex items-center gap-1.5 text-xs text-on-surface-variant">
                         <InfoIcon className="size-3.5" />
-                        Uses {selectedSettlementAsset.symbol} with {selectedSettlementAsset.decimals} decimals on this network.
+                        Uses {getUnderlyingTokenSymbol(selectedSettlementAsset)} with {selectedSettlementAsset.decimals} decimals on this network.
                       </p>
                     )}
                   </div>

@@ -9,6 +9,7 @@ import {
   MdSearch as SearchIcon,
 } from 'react-icons/md'
 import { AddEmployeeDialog } from '@/components/dialogs/add-employee-dialog'
+import { EncryptedField } from '@/components/encrypted-field'
 import { AppLayout } from '@/components/layout/app-layout'
 import { RoleBadge } from '@/components/role-badge'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
@@ -26,7 +27,7 @@ import {
 import { canManagePeople } from '@/constants'
 import { RolesEnum } from '@/enums'
 import { useCompanyEmployees, useStoreContext } from '@/hooks'
-import { cn, formatAddress, formatUnixDate, getAvatarFallback } from '@/utils'
+import { cn, formatAddress, formatUnixDate, getAvatarFallback, getConfidentialTokenSymbol, getUnderlyingTokenSymbol } from '@/utils'
 
 export default function PeoplePage() {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false)
@@ -50,7 +51,8 @@ export default function PeoplePage() {
     selectedSettlementAsset,
     updateEmployee,
   } = useCompanyEmployees(selectedCompany)
-  const salarySymbol = selectedSettlementAsset?.symbol ?? 'USDC'
+  const underlyingTokenSymbol = getUnderlyingTokenSymbol(selectedSettlementAsset)
+  const confidentialTokenSymbol = getConfidentialTokenSymbol(selectedSettlementAsset)
   const editDialogInitialValues = useMemo(() => {
     if (!editingEmployee) {
       return undefined
@@ -94,7 +96,7 @@ export default function PeoplePage() {
               isSubmitting={editingEmployee ? isUpdatingEmployee : isAddingEmployee}
               mode={editingEmployee ? 'edit' : 'add'}
               open={isAddModalOpen}
-              salarySymbol={salarySymbol}
+              salarySymbol={underlyingTokenSymbol}
               onOpenChange={(open) => {
                 setIsAddModalOpen(open)
 
@@ -175,8 +177,13 @@ export default function PeoplePage() {
                             {emp.role !== RolesEnum.Owner
                               && (
                                 <div className="flex items-center gap-2 bg-surface-container-lowest border border-tertiary/10 px-3 py-1.5 rounded-sm w-fit group-hover:border-tertiary/30 transition-colors">
-                                  <LockIcon className="text-tertiary size-3 fill-current" />
-                                  <span className="text-tertiary font-mono tracking-[0.3em] text-[10px] font-black opacity-60">••••••••</span>
+                                  <EncryptedField
+                                    className="space-y-0"
+                                    isEncrypted
+                                    value="••••••••"
+                                    valueClassName="text-tertiary font-mono tracking-[0.3em] text-[10px] font-black"
+                                  />
+                                  <span className="text-[10px] font-black text-outline uppercase tracking-tighter">{confidentialTokenSymbol}</span>
                                 </div>
                               )}
                           </TableCell>
@@ -287,7 +294,7 @@ export default function PeoplePage() {
                   </div>
                   <div>
                     <div className="text-[10px] text-outline uppercase font-black tracking-widest mb-1.5">Settlement Asset</div>
-                    <div className="text-3xl font-heading font-black text-on-surface tracking-tighter">{salarySymbol}</div>
+                    <div className="text-3xl font-heading font-black text-on-surface tracking-tighter">{confidentialTokenSymbol}</div>
                   </div>
                   <div>
                     <div className="text-[10px] text-outline uppercase font-black tracking-widest mb-1.5">Payroll Day</div>

@@ -7,9 +7,10 @@ import {
   MdLockOpen as LockOpenIcon,
   MdPolicy as PolicyIcon,
 } from 'react-icons/md'
+import { EncryptedField } from '@/components/encrypted-field'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
-import { formatAddress } from '@/utils'
+import { formatAddress, getConfidentialTokenSymbol } from '@/utils'
 import { PayrollExecutionHistory } from './payroll-execution-history'
 import { formatTokenAmount, getBalanceShare } from './payroll-formatters'
 
@@ -18,7 +19,7 @@ interface PayrollEmployeeViewProps {
 }
 
 export function PayrollEmployeeView({ overview }: PayrollEmployeeViewProps) {
-  const salarySymbol = overview.selectedSettlementAsset?.symbol ?? 'USDC'
+  const salarySymbol = getConfidentialTokenSymbol(overview.selectedSettlementAsset)
   const balanceShare = getBalanceShare(overview.employeeConfidentialBalance, overview.employeeTotalReceived)
   const historyRows = useMemo(() => {
     return overview.employeePayrollHistory.map(row => ({
@@ -49,7 +50,15 @@ export function PayrollEmployeeView({ overview }: PayrollEmployeeViewProps) {
                   <h3 className="text-xs font-bold uppercase tracking-widest text-on-surface-variant">Available Balance (Encrypted)</h3>
                 </div>
                 <div className="mt-4 mb-8 flex items-end gap-3">
-                  {formatTokenAmount(overview.employeeConfidentialBalance)}
+                  <EncryptedField
+                    canDecrypt={overview.canDecryptSalary}
+                    className="space-y-0"
+                    isDecrypting={overview.isDecryptingSalary}
+                    isEncrypted={!overview.employeeConfidentialBalance}
+                    value={formatTokenAmount(overview.employeeConfidentialBalance)}
+                    valueClassName="font-mono text-sm font-bold text-on-surface"
+                    onDecrypt={overview.decryptSalary}
+                  />
                   <span className="mb-2 font-mono text-lg text-on-surface-variant">{salarySymbol}</span>
                 </div>
               </div>
@@ -72,25 +81,15 @@ export function PayrollEmployeeView({ overview }: PayrollEmployeeViewProps) {
               <div className="relative z-10">
                 <h3 className="mb-6 text-xs font-bold uppercase tracking-widest text-on-surface-variant">Total Earned</h3>
                 <div className="flex items-baseline gap-2">
-                  <span className="font-mono text-4xl font-bold text-on-surface">
-                    {overview.employeeTotalReceived
-                      ? (
-                          <span className="font-mono text-5xl font-bold tracking-tight text-primary md:text-6xl">
-                            {formatTokenAmount(overview.employeeTotalReceived)}
-                          </span>
-                        )
-                      : (
-                          <span className="flex items-center">
-                            {[0.8, 0.6, 0.4, 0.2, 0.1].map(opacity => (
-                              <span
-                                key={opacity}
-                                className="mx-1 inline-block h-4 w-4 rounded-full bg-primary shadow-[0_0_15px_rgba(192,193,255,0.3)] md:h-5 md:w-5"
-                                style={{ opacity }}
-                              />
-                            ))}
-                          </span>
-                        )}
-                  </span>
+                  <EncryptedField
+                    canDecrypt={overview.canDecryptSalary}
+                    className="space-y-0"
+                    isDecrypting={overview.isDecryptingSalary}
+                    isEncrypted={!overview.employeeTotalReceived}
+                    value={formatTokenAmount(overview.employeeTotalReceived)}
+                    valueClassName="font-mono text-5xl font-bold tracking-tight text-primary md:text-6xl"
+                    onDecrypt={overview.decryptSalary}
+                  />
                   <span className="font-mono text-sm text-on-surface-variant">{salarySymbol}</span>
                 </div>
                 <p className="mt-2 font-mono text-[10px] uppercase tracking-tighter text-outline">
@@ -117,8 +116,11 @@ export function PayrollEmployeeView({ overview }: PayrollEmployeeViewProps) {
 
       <PayrollExecutionHistory
         error={overview.employeePayrollHistoryError}
+        canDecryptAmount={overview.canDecryptSalary}
         historyRows={historyRows}
+        isDecryptingAmount={overview.isDecryptingSalary}
         isLoading={overview.isLoadingEmployeePayrollHistory}
+        onDecryptAmount={overview.decryptSalary}
         salarySymbol={salarySymbol}
       />
     </div>

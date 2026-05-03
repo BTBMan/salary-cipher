@@ -3,10 +3,10 @@
 import type { PayrollHistoryRow } from './types'
 import {
   MdAutorenew as AutorenewIcon,
-  MdLock as LockIcon,
   MdOpenInNew as OpenInNewIcon,
   MdShield as ShieldPersonIcon,
 } from 'react-icons/md'
+import { EncryptedField } from '@/components/encrypted-field'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
@@ -21,10 +21,13 @@ import {
 import { formatAddress, formatUnixDate, getAvatarFallback } from '@/utils'
 
 interface PayrollExecutionHistoryProps {
+  canDecryptAmount?: boolean
   error: string | null
   historyRows: PayrollHistoryRow[]
   indexedTransferCount?: number
+  isDecryptingAmount?: boolean
   isLoading: boolean
+  onDecryptAmount?: () => void
   salarySymbol: string
   showTreasuryVaultFooter?: boolean
   treasuryVault?: string
@@ -32,10 +35,13 @@ interface PayrollExecutionHistoryProps {
 }
 
 export function PayrollExecutionHistory({
+  canDecryptAmount = false,
   error,
   historyRows,
   indexedTransferCount = 0,
+  isDecryptingAmount = false,
   isLoading,
+  onDecryptAmount,
   salarySymbol,
   showTreasuryVaultFooter = false,
   treasuryVault,
@@ -138,11 +144,18 @@ export function PayrollExecutionHistory({
                         </TableCell>
                         <TableCell className="px-6 py-5">
                           <div className="inline-flex items-center gap-2 bg-surface-container-lowest border border-tertiary/10 px-3 py-1.5 rounded-lg group-hover:border-tertiary/40 transition-all relative overflow-hidden">
-                            <span className="font-mono text-sm text-tertiary font-bold">
-                              {row.amount ?? (row.amountHandle ? formatAddress(row.amountHandle) : 'Handle missing')}
+                            <div className="font-mono text-sm text-tertiary font-bold">
+                              <EncryptedField
+                                canDecrypt={canDecryptAmount}
+                                className="inline-flex space-y-0"
+                                isDecrypting={isDecryptingAmount}
+                                isEncrypted={!row.amount && Boolean(row.amountHandle)}
+                                value={row.amount ?? (row.amountHandle ? formatAddress(row.amountHandle) : 'Handle missing')}
+                                valueClassName="font-mono text-sm text-tertiary font-bold"
+                                onDecrypt={onDecryptAmount}
+                              />
                               <span className="text-[10px] text-outline font-black"> {salarySymbol}</span>
-                            </span>
-                            {!row.amount && <LockIcon className="size-3 text-tertiary fill-current" />}
+                            </div>
                           </div>
                         </TableCell>
                         <TableCell className="px-6 py-5">

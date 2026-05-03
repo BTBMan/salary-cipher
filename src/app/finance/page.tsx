@@ -9,12 +9,12 @@ import {
   MdAutorenew as AutorenewIcon,
   MdDownload as DownloadIcon,
   MdFilterList as FilterListIcon,
-  MdLock as LockIcon,
   MdOpenInNew as OpenInNewIcon,
   MdPayments as PaymentsIcon,
   MdShield as ShieldLockIcon,
 } from 'react-icons/md'
 import { z } from 'zod'
+import { EncryptedField } from '@/components/encrypted-field'
 import { AppLayout } from '@/components/layout/app-layout'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
@@ -36,7 +36,7 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { useFinanceVault, useStoreContext } from '@/hooks'
-import { cn, formatAddress, formatUnixDate } from '@/utils'
+import { cn, formatAddress, formatUnixDate, getConfidentialTokenSymbol, getUnderlyingTokenSymbol } from '@/utils'
 
 const TOKEN_AMOUNT_REGEX = /^\d+(\.\d+)?$/
 
@@ -114,12 +114,9 @@ export default function FinancePage() {
   const [isWithdrawDialogOpen, setIsWithdrawDialogOpen] = useState(false)
   const [depositAmount, setDepositAmount] = useState('')
   const [depositError, setDepositError] = useState<string | null>(null)
-  const salarySymbol = finance.selectedSettlementAsset?.symbol ?? 'USDC'
-  const vaultBalanceLabel = finance.vaultConfidentialBalance
-    ? formatTokenAmount(finance.vaultConfidentialBalance)
-    : finance.vaultConfidentialBalanceHandle
-      ? 'Encrypted'
-      : '0.00'
+  const underlyingTokenSymbol = getUnderlyingTokenSymbol(finance.selectedSettlementAsset)
+  const confidentialTokenSymbol = getConfidentialTokenSymbol(finance.selectedSettlementAsset)
+  const vaultBalanceLabel = finance.vaultConfidentialBalance ? formatTokenAmount(finance.vaultConfidentialBalance) : '••••••••'
   const hasWrappedBalance = Boolean(finance.vaultConfidentialBalanceHandle)
   const healthStatus = finance.treasuryVaultConfigured
     ? hasWrappedBalance
@@ -178,22 +175,29 @@ export default function FinancePage() {
                   <span className="text-[10px] font-black text-on-surface-variant tracking-[0.2em] uppercase mb-4 block">Vault Wrapped Balance</span>
                   <div className="flex items-baseline gap-3 mb-8">
                     <div className="relative inline-flex flex-col">
-                      <span className="text-primary font-heading text-5xl font-black tracking-tighter">{vaultBalanceLabel}</span>
-                      <div className="absolute inset-0 bg-secondary/10 blur-xl opacity-0 group-hover:opacity-100 transition-opacity" />
+                      <EncryptedField
+                        canDecrypt={finance.canDecryptVaultBalance}
+                        className="space-y-0"
+                        isDecrypting={finance.isDecryptingVaultBalance}
+                        isEncrypted={!finance.vaultConfidentialBalance}
+                        value={vaultBalanceLabel}
+                        valueClassName="text-primary font-heading text-5xl font-black tracking-tighter"
+                        onDecrypt={finance.decryptVaultBalance}
+                      />
                     </div>
-                    <span className="text-outline text-xl font-black uppercase tracking-tighter">{salarySymbol}</span>
+                    <span className="text-outline text-xl font-black uppercase tracking-tighter">{confidentialTokenSymbol}</span>
                   </div>
                   <div className="mb-6 grid grid-cols-2 gap-3">
                     <div className="rounded-lg border border-white/5 bg-surface-container-lowest p-3">
                       <span className="mb-1 block text-[10px] font-black uppercase tracking-widest text-outline">Wallet Balance</span>
                       <span className="font-mono text-sm font-bold text-on-surface">
-                        {formatTokenAmount(finance.ownerUnderlyingBalance, '-')} {salarySymbol}
+                        {formatTokenAmount(finance.ownerUnderlyingBalance, '-')} {underlyingTokenSymbol}
                       </span>
                     </div>
                     <div className="rounded-lg border border-white/5 bg-surface-container-lowest p-3">
                       <span className="mb-1 block text-[10px] font-black uppercase tracking-widest text-outline">Unwrapped In Vault</span>
                       <span className="font-mono text-sm font-bold text-on-surface">
-                        {formatTokenAmount(finance.vaultUnusedUnderlyingBalance, '-')} {salarySymbol}
+                        {formatTokenAmount(finance.vaultUnusedUnderlyingBalance, '-')} {underlyingTokenSymbol}
                       </span>
                     </div>
                   </div>
@@ -216,21 +220,6 @@ export default function FinancePage() {
                       Withdraw
                     </Button>
                   </div>
-                  {finance.vaultConfidentialBalanceHandle && !finance.vaultConfidentialBalance && (
-                    <div className="mt-4 flex items-center justify-between gap-3 rounded-lg border border-white/5 bg-surface-container-lowest px-4 py-3">
-                      <span className="text-[10px] font-bold uppercase tracking-widest text-outline">Wrapped balance is encrypted</span>
-                      <Button
-                        className="h-8 rounded-sm text-[10px] font-black uppercase tracking-widest"
-                        disabled={!finance.canDecryptVaultBalance || finance.isDecryptingVaultBalance}
-                        size="sm"
-                        variant="outline"
-                        onClick={() => finance.decryptVaultBalance()}
-                      >
-                        {finance.isDecryptingVaultBalance && <AutorenewIcon className="size-3 animate-spin" />}
-                        Reveal
-                      </Button>
-                    </div>
-                  )}
                   {finance.vaultConfidentialBalanceError && (
                     <p className="mt-3 text-[10px] font-bold uppercase tracking-widest text-destructive">{finance.vaultConfidentialBalanceError}</p>
                   )}
@@ -244,7 +233,7 @@ export default function FinancePage() {
               <CardContent className="flex items-center justify-between p-6">
                 <div>
                   <span className="text-on-surface-variant text-[10px] font-black uppercase tracking-widest mb-1.5 block">Yield Generated (30d)</span>
-                  <span className="text-on-surface font-heading text-2xl font-black tracking-tight">Not available <span className="text-xs text-outline font-black">{salarySymbol}</span></span>
+                  <span className="text-on-surface font-heading text-2xl font-black tracking-tight">Not available <span className="text-xs text-outline font-black">{underlyingTokenSymbol}</span></span>
                 </div>
                 <div className="h-10 w-24 bg-surface-container-low rounded-sm flex items-end gap-1 p-2 border border-white/5 opacity-40">
                   <div className="w-2 bg-primary/40 h-1/2 rounded-t-[1px]" />
@@ -390,10 +379,20 @@ export default function FinancePage() {
                             </TableCell>
                             <TableCell className="px-8 py-6">
                               <div className="relative min-w-36 h-10 bg-surface-container-lowest rounded-lg overflow-hidden flex items-center px-4 border border-white/5 group-hover:border-primary/30 transition-all">
-                                <span className="text-sm font-['JetBrains_Mono'] font-bold text-white z-10">
-                                  {tx.amount ? `${formatTokenAmount(tx.amount)} ${salarySymbol}` : tx.requestId ? 'Full wrapped balance' : 'Encrypted'}
-                                </span>
-                                {!tx.amount && <LockIcon className="text-tertiary size-3.5 absolute right-3 opacity-60 fill-current" />}
+                                <div className="text-sm font-['JetBrains_Mono'] font-bold text-white z-10">
+                                  {tx.amount
+                                    ? `${formatTokenAmount(tx.amount)} ${tx.type === 'deposit' ? underlyingTokenSymbol : confidentialTokenSymbol}`
+                                    : tx.requestId
+                                      ? `Full wrapped balance ${confidentialTokenSymbol}`
+                                      : (
+                                          <EncryptedField
+                                            className="space-y-0"
+                                            isEncrypted
+                                            value={`•••••••• ${confidentialTokenSymbol}`}
+                                            valueClassName="text-sm font-['JetBrains_Mono'] font-bold text-white"
+                                          />
+                                        )}
+                                </div>
                               </div>
                             </TableCell>
                             <TableCell className="px-8 py-6 text-center">
@@ -422,7 +421,7 @@ export default function FinancePage() {
           <DialogHeader className="border-b border-white/5 px-6 py-5">
             <DialogTitle>Deposit treasury funds</DialogTitle>
             <DialogDescription className="text-on-surface-variant">
-              This will approve {salarySymbol}, deposit it into the company vault, then wrap it into the confidential settlement token.
+              This will approve {underlyingTokenSymbol}, deposit it into the company vault, then wrap it into the confidential settlement token.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 px-6 py-5">
@@ -432,7 +431,7 @@ export default function FinancePage() {
                 aria-invalid={Boolean(depositError)}
                 className="h-12 rounded border-outline-variant/20 bg-surface-container-lowest px-4 font-mono text-sm font-medium text-on-surface shadow-none focus-visible:ring-1 focus-visible:ring-primary/40"
                 inputMode="decimal"
-                placeholder={`0.00 ${salarySymbol}`}
+                placeholder={`0.00 ${underlyingTokenSymbol}`}
                 value={depositAmount}
                 onChange={(event) => {
                   setDepositError(null)
@@ -442,7 +441,7 @@ export default function FinancePage() {
               {depositError && <p className="text-xs font-bold text-destructive">{depositError}</p>}
             </div>
             <p className="text-[10px] font-bold uppercase tracking-widest text-outline">
-              Wallet balance: {formatTokenAmount(finance.ownerUnderlyingBalance, '-')} {salarySymbol}
+              Wallet balance: {formatTokenAmount(finance.ownerUnderlyingBalance, '-')} {underlyingTokenSymbol}
             </p>
           </div>
           <DialogFooter className="border-t border-white/5 px-6 py-5">
@@ -478,7 +477,18 @@ export default function FinancePage() {
           <div className="space-y-4 px-6 py-5">
             <div className="rounded-lg border border-white/5 bg-surface-container-lowest p-4">
               <p className="text-[10px] font-black uppercase tracking-[0.2em] text-outline">Wrapped balance</p>
-              <p className="mt-2 font-mono text-lg font-black text-on-surface">{vaultBalanceLabel} {salarySymbol}</p>
+              <div className="mt-2 flex items-center gap-2">
+                <EncryptedField
+                  canDecrypt={finance.canDecryptVaultBalance}
+                  className="space-y-0"
+                  isDecrypting={finance.isDecryptingVaultBalance}
+                  isEncrypted={!finance.vaultConfidentialBalance}
+                  value={vaultBalanceLabel}
+                  valueClassName="font-mono text-lg font-black text-on-surface"
+                  onDecrypt={finance.decryptVaultBalance}
+                />
+                <span className="font-mono text-lg font-black text-on-surface">{confidentialTokenSymbol}</span>
+              </div>
             </div>
             <p className="text-xs font-medium leading-relaxed text-on-surface-variant">
               The unwrap flow is asynchronous. The request will be visible on-chain after this transaction confirms.

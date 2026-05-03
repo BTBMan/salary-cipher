@@ -17,6 +17,7 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { RolesEnum } from '@/enums'
 import { usePayrollActions } from '@/hooks'
+import { getConfidentialTokenSymbol } from '@/utils'
 import { ExecutePayrollDialog } from '../dialogs/execute-payroll-dialog'
 import { PayrollExecutionHistory } from './payroll-execution-history'
 
@@ -38,7 +39,7 @@ interface PayrollManagerViewProps {
 export function PayrollManagerView({ overview, selectedCompany }: PayrollManagerViewProps) {
   const payrollActions = usePayrollActions(selectedCompany)
   const canUpdatePayrollConfig = selectedCompany.role === RolesEnum.Owner
-  const salarySymbol = overview.selectedSettlementAsset?.symbol ?? 'USDC'
+  const salarySymbol = getConfidentialTokenSymbol(overview.selectedSettlementAsset)
   const selectedCompanyId = selectedCompany.id
   const selectedPayrollDayOfMonth = String(selectedCompany.payrollDayOfMonth ?? 15)
   const [payrollConfigDraft, setPayrollConfigDraft] = useState<PayrollConfigDraft>({
