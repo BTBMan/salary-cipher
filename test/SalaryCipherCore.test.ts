@@ -128,6 +128,68 @@ for (const assetCase of assetCases) {
       expect(await salaryCipherCore.read.lastPayrollTime([companyId])).to.equal(payrollTime)
     })
 
+    it('executes the next scheduled payroll early when requested explicitly', async () => {
+      const { companyRegistry, salaryCipherCore, companyTreasuryVault, owner, employee, publicClient, companyId, underlyingToken }
+        = await createSalaryCipherCompanyFixture({ asset: assetCase.asset })
+
+      const addEmployeeHash = await companyRegistry.write.addEmployee(
+        [companyId, employee.account.address, RolesEnum.Employee, 'Alice'],
+        { account: owner.account },
+      )
+      await publicClient.waitForTransactionReceipt({ hash: addEmployeeHash })
+
+      await fundVault({
+        underlyingToken,
+        companyTreasuryVault,
+        owner,
+        publicClient,
+        amount: 1_200_000n,
+      })
+
+      const [salaryHandle, salaryProof] = await encryptUint128(
+        salaryCipherCore.address,
+        owner.account.address,
+        500_000,
+      )
+      const setSalaryHash = await salaryCipherCore.write.setSalary(
+        [companyId, employee.account.address, salaryHandle, salaryProof],
+        { account: owner.account },
+      )
+      await publicClient.waitForTransactionReceipt({ hash: setSalaryHash })
+
+      const latestBlock = await publicClient.getBlock()
+      const firstPayrollTime = computeNextMonthlyPayrollTimestamp(latestBlock.timestamp, 15)
+      const nextPayrollTime = computeFollowingMonthlyPayrollTimestamp(firstPayrollTime, 15)
+
+      await time.increaseTo(firstPayrollTime)
+
+      const firstExecuteHash = await salaryCipherCore.write.executePayroll([companyId], {
+        account: owner.account,
+      })
+      await publicClient.waitForTransactionReceipt({ hash: firstExecuteHash })
+
+      await time.increaseTo(nextPayrollTime - 2n * 24n * 60n * 60n)
+
+      await expect(
+        salaryCipherCore.write.executePayroll([companyId], {
+          account: owner.account,
+        }),
+      ).to.be.rejectedWith(customErrorPattern('SalaryCipherCore__PayrollNotDue'))
+
+      const executeHash = await salaryCipherCore.write.executePayrollNow([companyId], {
+        account: owner.account,
+      })
+      await publicClient.waitForTransactionReceipt({ hash: executeHash })
+
+      expect(await salaryCipherCore.read.lastPayrollTime([companyId])).to.equal(nextPayrollTime)
+
+      await expect(
+        salaryCipherCore.write.executePayrollNow([companyId], {
+          account: owner.account,
+        }),
+      ).to.be.rejectedWith(customErrorPattern('SalaryCipherCore__PayrollNotDue'))
+    })
+
     it('limits salary proof configuration to admin and generates audit results', async () => {
       const { companyRegistry, salaryCipherCore, owner, hr, employee, outsider, publicClient, companyId }
         = await loadFixture(companyFixture)

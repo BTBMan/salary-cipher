@@ -93,6 +93,9 @@ interface ISalaryCipherCore {
     /// @notice Executes payroll for the company and immediately transfers confidential salary funds.
     function executePayroll(uint256 companyId) external;
 
+    /// @notice Executes the next unpaid payroll date immediately, even when the configured payroll day has not arrived.
+    function executePayrollNow(uint256 companyId) external;
+
     /// @notice Settles an employee, zeros salary state, and removes them from the registry.
     function terminateEmployee(uint256 companyId, address employee) external;
 

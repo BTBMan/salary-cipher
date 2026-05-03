@@ -22,6 +22,13 @@ import {DateTimeLib} from "solady/src/utils/DateTimeLib.sol";
 contract SalaryCipherCore is ISalaryCipherCore, ZamaEthereumConfig {
     using DateTimeLib for uint256;
 
+    struct PayrollExecutionPlan {
+        address treasuryVault;
+        uint64 previousPaidAt;
+        uint64 nextPayrollDateToSettle;
+        uint64 targetPayrollDate;
+    }
+
     // Date-based payroll calculations operate on whole UTC days.
     uint64 private constant DAY_SECONDS = 1 days;
     // Temporary fixed threshold used by audit finalization.
@@ -119,6 +126,16 @@ contract SalaryCipherCore is ISalaryCipherCore, ZamaEthereumConfig {
 
     /// @inheritdoc ISalaryCipherCore
     function executePayroll(uint256 companyId) external onlyOwnerOrHR(companyId) {
+        _executePayroll(companyId, false);
+    }
+
+    /// @inheritdoc ISalaryCipherCore
+    function executePayrollNow(uint256 companyId) external onlyOwnerOrHR(companyId) {
+        _executePayroll(companyId, true);
+    }
+
+    /// @dev Executes due payroll, or the next scheduled payroll when allowEarly is enabled.
+    function _executePayroll(uint256 companyId, bool allowEarly) private {
         _requireCompanyExists(companyId);
 
         ICompanyRegistry.PayrollConfig memory payrollConfig = companyRegistry
@@ -127,57 +144,138 @@ contract SalaryCipherCore is ISalaryCipherCore, ZamaEthereumConfig {
             revert SalaryCipherCore__PayrollConfigNotSet();
         }
 
-        address treasuryVault = companyRegistry.getTreasuryVault(companyId);
-        if (treasuryVault == address(0)) {
-            revert SalaryCipherCore__TreasuryVaultNotSet();
-        }
+        PayrollExecutionPlan memory plan = _buildPayrollExecutionPlan(
+            companyId,
+            payrollConfig.dayOfMonth,
+            allowEarly
+        );
 
         address[] memory employees = companyRegistry.getEmployees(companyId);
         uint256 count;
-        uint64 latestDuePayrollDate = _latestPayrollDate(
-            payrollConfig.dayOfMonth,
-            _blockTimestamp()
-        );
-        uint64 previousPaidAt = lastPayrollTime[companyId];
-        uint64 nextPayrollDateToSettle = previousPaidAt == 0
-            ? latestDuePayrollDate
-            : _nextPayrollDate(previousPaidAt, payrollConfig.dayOfMonth);
-        if (nextPayrollDateToSettle > latestDuePayrollDate) {
-            revert SalaryCipherCore__PayrollNotDue();
-        }
-
         // Pagination is intentionally skipped for now; all eligible members are processed.
         for (uint256 i = 0; i < employees.length; i++) {
-            address employee = employees[i];
-            // Only HR and employees are eligible for payroll.
             if (
-                !_isPayrollEligible(companyId, employee) ||
-                !FHE.isInitialized(monthlySalary[companyId][employee])
+                _processPayrollEmployee(
+                    companyId,
+                    employees[i],
+                    payrollConfig.dayOfMonth,
+                    plan
+                )
             ) {
-                continue;
+                count++;
             }
-
-            euint128 payout = _calculatePayrollCatchUpPayout(
-                companyId,
-                employee,
-                previousPaidAt,
-                nextPayrollDateToSettle,
-                latestDuePayrollDate,
-                payrollConfig.dayOfMonth
-            );
-
-            _transferPayroll(
-                companyId,
-                treasuryVault,
-                employee,
-                payout
-            );
-            count++;
         }
 
-        lastPayrollTime[companyId] = latestDuePayrollDate;
+        lastPayrollTime[companyId] = plan.targetPayrollDate;
 
         emit PayrollExecuted(companyId, count);
+    }
+
+    /// @dev Builds the payroll date range that should be settled for a normal or early execution.
+    function _buildPayrollExecutionPlan(
+        uint256 companyId,
+        uint8 dayOfMonth,
+        bool allowEarly
+    ) private view returns (PayrollExecutionPlan memory plan) {
+        plan.treasuryVault = companyRegistry.getTreasuryVault(companyId);
+        if (plan.treasuryVault == address(0)) {
+            revert SalaryCipherCore__TreasuryVaultNotSet();
+        }
+
+        uint64 currentTimestamp = _blockTimestamp();
+        uint64 currentMonthPayrollDate = _payrollDateForReferenceMonth(
+            dayOfMonth,
+            currentTimestamp
+        );
+        uint64 latestDuePayrollDate = currentTimestamp >=
+            currentMonthPayrollDate
+            ? currentMonthPayrollDate
+            : _previousPayrollDate(
+                currentMonthPayrollDate,
+                dayOfMonth
+        );
+        plan.previousPaidAt = lastPayrollTime[companyId];
+        if (plan.previousPaidAt == 0) {
+            // The first payroll target cannot point to a payroll date before the company existed.
+            plan.nextPayrollDateToSettle = _firstPayrollDateOnOrAfterCompanyStart(
+                companyId,
+                latestDuePayrollDate,
+                dayOfMonth
+            );
+        } else {
+            plan.nextPayrollDateToSettle = _nextPayrollDate(
+                plan.previousPaidAt,
+                dayOfMonth
+            );
+        }
+
+        plan.targetPayrollDate = latestDuePayrollDate;
+        if (plan.nextPayrollDateToSettle > latestDuePayrollDate) {
+            if (!allowEarly) {
+                revert SalaryCipherCore__PayrollNotDue();
+            }
+
+            // Only the nearest upcoming unpaid payroll can be pulled forward.
+            // This prevents repeated clicks from pre-paying multiple future cycles.
+            uint64 earliestUpcomingPayrollDate = currentTimestamp <
+                currentMonthPayrollDate
+                ? currentMonthPayrollDate
+                : _nextPayrollDate(
+                    currentMonthPayrollDate,
+                    dayOfMonth
+                );
+            if (plan.nextPayrollDateToSettle > earliestUpcomingPayrollDate) {
+                revert SalaryCipherCore__PayrollNotDue();
+            }
+
+            plan.targetPayrollDate = plan.nextPayrollDateToSettle;
+        }
+    }
+
+    /// @dev Moves the first payroll date forward when the company was created after the latest due date.
+    function _firstPayrollDateOnOrAfterCompanyStart(
+        uint256 companyId,
+        uint64 candidatePayrollDate,
+        uint8 dayOfMonth
+    ) private view returns (uint64) {
+        uint64 companyStartDay = _floorToDay(
+            companyRegistry.getCompany(companyId).createdAt
+        );
+        while (candidatePayrollDate < companyStartDay) {
+            candidatePayrollDate = _nextPayrollDate(
+                candidatePayrollDate,
+                dayOfMonth
+            );
+        }
+        return candidatePayrollDate;
+    }
+
+    /// @dev Calculates and transfers one employee payout, returning whether a transfer was attempted.
+    function _processPayrollEmployee(
+        uint256 companyId,
+        address employee,
+        uint8 dayOfMonth,
+        PayrollExecutionPlan memory plan
+    ) private returns (bool) {
+        // Only HR and employees with initialized salaries are eligible for payroll.
+        if (
+            !_isPayrollEligible(companyId, employee) ||
+            !FHE.isInitialized(monthlySalary[companyId][employee])
+        ) {
+            return false;
+        }
+
+        euint128 payout = _calculatePayrollCatchUpPayout(
+            companyId,
+            employee,
+            plan.previousPaidAt,
+            plan.nextPayrollDateToSettle,
+            plan.targetPayrollDate,
+            dayOfMonth
+        );
+
+        _transferPayroll(companyId, plan.treasuryVault, employee, payout);
+        return true;
     }
 
     /// @inheritdoc ISalaryCipherCore
@@ -659,18 +757,25 @@ contract SalaryCipherCore is ISalaryCipherCore, ZamaEthereumConfig {
         uint8 dayOfMonth,
         uint64 referenceTimestamp
     ) private pure returns (uint64) {
-        (uint256 year, uint256 month, , , , ) = DateTimeLib.timestampToDateTime(
+        uint64 currentMonthPayrollDate = _payrollDateForReferenceMonth(
+            dayOfMonth,
             referenceTimestamp
-        );
-        uint64 currentMonthPayrollDate = _payrollDateForMonth(
-            year,
-            month,
-            dayOfMonth
         );
         if (referenceTimestamp >= currentMonthPayrollDate) {
             return currentMonthPayrollDate;
         }
         return _previousPayrollDate(currentMonthPayrollDate, dayOfMonth);
+    }
+
+    /// @dev Returns the configured payroll date in the same UTC month as the supplied timestamp.
+    function _payrollDateForReferenceMonth(
+        uint8 dayOfMonth,
+        uint64 referenceTimestamp
+    ) private pure returns (uint64) {
+        (uint256 year, uint256 month, , , , ) = DateTimeLib.timestampToDateTime(
+            referenceTimestamp
+        );
+        return _payrollDateForMonth(year, month, dayOfMonth);
     }
 
     /// @dev Returns the payroll period start that contains the given reference day.

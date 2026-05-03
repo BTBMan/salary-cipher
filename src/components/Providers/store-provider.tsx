@@ -249,6 +249,7 @@ export function StoreProvider({ children }: PropsWithChildren) {
     const settlementAsset = results[4].result as SettlementAssetEnum
 
     return {
+      createdAt: Number(company.createdAt),
       id: companyId.toString(),
       name: company.name,
       description: '',

@@ -29,7 +29,7 @@ export function Providers({ children }: PropsWithChildren) {
                 <AccessGuardProvider>
                   {children}
                 </AccessGuardProvider>
-                <Toaster richColors position="bottom-right" />
+                <Toaster richColors position="top-center" />
               </TooltipProvider>
             </ThemeProvider>
           </StoreProvider>

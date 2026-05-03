@@ -2,7 +2,6 @@
 
 import type { CompanySummary } from '@/contexts'
 import type { Address, Hex } from 'viem'
-import dayjs from 'dayjs'
 import { useCallback, useMemo } from 'react'
 import { formatUnits, isAddress, zeroAddress, zeroHash } from 'viem'
 import { useConnection, useContractEvents, useReadContracts, useWatchContractEvent } from 'wagmi'
@@ -11,14 +10,9 @@ import { CompanyTreasuryVault } from '@/contract-data/company-treasury-vault'
 import { ERC7984Wrapper } from '@/contract-data/erc7984-wrapper'
 import { SalaryCipherCore } from '@/contract-data/salary-cipher-core'
 import { RolesEnum } from '@/enums'
+import { getPayrollSchedule } from '@/utils'
 import { useFHEDecrypt } from './fhevm/use-fhe-decrypt'
 import { useCompanyEmployees } from './use-company-employees'
-
-interface PayrollSchedule {
-  daysLeft: number
-  nextPayrollDate: string
-  periodProgress: number
-}
 
 export interface EmployeePayrollHistoryItem {
   amount: string | null
@@ -52,32 +46,10 @@ interface ConfidentialTransferLog {
 }
 
 const DECIMAL_STRING_REGEX = /^\d+$/
+const DEFAULT_PAYROLL_HISTORY_LIMIT = 5
 
-function getPayrollDateForMonth(reference: dayjs.Dayjs, dayOfMonth: number) {
-  const clampedDay = Math.min(dayOfMonth, reference.daysInMonth())
-  return reference.date(clampedDay).startOf('day')
-}
-
-function getPayrollSchedule(dayOfMonth: number): PayrollSchedule | null {
-  if (!dayOfMonth) {
-    return null
-  }
-
-  const today = dayjs()
-  const todayStart = today.startOf('day')
-  const currentMonthPayrollDate = getPayrollDateForMonth(today, dayOfMonth)
-  const nextPayrollDate = today.isBefore(currentMonthPayrollDate)
-    ? currentMonthPayrollDate
-    : getPayrollDateForMonth(today.add(1, 'month'), dayOfMonth)
-  const previousPayrollDate = getPayrollDateForMonth(nextPayrollDate.subtract(1, 'month'), dayOfMonth)
-  const totalDays = Math.max(nextPayrollDate.diff(previousPayrollDate, 'day'), 1)
-  const elapsedDays = Math.min(Math.max(todayStart.diff(previousPayrollDate, 'day'), 0), totalDays)
-
-  return {
-    daysLeft: Math.max(nextPayrollDate.diff(todayStart, 'day'), 0),
-    nextPayrollDate: nextPayrollDate.format('MMM DD, YYYY'),
-    periodProgress: Math.round((elapsedDays / totalDays) * 100),
-  }
+interface UseOverviewChainDataOptions {
+  payrollHistoryLimit?: number | null
 }
 
 function isActiveSalaryHandle(handle: unknown): handle is Hex {
@@ -112,17 +84,20 @@ function toEventAddress(value: unknown): Address | null {
   return typeof value === 'string' && isAddress(value) ? value : null
 }
 
-export function useOverviewChainData(selectedCompany: CompanySummary | null) {
+export function useOverviewChainData(
+  selectedCompany: CompanySummary | null,
+  options: UseOverviewChainDataOptions = {},
+) {
   const { address } = useConnection()
+  const payrollHistoryLimit = options.payrollHistoryLimit === undefined
+    ? DEFAULT_PAYROLL_HISTORY_LIMIT
+    : options.payrollHistoryLimit
   const {
     employees,
     isLoadingEmployees,
     selectedSettlementAsset,
   } = useCompanyEmployees(selectedCompany)
   const companyId = selectedCompany ? BigInt(selectedCompany.id) : null
-  const payrollSchedule = useMemo(() => {
-    return getPayrollSchedule(selectedCompany?.payrollDayOfMonth ?? 0)
-  }, [selectedCompany?.payrollDayOfMonth])
   const currentEmployee = useMemo(() => {
     if (!address) {
       return null
@@ -183,6 +158,7 @@ export function useOverviewChainData(selectedCompany: CompanySummary | null) {
   const {
     data: overviewResults,
     isLoading: isLoadingOverview,
+    refetch: refetchOverview,
   } = useReadContracts({
     contracts: overviewContracts,
     query: {
@@ -378,6 +354,9 @@ export function useOverviewChainData(selectedCompany: CompanySummary | null) {
       refetchCompanyTransferEventLogs(),
     ])
   }, [canReadCompanyPayrollHistory, refetchCompanyPayrollEventLogs, refetchCompanyTransferEventLogs])
+  const refetchOverviewData = useCallback(async () => {
+    await refetchOverview()
+  }, [refetchOverview])
 
   useWatchContractEvent({
     abi: CompanyTreasuryVault.abi,
@@ -418,6 +397,18 @@ export function useOverviewChainData(selectedCompany: CompanySummary | null) {
     enabled: canReadCompanyPayrollHistory,
     onLogs: () => {
       void refetchCompanyPayrollHistory()
+    },
+  })
+  useWatchContractEvent({
+    abi: SalaryCipherCore.abi,
+    address: SalaryCipherCore.address,
+    eventName: 'PayrollExecuted',
+    args: companyPayrollHistoryEventArgs,
+    enabled: Boolean(companyId),
+    onLogs: () => {
+      void refetchOverviewData()
+      void refetchCompanyPayrollHistory()
+      void refetchEmployeePayrollHistory()
     },
   })
 
@@ -581,11 +572,17 @@ export function useOverviewChainData(selectedCompany: CompanySummary | null) {
   }, [decryptedSalaryByHandle, employeeBalanceHandle, selectedSettlementAsset?.decimals])
   const employeePayrollHistoryWithAmounts = useMemo(() => {
     const decimals = selectedSettlementAsset?.decimals ?? 6
-    return employeePayrollHistory.map(item => ({
+    const rows = employeePayrollHistory.map(item => ({
       ...item,
       amount: item.amountHandle ? toTokenAmount(decryptedSalaryByHandle[item.amountHandle], decimals) : null,
     }))
-  }, [decryptedSalaryByHandle, employeePayrollHistory, selectedSettlementAsset?.decimals])
+    return payrollHistoryLimit === null ? rows : rows.slice(0, payrollHistoryLimit)
+  }, [decryptedSalaryByHandle, employeePayrollHistory, payrollHistoryLimit, selectedSettlementAsset?.decimals])
+  const displayedCompanyPayrollHistory = useMemo(() => {
+    return payrollHistoryLimit === null
+      ? companyPayrollHistory
+      : companyPayrollHistory.slice(0, payrollHistoryLimit)
+  }, [companyPayrollHistory, payrollHistoryLimit])
   const employeeTotalReceived = useMemo(() => {
     const total = employeePayrollHistory.reduce((sum, item) => {
       if (!item.amountHandle) {
@@ -607,6 +604,13 @@ export function useOverviewChainData(selectedCompany: CompanySummary | null) {
     const result = overviewResults?.[2]
     return result?.status === 'success' ? Number(result.result) : 0
   }, [overviewResults])
+  const payrollSchedule = useMemo(() => {
+    return getPayrollSchedule(
+      selectedCompany?.payrollDayOfMonth ?? 0,
+      lastPayrollTime,
+      selectedCompany?.createdAt ?? 0,
+    )
+  }, [lastPayrollTime, selectedCompany?.createdAt, selectedCompany?.payrollDayOfMonth])
   const employeeStartDate = useMemo(() => {
     const result = overviewResults?.[3]
     return result?.status === 'success' ? Number(result.result) : 0
@@ -614,7 +618,7 @@ export function useOverviewChainData(selectedCompany: CompanySummary | null) {
 
   return {
     canDecryptSalary: salaryDecrypt.canDecrypt,
-    companyPayrollHistory,
+    companyPayrollHistory: displayedCompanyPayrollHistory,
     companyPayrollHistoryError,
     currentEmployee,
     decryptSalary: salaryDecrypt.decrypt,
@@ -638,6 +642,7 @@ export function useOverviewChainData(selectedCompany: CompanySummary | null) {
     refetchBalanceHandle,
     refetchCompanyPayrollHistory,
     refetchEmployeePayrollHistory,
+    refetchOverview: refetchOverviewData,
     selectedSettlementAsset,
     salaryDecryptError: salaryDecrypt.error,
     totalMonthlyPayroll,

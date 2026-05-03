@@ -11,6 +11,7 @@ export interface CreateCompanyInput {
 }
 
 export interface CompanySummary {
+  createdAt: number
   id: string
   name: string
   description: string
