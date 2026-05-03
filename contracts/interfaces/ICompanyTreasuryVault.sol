@@ -8,14 +8,12 @@ interface ICompanyTreasuryVault {
     ////////////////////////////////////
     // Events                         //
     ////////////////////////////////////
-    /// @notice Emitted when public underlying funds are deposited into the vault.
-    event UnderlyingDeposited(
+    /// @notice Emitted when public underlying funds are deposited and wrapped into confidential assets.
+    event UnderlyingDepositedAndWrapped(
         uint256 indexed companyId,
         address indexed from,
         uint256 amount
     );
-    /// @notice Emitted when public underlying funds are wrapped into confidential assets.
-    event UnderlyingWrapped(uint256 indexed companyId, uint256 amount);
     /// @notice Emitted when payroll is transferred to one payout wallet.
     event PayrollTransferred(
         uint256 indexed companyId,
@@ -46,11 +44,8 @@ interface ICompanyTreasuryVault {
     ////////////////////////////////////
     // Functions                      //
     ////////////////////////////////////
-    /// @notice Deposits public underlying tokens into the vault.
-    function depositUnderlying(uint256 amount) external;
-
-    /// @notice Wraps public underlying tokens into the company's confidential settlement asset.
-    function wrapUnderlying(uint256 amount) external;
+    /// @notice Deposits public underlying tokens and wraps them into the company's confidential settlement asset in one transaction.
+    function depositAndWrapUnderlying(uint256 amount) external;
 
     /// @notice Transfers confidential payroll funds to one employee payout wallet.
     function payrollTransfer(address to, euint64 amount) external;

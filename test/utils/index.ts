@@ -94,15 +94,10 @@ export async function fundVault({
   )
   await publicClient.waitForTransactionReceipt({ hash: approveHash })
 
-  const depositHash = await companyTreasuryVault.write.depositUnderlying([amount], {
+  const depositHash = await companyTreasuryVault.write.depositAndWrapUnderlying([amount], {
     account: owner.account,
   })
   await publicClient.waitForTransactionReceipt({ hash: depositHash })
-
-  const wrapHash = await companyTreasuryVault.write.wrapUnderlying([amount], {
-    account: owner.account,
-  })
-  await publicClient.waitForTransactionReceipt({ hash: wrapHash })
 }
 
 /**

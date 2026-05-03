@@ -88,20 +88,11 @@ contract CompanyTreasuryVault is ICompanyTreasuryVault, ZamaEthereumConfig {
     }
 
     /// @inheritdoc ICompanyTreasuryVault
-    function depositUnderlying(uint256 amount) external onlyOwner {
+    function depositAndWrapUnderlying(uint256 amount) external onlyOwner {
         if (amount == 0) {
             revert CompanyTreasuryVault__InvalidAmount();
         }
         underlyingToken.safeTransferFrom(msg.sender, address(this), amount);
-
-        emit UnderlyingDeposited(companyId, msg.sender, amount);
-    }
-
-    /// @inheritdoc ICompanyTreasuryVault
-    function wrapUnderlying(uint256 amount) external onlyOwner {
-        if (amount == 0) {
-            revert CompanyTreasuryVault__InvalidAmount();
-        }
         SafeERC20.forceApprove(
             underlyingToken,
             address(settlementToken),
@@ -110,7 +101,7 @@ contract CompanyTreasuryVault is ICompanyTreasuryVault, ZamaEthereumConfig {
 
         settlementToken.wrap(address(this), amount);
 
-        emit UnderlyingWrapped(companyId, amount);
+        emit UnderlyingDepositedAndWrapped(companyId, msg.sender, amount);
     }
 
     /// @inheritdoc ICompanyTreasuryVault

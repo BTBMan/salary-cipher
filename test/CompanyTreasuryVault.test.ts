@@ -16,7 +16,7 @@ for (const assetCase of assetCases) {
       return createSalaryCipherCompanyFixture({ asset: assetCase.asset })
     }
 
-    it('deposits underlying funds and wraps them into confidential balance', async () => {
+    it('deposits and wraps underlying funds into confidential balance atomically', async () => {
       const { companyTreasuryVault, underlyingToken, settlementToken, owner, publicClient }
         = await loadFixture(companyFixture)
 
@@ -26,15 +26,10 @@ for (const assetCase of assetCases) {
       )
       await publicClient.waitForTransactionReceipt({ hash: approveHash })
 
-      const depositHash = await companyTreasuryVault.write.depositUnderlying([1_000_000n], {
+      const depositHash = await companyTreasuryVault.write.depositAndWrapUnderlying([1_000_000n], {
         account: owner.account,
       })
       await publicClient.waitForTransactionReceipt({ hash: depositHash })
-
-      const wrapHash = await companyTreasuryVault.write.wrapUnderlying([1_000_000n], {
-        account: owner.account,
-      })
-      await publicClient.waitForTransactionReceipt({ hash: wrapHash })
 
       expect(await underlyingToken.read.balanceOf([companyTreasuryVault.address])).to.equal(0n)
       expect(await underlyingToken.read.balanceOf([settlementToken.address])).to.equal(1_000_000n)
@@ -44,7 +39,7 @@ for (const assetCase of assetCases) {
       const { companyTreasuryVault, outsider } = await loadFixture(companyFixture)
 
       await expect(
-        companyTreasuryVault.write.depositUnderlying([1n], {
+        companyTreasuryVault.write.depositAndWrapUnderlying([1n], {
           account: outsider.account,
         }),
       ).to.be.rejectedWith(customErrorPattern('CompanyTreasuryVault__Unauthorized'))
@@ -60,15 +55,10 @@ for (const assetCase of assetCases) {
       )
       await publicClient.waitForTransactionReceipt({ hash: approveHash })
 
-      const depositHash = await companyTreasuryVault.write.depositUnderlying([1_000_000n], {
+      const depositHash = await companyTreasuryVault.write.depositAndWrapUnderlying([1_000_000n], {
         account: owner.account,
       })
       await publicClient.waitForTransactionReceipt({ hash: depositHash })
-
-      const wrapHash = await companyTreasuryVault.write.wrapUnderlying([1_000_000n], {
-        account: owner.account,
-      })
-      await publicClient.waitForTransactionReceipt({ hash: wrapHash })
 
       const { result: unwrapRequestId } = await companyTreasuryVault.simulate.refundAllWrappedUnderlying(
         { account: owner.account.address },
@@ -101,7 +91,7 @@ for (const assetCase of assetCases) {
       )
       await publicClient.waitForTransactionReceipt({ hash: approveHash })
 
-      const depositHash = await companyTreasuryVault.write.depositUnderlying([1_000_000n], {
+      const depositHash = await underlyingToken.write.transfer([companyTreasuryVault.address, 1_000_000n], {
         account: owner.account,
       })
       await publicClient.waitForTransactionReceipt({ hash: depositHash })

@@ -1,0 +1,499 @@
+'use client'
+
+import type { CompanySummary } from '@/contexts'
+import type { Address, Hash, Hex } from 'viem'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { toast } from 'sonner'
+import { formatUnits, parseUnits, zeroAddress, zeroHash } from 'viem'
+import { useConnection, useContractEvents, useReadContract, useReadContracts, useWaitForTransactionReceipt, useWatchContractEvent, useWriteContract } from 'wagmi'
+import { CompanyRegistry } from '@/contract-data/company-registry'
+import { CompanyTreasuryVault } from '@/contract-data/company-treasury-vault'
+import { ERC20 } from '@/contract-data/erc20'
+import { ERC7984Wrapper } from '@/contract-data/erc7984-wrapper'
+import { useFHEDecrypt } from './fhevm/use-fhe-decrypt'
+import { useStoreContext } from './use-store-context'
+
+interface ReceiptWaiter {
+  hash: Hash
+  resolve: () => void
+  reject: (error: Error) => void
+}
+
+interface VaultEventLog {
+  args: {
+    amount?: bigint
+    executedAt?: bigint
+    from?: Address
+    to?: Address
+    unwrapRequestId?: Hex
+  }
+  blockNumber?: bigint
+  logIndex?: number
+  transactionHash: Hex
+}
+
+export interface FinanceTransactionRow {
+  amount: string | null
+  blockNumber: bigint
+  executedAt: number | null
+  hash: Hex
+  logIndex: number
+  requestId: Hex | null
+  type: 'deposit' | 'payroll' | 'refund-request' | 'wrap'
+}
+
+const DECIMAL_STRING_REGEX = /^\d+$/
+
+function toTokenAmount(value: bigint | string | boolean | undefined, decimals: number) {
+  if (typeof value === 'bigint') {
+    return formatUnits(value, decimals)
+  }
+  if (typeof value === 'string' && DECIMAL_STRING_REGEX.test(value)) {
+    return formatUnits(BigInt(value), decimals)
+  }
+  return null
+}
+
+function isActiveHandle(value: unknown): value is Hex {
+  return typeof value === 'string' && value !== '0x' && value !== zeroAddress && value !== zeroHash
+}
+
+function getSortableBlockNumber(log: VaultEventLog) {
+  return log.blockNumber ?? 0n
+}
+
+function getSortableLogIndex(log: VaultEventLog) {
+  return log.logIndex ?? 0
+}
+
+export function useFinanceVault(selectedCompany: CompanySummary | null) {
+  const { address } = useConnection()
+  const { settlementAssets } = useStoreContext()
+  const { mutateAsync } = useWriteContract()
+  const receiptWaiterRef = useRef<ReceiptWaiter | null>(null)
+  const [receiptHash, setReceiptHash] = useState<Hash>()
+  const [isDepositing, setIsDepositing] = useState(false)
+  const [isWithdrawingWrapped, setIsWithdrawingWrapped] = useState(false)
+  const companyId = selectedCompany ? BigInt(selectedCompany.id) : null
+
+  const selectedSettlementAsset = useMemo(() => {
+    if (!selectedCompany) {
+      return null
+    }
+
+    return settlementAssets.find(asset => asset.value === selectedCompany.settlementAsset) ?? null
+  }, [selectedCompany, settlementAssets])
+
+  const receiptQuery = useWaitForTransactionReceipt({
+    hash: receiptHash,
+    query: {
+      enabled: Boolean(receiptHash),
+    },
+  })
+
+  useEffect(() => {
+    if (!receiptQuery.data || !receiptWaiterRef.current) {
+      return
+    }
+
+    const waiter = receiptWaiterRef.current
+    if (waiter.hash.toLowerCase() !== receiptQuery.data.transactionHash.toLowerCase()) {
+      return
+    }
+
+    receiptWaiterRef.current = null
+    waiter.resolve()
+  }, [receiptQuery.data])
+
+  useEffect(() => {
+    if (!receiptQuery.error || !receiptWaiterRef.current) {
+      return
+    }
+
+    const waiter = receiptWaiterRef.current
+    receiptWaiterRef.current = null
+    waiter.reject(receiptQuery.error)
+  }, [receiptQuery.error])
+
+  useEffect(() => {
+    return () => {
+      receiptWaiterRef.current?.reject(new Error('Transaction receipt wait was cancelled.'))
+      receiptWaiterRef.current = null
+    }
+  }, [])
+
+  const waitForReceipt = useCallback((hash: Hash) => {
+    if (receiptWaiterRef.current) {
+      return Promise.reject(new Error('Another transaction receipt is already pending.'))
+    }
+
+    return new Promise<void>((resolve, reject) => {
+      receiptWaiterRef.current = {
+        hash,
+        resolve,
+        reject,
+      }
+      setReceiptHash(hash)
+    })
+  }, [])
+
+  const {
+    data: treasuryVaultResult,
+    refetch: refetchTreasuryVault,
+  } = useReadContract({
+    abi: CompanyRegistry.abi,
+    address: CompanyRegistry.address,
+    functionName: 'getTreasuryVault',
+    args: companyId ? [companyId] : undefined,
+    query: {
+      enabled: Boolean(companyId),
+    },
+  })
+
+  const treasuryVault = useMemo(() => {
+    return typeof treasuryVaultResult === 'string' ? treasuryVaultResult as Address : zeroAddress
+  }, [treasuryVaultResult])
+  const treasuryVaultConfigured = treasuryVault !== zeroAddress
+
+  const balanceContracts = useMemo((): any[] => {
+    if (!selectedSettlementAsset || !address || !treasuryVaultConfigured) {
+      return []
+    }
+
+    return [
+      {
+        abi: ERC20.abi,
+        address: selectedSettlementAsset.underlyingToken as Address,
+        functionName: 'balanceOf',
+        args: [address],
+      },
+      {
+        abi: ERC20.abi,
+        address: selectedSettlementAsset.underlyingToken as Address,
+        functionName: 'balanceOf',
+        args: [treasuryVault],
+      },
+    ]
+  }, [address, selectedSettlementAsset, treasuryVault, treasuryVaultConfigured])
+
+  const {
+    data: balanceResults,
+    isLoading: isLoadingPublicBalances,
+    refetch: refetchPublicBalances,
+  } = useReadContracts({
+    contracts: balanceContracts,
+    query: {
+      enabled: balanceContracts.length > 0,
+    },
+  })
+
+  const {
+    data: vaultConfidentialBalanceResult,
+    isLoading: isLoadingConfidentialBalance,
+    refetch: refetchConfidentialBalance,
+  } = useReadContract({
+    abi: ERC7984Wrapper.abi,
+    address: selectedSettlementAsset?.settlementToken as Address | undefined,
+    functionName: 'confidentialBalanceOf',
+    args: treasuryVaultConfigured ? [treasuryVault] : undefined,
+    query: {
+      enabled: Boolean(selectedSettlementAsset?.settlementToken && treasuryVaultConfigured),
+    },
+  })
+
+  const vaultConfidentialBalanceHandle = useMemo(() => {
+    return isActiveHandle(vaultConfidentialBalanceResult) ? vaultConfidentialBalanceResult : null
+  }, [vaultConfidentialBalanceResult])
+
+  const vaultBalanceDecrypt = useFHEDecrypt({
+    requests: vaultConfidentialBalanceHandle && selectedSettlementAsset?.settlementToken
+      ? [{
+          contractAddress: selectedSettlementAsset.settlementToken as Address,
+          handle: vaultConfidentialBalanceHandle,
+        }]
+      : undefined,
+  })
+
+  const ownerUnderlyingBalance = useMemo(() => {
+    const result = balanceResults?.[0]
+    return result?.status === 'success' && typeof result.result === 'bigint'
+      ? formatUnits(result.result, selectedSettlementAsset?.decimals ?? 6)
+      : null
+  }, [balanceResults, selectedSettlementAsset?.decimals])
+
+  const vaultUnusedUnderlyingBalance = useMemo(() => {
+    const result = balanceResults?.[1]
+    return result?.status === 'success' && typeof result.result === 'bigint'
+      ? formatUnits(result.result, selectedSettlementAsset?.decimals ?? 6)
+      : null
+  }, [balanceResults, selectedSettlementAsset?.decimals])
+
+  const vaultConfidentialBalance = useMemo(() => {
+    if (!vaultConfidentialBalanceHandle) {
+      return null
+    }
+
+    return toTokenAmount(
+      vaultBalanceDecrypt.results[vaultConfidentialBalanceHandle],
+      selectedSettlementAsset?.decimals ?? 6,
+    )
+  }, [selectedSettlementAsset?.decimals, vaultBalanceDecrypt.results, vaultConfidentialBalanceHandle])
+
+  const eventArgs = useMemo(() => {
+    return companyId ? { companyId } : undefined
+  }, [companyId])
+
+  const {
+    data: depositAndWrapLogs,
+    refetch: refetchDepositAndWrapLogs,
+  } = useContractEvents({
+    abi: CompanyTreasuryVault.abi,
+    address: treasuryVaultConfigured ? treasuryVault : undefined,
+    eventName: 'UnderlyingDepositedAndWrapped',
+    args: eventArgs,
+    fromBlock: 0n,
+    toBlock: 'latest',
+    query: {
+      enabled: treasuryVaultConfigured,
+    },
+  })
+
+  const {
+    data: payrollLogs,
+    refetch: refetchPayrollLogs,
+  } = useContractEvents({
+    abi: CompanyTreasuryVault.abi,
+    address: treasuryVaultConfigured ? treasuryVault : undefined,
+    eventName: 'PayrollTransferred',
+    args: eventArgs,
+    fromBlock: 0n,
+    toBlock: 'latest',
+    query: {
+      enabled: treasuryVaultConfigured,
+    },
+  })
+
+  const {
+    data: refundRequestLogs,
+    refetch: refetchRefundRequestLogs,
+  } = useContractEvents({
+    abi: CompanyTreasuryVault.abi,
+    address: treasuryVaultConfigured ? treasuryVault : undefined,
+    eventName: 'UnderlyingUnwrapRequested',
+    args: eventArgs,
+    fromBlock: 0n,
+    toBlock: 'latest',
+    query: {
+      enabled: treasuryVaultConfigured,
+    },
+  })
+
+  const refetchFinanceData = useCallback(async () => {
+    await Promise.all([
+      refetchTreasuryVault(),
+      refetchPublicBalances(),
+      refetchConfidentialBalance(),
+      refetchDepositAndWrapLogs(),
+      refetchPayrollLogs(),
+      refetchRefundRequestLogs(),
+    ])
+  }, [
+    refetchConfidentialBalance,
+    refetchDepositAndWrapLogs,
+    refetchPayrollLogs,
+    refetchPublicBalances,
+    refetchRefundRequestLogs,
+    refetchTreasuryVault,
+  ])
+
+  useWatchContractEvent({
+    abi: CompanyTreasuryVault.abi,
+    address: treasuryVaultConfigured ? treasuryVault : undefined,
+    eventName: 'UnderlyingDepositedAndWrapped',
+    args: eventArgs,
+    enabled: treasuryVaultConfigured,
+    onLogs: () => {
+      void refetchFinanceData()
+    },
+  })
+
+  useWatchContractEvent({
+    abi: CompanyTreasuryVault.abi,
+    address: treasuryVaultConfigured ? treasuryVault : undefined,
+    eventName: 'PayrollTransferred',
+    args: eventArgs,
+    enabled: treasuryVaultConfigured,
+    onLogs: () => {
+      void refetchFinanceData()
+    },
+  })
+
+  useWatchContractEvent({
+    abi: CompanyTreasuryVault.abi,
+    address: treasuryVaultConfigured ? treasuryVault : undefined,
+    eventName: 'UnderlyingUnwrapRequested',
+    args: eventArgs,
+    enabled: treasuryVaultConfigured,
+    onLogs: () => {
+      void refetchFinanceData()
+    },
+  })
+
+  const transactionRows = useMemo(() => {
+    const decimals = selectedSettlementAsset?.decimals ?? 6
+    const rows: FinanceTransactionRow[] = [
+      ...((depositAndWrapLogs ?? []) as VaultEventLog[]).map(log => ({
+        amount: typeof log.args.amount === 'bigint' ? formatUnits(log.args.amount, decimals) : null,
+        blockNumber: getSortableBlockNumber(log),
+        executedAt: null,
+        hash: log.transactionHash,
+        logIndex: getSortableLogIndex(log),
+        requestId: null,
+        type: 'deposit' as const,
+      })),
+      ...((payrollLogs ?? []) as VaultEventLog[]).map(log => ({
+        amount: null,
+        blockNumber: getSortableBlockNumber(log),
+        executedAt: typeof log.args.executedAt === 'bigint' ? Number(log.args.executedAt) : null,
+        hash: log.transactionHash,
+        logIndex: getSortableLogIndex(log),
+        requestId: null,
+        type: 'payroll' as const,
+      })),
+      ...((refundRequestLogs ?? []) as VaultEventLog[]).map(log => ({
+        amount: null,
+        blockNumber: getSortableBlockNumber(log),
+        executedAt: null,
+        hash: log.transactionHash,
+        logIndex: getSortableLogIndex(log),
+        requestId: log.args.unwrapRequestId ?? null,
+        type: 'refund-request' as const,
+      })),
+    ]
+
+    return rows.sort((a, b) => {
+      if (a.blockNumber === b.blockNumber) {
+        return b.logIndex - a.logIndex
+      }
+
+      return a.blockNumber > b.blockNumber ? -1 : 1
+    })
+  }, [depositAndWrapLogs, payrollLogs, refundRequestLogs, selectedSettlementAsset?.decimals])
+
+  const depositAndWrap = useCallback(async (amountText: string) => {
+    if (!address || !selectedSettlementAsset || !treasuryVaultConfigured) {
+      toast.error('Wallet, asset, or treasury vault is not ready.')
+      return false
+    }
+
+    const amount = parseUnits(amountText, selectedSettlementAsset.decimals)
+    if (amount <= 0n) {
+      toast.error('Deposit amount must be greater than zero.')
+      return false
+    }
+
+    setIsDepositing(true)
+
+    try {
+      const resetApproveHash = await mutateAsync({
+        abi: ERC20.abi,
+        address: selectedSettlementAsset.underlyingToken as Address,
+        functionName: 'approve',
+        args: [treasuryVault, 0n],
+        account: address,
+      })
+      await waitForReceipt(resetApproveHash)
+
+      const approveHash = await mutateAsync({
+        abi: ERC20.abi,
+        address: selectedSettlementAsset.underlyingToken as Address,
+        functionName: 'approve',
+        args: [treasuryVault, amount],
+        account: address,
+      })
+      await waitForReceipt(approveHash)
+
+      const depositHash = await mutateAsync({
+        abi: CompanyTreasuryVault.abi,
+        address: treasuryVault,
+        functionName: 'depositAndWrapUnderlying',
+        args: [amount],
+        account: address,
+      })
+      await waitForReceipt(depositHash)
+
+      await refetchFinanceData()
+      toast.success('Deposit wrapped into treasury vault.')
+      return true
+    }
+    catch (error) {
+      console.error(error)
+      toast.error('Failed to deposit treasury funds.')
+      return false
+    }
+    finally {
+      setIsDepositing(false)
+    }
+  }, [
+    address,
+    mutateAsync,
+    refetchFinanceData,
+    selectedSettlementAsset,
+    treasuryVault,
+    treasuryVaultConfigured,
+    waitForReceipt,
+  ])
+
+  const withdrawWrappedBalance = useCallback(async () => {
+    if (!address || !treasuryVaultConfigured) {
+      toast.error('Wallet or treasury vault is not ready.')
+      return false
+    }
+
+    setIsWithdrawingWrapped(true)
+
+    try {
+      const hash = await mutateAsync({
+        abi: CompanyTreasuryVault.abi,
+        address: treasuryVault,
+        functionName: 'refundAllWrappedUnderlying',
+        args: [],
+        account: address,
+      })
+      await waitForReceipt(hash)
+
+      await refetchFinanceData()
+      toast.success('Withdraw request submitted.')
+      return true
+    }
+    catch (error) {
+      console.error(error)
+      toast.error('Failed to request treasury withdrawal.')
+      return false
+    }
+    finally {
+      setIsWithdrawingWrapped(false)
+    }
+  }, [address, mutateAsync, refetchFinanceData, treasuryVault, treasuryVaultConfigured, waitForReceipt])
+
+  return {
+    canDecryptVaultBalance: vaultBalanceDecrypt.canDecrypt,
+    decryptVaultBalance: vaultBalanceDecrypt.decrypt,
+    isDecryptingVaultBalance: vaultBalanceDecrypt.isDecrypting,
+    isDepositing,
+    isLoading: isLoadingPublicBalances || isLoadingConfidentialBalance,
+    isWithdrawingWrapped,
+    ownerUnderlyingBalance,
+    refetchFinanceData,
+    selectedSettlementAsset,
+    transactionRows,
+    treasuryVault,
+    treasuryVaultConfigured,
+    vaultConfidentialBalance,
+    vaultConfidentialBalanceError: vaultBalanceDecrypt.error,
+    vaultConfidentialBalanceHandle,
+    vaultUnusedUnderlyingBalance,
+    depositAndWrap,
+    withdrawWrappedBalance,
+  } as const
+}

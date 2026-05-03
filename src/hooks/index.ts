@@ -1,6 +1,7 @@
 export * from './fhevm'
 export * from './use-company-employees'
 export * from './use-controllable-value'
+export * from './use-finance-vault'
 export * from './use-mobile'
 export * from './use-overview-chain-data'
 export * from './use-payroll-actions'
