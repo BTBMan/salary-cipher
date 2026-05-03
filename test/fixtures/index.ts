@@ -83,37 +83,21 @@ export async function createDefaultCompanyFixture(options: CompanyFixtureOptions
  */
 export async function createSalaryCipherCompanyFixture(options: CompanyFixtureOptions = {}) {
   const fixture = await deploySalaryCipherCoreFixture()
-  const { companyRegistry, salaryCipherCore, owner, publicClient } = fixture
+  const { companyRegistry, salaryCipherFactory, owner, publicClient } = fixture
   const asset = options.asset ?? SettlementAssetEnum.USDC
 
-  const createCompanyHash = await companyRegistry.write.createCompany(['Acme', 15, asset], {
+  const createCompanyHash = await salaryCipherFactory.write.createCompany(['Acme', 15, asset], {
     account: owner.account,
   })
   await publicClient.waitForTransactionReceipt({ hash: createCompanyHash })
 
   const companyId = 1n
   const { underlyingToken, settlementToken } = resolveAssetContracts(fixture, asset)
-  const companyTreasuryVault = await viem.deployContract(
+  const treasuryVaultAddress = await companyRegistry.read.getTreasuryVault([companyId])
+  const companyTreasuryVault = await viem.getContractAt(
     'CompanyTreasuryVault',
-    [
-      companyId,
-      companyRegistry.address,
-      salaryCipherCore.address,
-    ],
-    { client: { wallet: owner } },
+    treasuryVaultAddress,
   )
-
-  const authorizeCoreHash = await companyRegistry.write.setAuthorizedCaller(
-    [companyId, salaryCipherCore.address, true],
-    { account: owner.account },
-  )
-  await publicClient.waitForTransactionReceipt({ hash: authorizeCoreHash })
-
-  const setTreasuryVaultHash = await companyRegistry.write.setTreasuryVault(
-    [companyId, companyTreasuryVault.address],
-    { account: owner.account },
-  )
-  await publicClient.waitForTransactionReceipt({ hash: setTreasuryVaultHash })
 
   if (!options.useSepoliaAssets) {
     const mintHash = await underlyingToken.write.mint([owner.account.address, 2_000_000n], {

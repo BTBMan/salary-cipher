@@ -143,6 +143,8 @@ interface ICompanyRegistry {
         uint256 indexed companyId,
         address indexed vault
     );
+    /// @notice Emitted when the platform factory is configured.
+    event CompanyFactoryUpdated(address indexed factory);
 
     ////////////////////////////////////
     // Errors                         //
@@ -163,6 +165,7 @@ interface ICompanyRegistry {
     error CompanyRegistry__InvalidSettlementAsset();
     error CompanyRegistry__AssetNotEnabled();
     error CompanyRegistry__OnlyAdmin();
+    error CompanyRegistry__OnlyCompanyFactory();
 
     ////////////////////////////////////
     // Modifiers                      //
@@ -177,6 +180,14 @@ interface ICompanyRegistry {
     ////////////////////////////////////
     /// @notice Creates a new company and assigns the caller as owner.
     function createCompany(
+        string memory name,
+        uint8 payrollDayOfMonth,
+        SettlementAsset asset
+    ) external returns (uint256 companyId);
+
+    /// @notice Creates a new company on behalf of an owner through the configured factory.
+    function createCompanyFor(
+        address owner,
         string memory name,
         uint8 payrollDayOfMonth,
         SettlementAsset asset
@@ -235,6 +246,9 @@ interface ICompanyRegistry {
         bool enabled,
         uint8 decimals
     ) external;
+
+    /// @notice Configures the factory allowed to create fully initialized companies.
+    function setCompanyFactory(address factory) external;
 
     /// @notice Sets the treasury vault responsible for holding one company's funds.
     function setTreasuryVault(uint256 companyId, address vault) external;

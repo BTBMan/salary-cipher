@@ -55,7 +55,7 @@ export default function EmployeeDashboardPage() {
         </section>
 
         {/* Stats Cards Section */}
-        <section className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <section className="grid grid-cols-1 md:grid-cols-4 gap-4">
           {/* Monthly Salary */}
           <div className="bg-surface-container p-5 rounded-lg border-l-2 border-primary group hover:bg-surface-container-high transition-all cursor-pointer border-y-none border-r-none">
             <div className="flex justify-between items-start mb-3">
@@ -103,6 +103,23 @@ export default function EmployeeDashboardPage() {
             </div>
           </div> */}
 
+          {/* Balance */}
+          <div className="bg-surface-container p-5 rounded-lg border-l-2 border-tertiary group hover:bg-surface-container-high transition-all cursor-pointer border-y-none border-r-none">
+            <div className="flex justify-between items-start mb-3">
+              <span className="text-[10px] font-black text-on-surface-variant tracking-[0.15em] uppercase">Balance</span>
+              <EncryptedIcon className="text-tertiary size-3.5 fill-current" />
+            </div>
+            <div className="flex items-baseline gap-1.5">
+              <span className={overview.employeeConfidentialBalance ? 'font-mono text-2xl font-black text-white' : 'font-mono text-2xl font-black blur-[6px] select-none text-white opacity-40'}>
+                {formatTokenAmount(overview.employeeConfidentialBalance)}
+              </span>
+              <span className="font-mono text-[10px] font-black text-outline uppercase tracking-tighter">{salarySymbol}</span>
+            </div>
+            <p className="mt-3 text-[9px] text-slate-500 font-black uppercase tracking-widest">
+              {overview.employeeBalanceHandle ? 'CONFIDENTIAL TOKEN BALANCE' : 'BALANCE HANDLE NOT FOUND'}
+            </p>
+          </div>
+
           {/* Total Received */}
           <div className="bg-surface-container p-5 rounded-lg border-l-2 border-[#d0bcff] group hover:bg-surface-container-high transition-all cursor-pointer border-y-none border-r-none">
             <div className="flex justify-between items-start mb-3">
@@ -110,10 +127,12 @@ export default function EmployeeDashboardPage() {
               <AccountBalanceIcon className="text-[#d0bcff] size-3.5 fill-current" />
             </div>
             <div className="flex items-baseline gap-1.5">
-              <span className="font-mono text-2xl font-black text-on-surface-variant">N/A</span>
+              <span className={overview.employeeTotalReceived ? 'font-mono text-2xl font-black text-white' : 'font-mono text-2xl font-black blur-[6px] select-none text-white opacity-40'}>
+                {formatTokenAmount(overview.employeeTotalReceived)}
+              </span>
               <span className="font-mono text-[10px] font-black text-outline uppercase tracking-tighter">{salarySymbol}</span>
             </div>
-            <p className="mt-3 text-[9px] text-slate-500 font-black uppercase tracking-widest">No history getter</p>
+            <p className="mt-3 text-[9px] text-slate-500 font-black uppercase tracking-widest">FROM PAYROLL EVENTS</p>
           </div>
 
           {/* Next Payday */}
@@ -180,15 +199,66 @@ export default function EmployeeDashboardPage() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    <TableRow className="border-white/5 hover:bg-transparent">
-                      <TableCell className="px-6 py-12 text-center text-xs font-bold uppercase tracking-widest text-outline" colSpan={3}>
-                        Salary history needs event indexing or an on-chain history getter.
-                      </TableCell>
-                    </TableRow>
+                    {overview.isLoadingEmployeePayrollHistory
+                      ? (
+                          <TableRow className="border-white/5 hover:bg-transparent">
+                            <TableCell className="px-6 py-12 text-center text-xs font-bold uppercase tracking-widest text-outline" colSpan={3}>
+                              <div className="flex items-center justify-center gap-2">
+                                <AutorenewIcon className="size-4 animate-spin" />
+                                Loading payroll events
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        )
+                      : overview.employeePayrollHistory.length === 0
+                        ? (
+                            <TableRow className="border-white/5 hover:bg-transparent">
+                              <TableCell className="px-6 py-12 text-center text-xs font-bold uppercase tracking-widest text-outline" colSpan={3}>
+                                No payroll history events found.
+                              </TableCell>
+                            </TableRow>
+                          )
+                        : overview.employeePayrollHistory.map(row => (
+                            <TableRow key={`${row.transactionHash}-${row.executedAt}`} className="group border-white/5 hover:bg-surface-container">
+                              <TableCell className="px-6 py-5">
+                                <div className="flex flex-col">
+                                  <span className="text-sm font-bold text-on-surface">{formatUnixDate(row.executedAt)}</span>
+                                  <span className="text-[10px] text-outline font-mono mt-1 font-bold uppercase tracking-widest">Tx: {formatAddress(row.transactionHash)}</span>
+                                </div>
+                              </TableCell>
+                              <TableCell className="px-6 py-5">
+                                <div className="flex items-center gap-2">
+                                  <span className={row.amount ? 'font-mono text-sm text-on-surface-variant font-bold' : 'font-mono text-sm blur-xs text-on-surface-variant font-bold'}>
+                                    {formatTokenAmount(row.amount)}
+                                  </span>
+                                  <span className="text-[10px] font-black text-outline uppercase tracking-tighter">{salarySymbol}</span>
+                                </div>
+                              </TableCell>
+                              <TableCell className="px-6 py-5 text-right">
+                                <span className="px-2.5 py-1 bg-primary/10 text-primary text-[9px] font-black rounded-sm border border-primary/20 uppercase tracking-widest">
+                                  {row.amount ? 'Decrypted' : 'Encrypted'}
+                                </span>
+                              </TableCell>
+                            </TableRow>
+                          ))}
                   </TableBody>
                 </Table>
+                {overview.employeePayrollHistoryError && (
+                  <div className="px-6 py-3 border-t border-white/5 text-[10px] font-bold uppercase tracking-widest text-destructive">
+                    {overview.employeePayrollHistoryError}
+                  </div>
+                )}
                 <div className="px-6 py-4 bg-surface-container-lowest/20 text-center border-t border-white/5">
-                  <Button variant="ghost" className="text-[10px] font-black uppercase tracking-[0.2em] text-outline hover:text-on-surface">View All History</Button>
+                  <Button
+                    variant="ghost"
+                    className="text-[10px] font-black uppercase tracking-[0.2em] text-outline hover:text-on-surface"
+                    disabled={overview.isLoadingEmployeePayrollHistory}
+                    onClick={() => {
+                      void overview.refetchEmployeePayrollHistory()
+                    }}
+                  >
+                    Refresh History
+                  </Button>
                 </div>
               </CardContent>
             </Card>

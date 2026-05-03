@@ -12,6 +12,7 @@ import { useConfig, useConnection, useReadContract, useReadContracts, useWaitFor
 import { readContracts } from 'wagmi/actions'
 import { StoreContext } from '@/contexts'
 import { CompanyRegistry } from '@/contract-data/company-registry'
+import { SalaryCipherFactory } from '@/contract-data/salary-cipher-factory'
 import { SettlementAssetEnum } from '@/enums'
 
 const STORAGE_KEY_PREFIX = 'salary-cipher'
@@ -301,15 +302,14 @@ export function StoreProvider({ children }: PropsWithChildren) {
       selectedCompanyId,
       isReady: true,
     })
-  // eslint-disable-next-line react/exhaustive-deps
   }, [
     address,
     status,
     isConnected,
-    isConnecting,
     readCompanySummary,
     readSettlementAssets,
     readStoredSelectedCompany,
+    refetchUserCompanyIds,
     registryAddress,
   ])
 
@@ -380,7 +380,6 @@ export function StoreProvider({ children }: PropsWithChildren) {
     return () => {
       cancelled = true
     }
-  // eslint-disable-next-line react/exhaustive-deps
   }, [
     address,
     status,
@@ -389,6 +388,7 @@ export function StoreProvider({ children }: PropsWithChildren) {
     readCompanySummary,
     readSettlementAssets,
     readStoredSelectedCompany,
+    refetchUserCompanyIds,
     registryAddress,
   ])
 
@@ -406,7 +406,7 @@ export function StoreProvider({ children }: PropsWithChildren) {
       isReady: sessionState.isReady,
       isCreatingCompany,
       createCompany: async (input: CreateCompanyInput) => {
-        if (!registryAddress || !address) {
+        if (!registryAddress || !SalaryCipherFactory.address || !address) {
           toast.error('Wallet or contract is not ready.')
           return null
         }
@@ -415,8 +415,8 @@ export function StoreProvider({ children }: PropsWithChildren) {
 
         try {
           const hash = await mutateAsync({
-            abi: companyRegistryAbi,
-            address: registryAddress,
+            abi: SalaryCipherFactory.abi,
+            address: SalaryCipherFactory.address,
             functionName: 'createCompany',
             args: [input.name, input.payrollDayOfMonth, input.settlementAsset],
             account: address,
@@ -478,7 +478,6 @@ export function StoreProvider({ children }: PropsWithChildren) {
       },
       refreshCompanies,
     }
-  // eslint-disable-next-line react/exhaustive-deps
   }, [
     address,
     isCreatingCompany,

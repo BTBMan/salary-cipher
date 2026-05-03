@@ -28,6 +28,8 @@ contract CompanyRegistry is ICompanyRegistry {
     ////////////////////////////////////
     // Deployment-time admin used to configure globally supported settlement assets.
     address public immutable admin;
+    // Factory allowed to create fully initialized companies with treasury vaults.
+    address public companyFactory;
     // Next company identifier to assign.
     uint256 public nextCompanyId;
 
@@ -93,6 +95,20 @@ contract CompanyRegistry is ICompanyRegistry {
         _;
     }
 
+    /// @notice Restricts execution to the configured company factory.
+    modifier onlyCompanyFactory() {
+        if (msg.sender != companyFactory) {
+            revert CompanyRegistry__OnlyCompanyFactory();
+        }
+        _;
+    }
+
+    /// @notice Restricts execution to the company owner, registry admin, or company factory.
+    modifier onlyOwnerAdminOrFactory(uint256 companyId) {
+        _requireCompanyOwnerAdminOrFactory(companyId, msg.sender);
+        _;
+    }
+
     constructor() {
         admin = msg.sender;
         nextCompanyId = 1;
@@ -114,6 +130,34 @@ contract CompanyRegistry is ICompanyRegistry {
         uint8 payrollDayOfMonth,
         SettlementAsset asset
     ) external returns (uint256 companyId) {
+        companyId = _createCompany(
+            msg.sender,
+            name,
+            payrollDayOfMonth,
+            asset
+        );
+    }
+
+    /// @inheritdoc ICompanyRegistry
+    function createCompanyFor(
+        address owner,
+        string memory name,
+        uint8 payrollDayOfMonth,
+        SettlementAsset asset
+    ) external onlyCompanyFactory returns (uint256 companyId) {
+        companyId = _createCompany(owner, name, payrollDayOfMonth, asset);
+    }
+
+    /// @dev Shared company creation path used by direct creation and factory creation.
+    function _createCompany(
+        address owner,
+        string memory name,
+        uint8 payrollDayOfMonth,
+        SettlementAsset asset
+    ) private returns (uint256 companyId) {
+        if (owner == address(0)) {
+            revert CompanyRegistry__OwnerIsZeroAddress();
+        }
         if (bytes(name).length == 0) {
             revert CompanyRegistry__CompanyNameIsEmpty();
         }
@@ -124,7 +168,7 @@ contract CompanyRegistry is ICompanyRegistry {
 
         companies[companyId] = Company({
             name: name,
-            owner: msg.sender,
+            owner: owner,
             createdAt: _blockTimestamp()
         });
         payrollConfigs[companyId] = PayrollConfig({
@@ -132,22 +176,21 @@ contract CompanyRegistry is ICompanyRegistry {
             initialized: true
         });
         companySettlementAssets[companyId] = asset;
-        companyEmployees[companyId][msg.sender] = Employee({
+        companyEmployees[companyId][owner] = Employee({
             displayName: "Owner",
             role: Role.Owner,
-            payoutWallet: msg.sender,
+            payoutWallet: owner,
             addedAt: _blockTimestamp()
         });
-        companyEmployeeAccounts[companyId].push(msg.sender);
-        companyEmployeeIndexPlusOne[companyId][msg.sender] = 1;
-        userCompanies[msg.sender].push(companyId);
-        userCompanyIndexPlusOne[msg.sender][companyId] = userCompanies[
-            msg.sender
-        ].length;
+        companyEmployeeAccounts[companyId].push(owner);
+        companyEmployeeIndexPlusOne[companyId][owner] = 1;
+        userCompanies[owner].push(companyId);
+        userCompanyIndexPlusOne[owner][companyId] = userCompanies[owner]
+            .length;
 
         nextCompanyId++;
 
-        emit CompanyCreated(companyId, msg.sender, name, _blockTimestamp());
+        emit CompanyCreated(companyId, owner, name, _blockTimestamp());
         emit PayrollConfigUpdated(companyId, payrollDayOfMonth);
         emit SettlementAssetSelected(companyId, asset);
     }
@@ -252,7 +295,7 @@ contract CompanyRegistry is ICompanyRegistry {
         uint256 companyId,
         address caller,
         bool authorized
-    ) external onlyOwner(companyId) {
+    ) external onlyOwnerAdminOrFactory(companyId) {
         if (caller == address(0)) {
             revert CompanyRegistry__InvalidCaller();
         }
@@ -319,10 +362,21 @@ contract CompanyRegistry is ICompanyRegistry {
     }
 
     /// @inheritdoc ICompanyRegistry
+    function setCompanyFactory(address factory) external onlyAdmin {
+        if (factory == address(0)) {
+            revert CompanyRegistry__InvalidAddress();
+        }
+
+        companyFactory = factory;
+
+        emit CompanyFactoryUpdated(factory);
+    }
+
+    /// @inheritdoc ICompanyRegistry
     function setTreasuryVault(
         uint256 companyId,
         address vault
-    ) external onlyOwner(companyId) {
+    ) external onlyOwnerAdminOrFactory(companyId) {
         if (vault == address(0)) {
             revert CompanyRegistry__InvalidAddress();
         }
@@ -433,6 +487,21 @@ contract CompanyRegistry is ICompanyRegistry {
     ) private view {
         _requireCompanyExists(companyId);
         if (companies[companyId].owner != account) {
+            revert CompanyRegistry__Unauthorized();
+        }
+    }
+
+    /// @dev Reverts unless the account is the company owner, registry admin, or company factory.
+    function _requireCompanyOwnerAdminOrFactory(
+        uint256 companyId,
+        address account
+    ) private view {
+        _requireCompanyExists(companyId);
+        if (
+            companies[companyId].owner != account &&
+            admin != account &&
+            companyFactory != account
+        ) {
             revert CompanyRegistry__Unauthorized();
         }
     }
