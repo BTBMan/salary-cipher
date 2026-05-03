@@ -4,16 +4,15 @@ import { useMemo, useState } from 'react'
 import {
   MdAutorenew as AutorenewIcon,
   MdCalendarMonth as CalendarMonthIcon,
-  MdCurrencyExchange as CurrencyExchangeIcon,
-  MdEventRepeat as EventRepeatIcon,
-  MdFilterList as FilterListIcon,
+  // MdFilterList as FilterListIcon,
   MdLock as LockIcon,
   MdOpenInNew as OpenInNewIcon,
+  MdRocketLaunch as RocketLaunchIcon,
   MdSave as SaveIcon,
+  MdSchedule as ScheduleIcon,
   MdShield as ShieldPersonIcon,
   MdToken as TokenIcon,
 } from 'react-icons/md'
-import { useChainId } from 'wagmi'
 import { z } from 'zod'
 import { AppLayout } from '@/components/layout/app-layout'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
@@ -28,13 +27,13 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
+// import {
+//   Select,
+//   SelectContent,
+//   SelectItem,
+//   SelectTrigger,
+//   SelectValue,
+// } from '@/components/ui/select'
 import {
   Table,
   TableBody,
@@ -60,13 +59,11 @@ interface PayrollConfigDraft {
 
 export default function PayrollHistoryPage() {
   const { selectedCompany } = useStoreContext()
-  const chainId = useChainId()
   const overview = useOverviewChainData(selectedCompany, { payrollHistoryLimit: null })
   const payrollActions = usePayrollActions(selectedCompany)
   const canExecutePayroll = canManagePayroll(selectedCompany?.role)
   const canUpdatePayrollConfig = selectedCompany?.role === RolesEnum.Owner
   const salarySymbol = overview.selectedSettlementAsset?.symbol ?? 'USDC'
-  const networkLabel = chainId === 31337 ? 'Hardhat' : chainId === 11155111 ? 'Sepolia' : `Chain ${chainId}`
   const selectedCompanyId = selectedCompany?.id ?? null
   const selectedPayrollDayOfMonth = String(selectedCompany?.payrollDayOfMonth ?? 15)
   const [payrollConfigDraft, setPayrollConfigDraft] = useState<PayrollConfigDraft>({
@@ -155,91 +152,110 @@ export default function PayrollHistoryPage() {
         {canExecutePayroll && (
           <section className="space-y-6">
             <div className="flex items-center gap-3 px-1">
-              <div className="w-1 h-6 bg-primary rounded-full shadow-[0_0_8px_#c0c1ff]" />
+              <div className="w-1 h-6 bg-primary rounded-full" />
               <h2 className="font-heading text-2xl font-bold text-on-surface tracking-tight">Payroll Configuration</h2>
             </div>
-            <Card className="rounded-xl border border-white/5 bg-surface-container-low p-0 shadow-2xl">
-              <CardContent className="p-8">
-                <div className="grid grid-cols-1 md:grid-cols-5 gap-6 items-end">
-                  <div className="space-y-3">
-                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-on-surface-variant flex items-center gap-2">
-                      <EventRepeatIcon className="text-tertiary size-4" />
-                      Monthly Payroll Day
-                    </label>
-                    <Input
-                      aria-invalid={Boolean(payrollConfigError)}
-                      className="h-12 rounded-lg border-none bg-surface-container-lowest font-mono font-bold shadow-inner"
-                      disabled={!canUpdatePayrollConfig || payrollActions.isUpdatingPayrollConfig}
-                      max={31}
-                      min={1}
-                      type="number"
-                      value={payrollDayOfMonth}
-                      onChange={event =>
-                        setPayrollConfigDraft({
-                          companyId: selectedCompanyId,
-                          error: null,
-                          value: event.target.value,
-                        })}
-                    />
-                    {payrollConfigError && (
-                      <p className="text-xs font-bold text-destructive">{payrollConfigError}</p>
-                    )}
-                  </div>
-                  <div className="space-y-3">
-                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-on-surface-variant flex items-center gap-2">
-                      <CurrencyExchangeIcon className="text-tertiary size-4" />
-                      Payroll Token
-                    </label>
-                    <div className="flex items-center gap-3 bg-surface-container-lowest p-3 rounded-lg border border-white/5 shadow-inner">
-                      <div className="w-6 h-6 rounded-full bg-indigo-500/20 flex items-center justify-center">
-                        <TokenIcon className="size-3 text-indigo-400" />
+            <Card className="rounded border border-outline-variant/5 bg-surface-container-low p-0 shadow-lg">
+              <CardContent className="p-0">
+                <div className="grid grid-cols-1 items-stretch gap-6 md:grid-cols-2">
+                  <div className="flex flex-col justify-between rounded border border-outline-variant/10 bg-surface-container-lowest p-6">
+                    <div className="space-y-4">
+                      <div className="flex items-center gap-2">
+                        <ScheduleIcon className="size-5 text-primary" />
+                        <h3 className="font-heading font-semibold text-on-surface">Schedule Settings</h3>
                       </div>
-                      <span className="font-mono text-xs font-black tracking-widest text-on-surface">{salarySymbol}</span>
+
+                      <div className="flex items-center">
+                        <label className="block text-xs font-bold uppercase tracking-widest text-on-surface-variant">
+                          Disbursement Asset:
+                        </label>
+                        {/* h-12 rounded bg-surface-container px-4 */}
+                        <div className="flex items-center gap-3 ml-3">
+                          <div className="flex h-6 w-6 items-center justify-center rounded-full bg-indigo-500/20">
+                            <TokenIcon className="size-3 text-indigo-400" />
+                          </div>
+                          <span className="font-mono text-sm font-medium tracking-tight text-on-surface">
+                            {salarySymbol}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="space-y-2">
+                        <label className="block text-xs font-bold uppercase tracking-widest text-on-surface-variant">
+                          Monthly Payroll Day
+                        </label>
+                        <Input
+                          aria-invalid={Boolean(payrollConfigError)}
+                          className="h-12 rounded border-outline-variant/20 bg-surface-container px-4 font-mono text-sm font-medium text-on-surface shadow-none focus-visible:ring-1 focus-visible:ring-primary/40"
+                          disabled={!canUpdatePayrollConfig || payrollActions.isUpdatingPayrollConfig}
+                          max={31}
+                          min={1}
+                          type="number"
+                          value={payrollDayOfMonth}
+                          onChange={event =>
+                            setPayrollConfigDraft({
+                              companyId: selectedCompanyId,
+                              error: null,
+                              value: event.target.value,
+                            })}
+                        />
+                        {payrollConfigError && (
+                          <p className="text-xs font-bold text-destructive">{payrollConfigError}</p>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                  <div className="space-y-3">
-                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-on-surface-variant flex items-center gap-2">
-                      <ShieldPersonIcon className="text-tertiary size-4" />
-                      Network
-                    </label>
-                    <div className="flex items-center gap-3 bg-surface-container-lowest p-3 rounded-lg border border-white/5 shadow-inner">
-                      <span className="font-mono text-xs font-black tracking-widest text-on-surface">{networkLabel}</span>
-                    </div>
-                  </div>
-                  <div className="space-y-3">
-                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-on-surface-variant flex items-center gap-2">
-                      <CalendarMonthIcon className="text-tertiary size-4" />
-                      Next Payday
-                    </label>
-                    <div className="flex flex-col gap-1 bg-surface-container-lowest p-3 rounded-lg border border-white/5 shadow-inner">
-                      <span className="font-mono text-xs font-black tracking-widest text-on-surface">{overview.payrollSchedule?.nextPayrollDate ?? '-'}</span>
-                      <span className="text-[9px] font-black uppercase tracking-widest text-outline">{overview.payrollSchedule ? `${overview.payrollSchedule.daysLeft} days left` : 'Not configured'}</span>
-                    </div>
-                  </div>
-                  <div className="flex flex-col gap-3">
+
                     {canUpdatePayrollConfig && (
+                      <div className="mt-6">
+                        <Button
+                          className="h-12 w-full rounded border-none bg-surface-container-high text-sm font-semibold text-on-surface shadow-none hover:bg-surface-bright"
+                          disabled={payrollActions.isUpdatingPayrollConfig}
+                          variant="outline"
+                          onClick={() => {
+                            void handleSavePayrollConfig()
+                          }}
+                        >
+                          {payrollActions.isUpdatingPayrollConfig ? <AutorenewIcon className="size-4 animate-spin" /> : <SaveIcon className="size-4" />}
+                          Save Settings
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="relative flex flex-col justify-between overflow-hidden rounded border border-primary/20 bg-primary-container/5 p-6">
+                    <div className="pointer-events-none absolute -right-4 -top-4 opacity-5">
+                      <RocketLaunchIcon className="size-24 text-on-surface" />
+                    </div>
+
+                    <div className="space-y-4">
+                      <div className="flex items-center gap-2">
+                        <CalendarMonthIcon className="size-5 text-tertiary" />
+                        <h3 className="font-heading font-semibold text-on-surface">Next Payroll Execution</h3>
+                      </div>
+                      <div>
+                        <p className="mb-1 text-xs font-bold uppercase tracking-widest text-on-surface-variant">Next Payday</p>
+                        <p className="font-heading text-2xl font-black text-white">
+                          {overview.payrollSchedule?.nextPayrollDate ?? '-'}
+                        </p>
+                        <p className="mt-2 text-xs font-semibold text-on-surface-variant">
+                          {overview.payrollSchedule ? `${overview.payrollSchedule.daysLeft} days left` : 'Not configured'}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="mt-6 space-y-2">
                       <Button
-                        className="primary-gradient text-on-primary-container text-sm h-12 px-6 rounded-sm shadow-xl shadow-primary/20 hover:opacity-90 active:scale-95 transition-all border-none flex items-center gap-2"
-                        disabled={payrollActions.isUpdatingPayrollConfig}
-                        onClick={() => {
-                          void handleSavePayrollConfig()
-                        }}
+                        className="primary-gradient h-12 w-full rounded border-none text-sm font-black tracking-wide text-on-primary-container shadow-none hover:shadow-[0_0_20px_rgba(192,193,255,0.3)]"
+                        disabled={payrollActions.isExecutingPayroll || !overview.treasuryVaultConfigured}
+                        onClick={() => setIsExecuteDialogOpen(true)}
                       >
-                        {payrollActions.isUpdatingPayrollConfig ? <AutorenewIcon className="size-4 animate-spin" /> : <SaveIcon className="size-4" />}
-                        Save Settings
+                        {payrollActions.isExecutingPayroll ? <AutorenewIcon className="size-4 animate-spin" /> : <RocketLaunchIcon className="size-4" />}
+                        Run Payroll Now
                       </Button>
-                    )}
-                    <Button
-                      className="h-12 rounded-sm border-primary/20 bg-primary/10 px-6 text-sm font-black uppercase tracking-widest text-primary hover:bg-primary/15"
-                      disabled={payrollActions.isExecutingPayroll || !overview.treasuryVaultConfigured}
-                      variant="outline"
-                      onClick={() => setIsExecuteDialogOpen(true)}
-                    >
-                      Execute Now
-                    </Button>
-                    {!overview.treasuryVaultConfigured && (
-                      <p className="text-[10px] font-bold uppercase tracking-widest text-destructive">Treasury vault missing</p>
-                    )}
+                      {!overview.treasuryVaultConfigured && (
+                        <p className="text-[10px] font-bold uppercase tracking-widest text-destructive">Treasury vault missing</p>
+                      )}
+                    </div>
                   </div>
                 </div>
               </CardContent>
@@ -256,7 +272,7 @@ export default function PayrollHistoryPage() {
             </div>
 
             {/* Filters */}
-            <div className="flex items-center gap-3 flex-wrap">
+            {/* <div className="flex items-center gap-3 flex-wrap">
               <div className="relative">
                 <CalendarMonthIcon className="absolute left-3 top-1/2 -translate-y-1/2 text-outline size-4" />
                 <Select defaultValue="30d">
@@ -284,7 +300,7 @@ export default function PayrollHistoryPage() {
                   </SelectContent>
                 </Select>
               </div>
-            </div>
+            </div> */}
           </div>
 
           <Card className="overflow-hidden rounded-xl border border-white/5 bg-surface-container py-0 shadow-2xl">
