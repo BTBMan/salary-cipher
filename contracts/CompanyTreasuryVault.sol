@@ -52,6 +52,14 @@ contract CompanyTreasuryVault is ICompanyTreasuryVault, ZamaEthereumConfig {
         _;
     }
 
+    /// @notice Restricts execution to the company registry that owns role state.
+    modifier onlyCompanyRegistry() {
+        if (msg.sender != address(companyRegistry)) {
+            revert CompanyTreasuryVault__Unauthorized();
+        }
+        _;
+    }
+
     /**
      * @notice Creates a dedicated treasury vault for one company.
      * @param companyId_ The company namespace served by this vault.
@@ -100,6 +108,7 @@ contract CompanyTreasuryVault is ICompanyTreasuryVault, ZamaEthereumConfig {
         );
 
         settlementToken.wrap(address(this), amount);
+        _grantCurrentVaultBalanceAccess();
 
         emit UnderlyingDepositedAndWrapped(companyId, msg.sender, amount);
     }
@@ -115,6 +124,7 @@ contract CompanyTreasuryVault is ICompanyTreasuryVault, ZamaEthereumConfig {
 
         FHE.allow(amount, address(settlementToken));
         settlementToken.confidentialTransfer(to, amount);
+        _grantCurrentVaultBalanceAccess();
 
         emit PayrollTransferred(companyId, to, block.timestamp);
     }
@@ -153,6 +163,7 @@ contract CompanyTreasuryVault is ICompanyTreasuryVault, ZamaEthereumConfig {
             msg.sender,
             wrappedBalance
         );
+        _grantCurrentVaultBalanceAccess();
 
         emit UnderlyingUnwrapRequested(companyId, msg.sender, unwrapRequestId);
     }
@@ -162,6 +173,62 @@ contract CompanyTreasuryVault is ICompanyTreasuryVault, ZamaEthereumConfig {
         euint64 balance = settlementToken.confidentialBalanceOf(address(this));
         _grantManagerAccess(balance);
         return balance;
+    }
+
+    /// @inheritdoc ICompanyTreasuryVault
+    function grantManagerBalanceAccess(
+        address account
+    ) external onlyCompanyRegistry {
+        _grantAccountCurrentVaultBalanceAccess(account);
+    }
+
+    /// @inheritdoc ICompanyTreasuryVault
+    function refreshManagerBalanceAccess() external onlyCompanyRegistry {
+        _rotateCurrentVaultBalanceHandle();
+        _grantCurrentVaultBalanceAccess();
+    }
+
+    /// @dev Refreshes manager decrypt access for the vault's latest encrypted wrapped balance.
+    function _grantCurrentVaultBalanceAccess() private {
+        euint64 balance = settlementToken.confidentialBalanceOf(address(this));
+        if (FHE.isInitialized(balance)) {
+            _grantManagerAccess(balance);
+        }
+    }
+
+    /// @dev Grants one active owner or HR access to the latest encrypted wrapped balance.
+    function _grantAccountCurrentVaultBalanceAccess(address account) private {
+        if (account == address(0)) {
+            revert CompanyTreasuryVault__InvalidAddress();
+        }
+
+        ICompanyRegistry.Role role = companyRegistry.getRole(
+            companyId,
+            account
+        );
+        if (
+            role != ICompanyRegistry.Role.Owner && role != ICompanyRegistry.Role.HR
+        ) {
+            revert CompanyTreasuryVault__Unauthorized();
+        }
+
+        euint64 balance = settlementToken.confidentialBalanceOf(address(this));
+        if (FHE.isInitialized(balance)) {
+            FHE.allow(balance, account);
+        }
+    }
+
+    /// @dev Rotates the vault balance handle so removed managers cannot decrypt the latest balance handle.
+    function _rotateCurrentVaultBalanceHandle() private {
+        euint64 balance = settlementToken.confidentialBalanceOf(address(this));
+        if (!FHE.isInitialized(balance)) {
+            return;
+        }
+
+        euint64 zeroAmount = FHE.asEuint64(0);
+        FHE.allow(zeroAmount, address(this));
+        FHE.allow(zeroAmount, address(settlementToken));
+        settlementToken.confidentialTransfer(address(this), zeroAmount);
     }
 
     /// @dev Grants an encrypted value handle to the current owner and HR members for the company.

@@ -1,9 +1,9 @@
 import type { Address } from 'viem'
 import { loadFixture } from '@nomicfoundation/hardhat-toolbox-viem/network-helpers'
 import { expect } from 'chai'
-import { SettlementAssetEnum } from '../src/enums'
+import { RolesEnum, SettlementAssetEnum } from '../src/enums'
 import { createSalaryCipherCompanyFixture } from './fixtures'
-import { createUnwrapDecryptionProof, customErrorPattern } from './utils'
+import { createUnwrapDecryptionProof, customErrorPattern, decryptUint64 } from './utils'
 
 const assetCases = [
   { label: 'USDC', asset: SettlementAssetEnum.USDC },
@@ -33,6 +33,11 @@ for (const assetCase of assetCases) {
 
       expect(await underlyingToken.read.balanceOf([companyTreasuryVault.address])).to.equal(0n)
       expect(await underlyingToken.read.balanceOf([settlementToken.address])).to.equal(1_000_000n)
+
+      const vaultEncryptedBalance = await settlementToken.read.confidentialBalanceOf([
+        companyTreasuryVault.address,
+      ])
+      expect(await decryptUint64(vaultEncryptedBalance, settlementToken.address, owner)).to.equal(1_000_000n)
     })
 
     it('restricts treasury funding operations to the company owner', async () => {
@@ -43,6 +48,47 @@ for (const assetCase of assetCases) {
           account: outsider.account,
         }),
       ).to.be.rejectedWith(customErrorPattern('CompanyTreasuryVault__Unauthorized'))
+    })
+
+    it('syncs wrapped balance decrypt access when HR permissions change', async () => {
+      const { companyRegistry, companyTreasuryVault, underlyingToken, settlementToken, owner, hr, companyId, publicClient }
+        = await loadFixture(companyFixture)
+
+      const approveHash = await underlyingToken.write.approve(
+        [companyTreasuryVault.address, 1_000_000n],
+        { account: owner.account },
+      )
+      await publicClient.waitForTransactionReceipt({ hash: approveHash })
+
+      const depositHash = await companyTreasuryVault.write.depositAndWrapUnderlying([1_000_000n], {
+        account: owner.account,
+      })
+      await publicClient.waitForTransactionReceipt({ hash: depositHash })
+
+      const addHrHash = await companyRegistry.write.addEmployee(
+        [companyId, hr.account.address, RolesEnum.HR, 'Helen'],
+        { account: owner.account },
+      )
+      await publicClient.waitForTransactionReceipt({ hash: addHrHash })
+
+      const hrBalanceHandle = await settlementToken.read.confidentialBalanceOf([
+        companyTreasuryVault.address,
+      ])
+      expect(await decryptUint64(hrBalanceHandle, settlementToken.address, hr)).to.equal(1_000_000n)
+
+      const demoteHrHash = await companyRegistry.write.updateRole(
+        [companyId, hr.account.address, RolesEnum.Employee],
+        { account: owner.account },
+      )
+      await publicClient.waitForTransactionReceipt({ hash: demoteHrHash })
+
+      const rotatedBalanceHandle = await settlementToken.read.confidentialBalanceOf([
+        companyTreasuryVault.address,
+      ])
+      expect(await decryptUint64(rotatedBalanceHandle, settlementToken.address, owner)).to.equal(1_000_000n)
+      await expect(
+        decryptUint64(rotatedBalanceHandle, settlementToken.address, hr),
+      ).to.be.rejectedWith(/not authorized/i)
     })
 
     it('refunds the full wrapped vault balance back to the owner', async () => {
@@ -59,6 +105,7 @@ for (const assetCase of assetCases) {
         account: owner.account,
       })
       await publicClient.waitForTransactionReceipt({ hash: depositHash })
+      const ownerBalanceBeforeRefund = await underlyingToken.read.balanceOf([owner.account.address])
 
       const { result: unwrapRequestId } = await companyTreasuryVault.simulate.refundAllWrappedUnderlying(
         { account: owner.account.address },
@@ -77,7 +124,7 @@ for (const assetCase of assetCases) {
       )
       await publicClient.waitForTransactionReceipt({ hash: finalizeHash })
 
-      expect(await underlyingToken.read.balanceOf([owner.account.address])).to.equal(2_000_000n)
+      expect(await underlyingToken.read.balanceOf([owner.account.address])).to.equal(ownerBalanceBeforeRefund + 1_000_000n)
       expect(await underlyingToken.read.balanceOf([settlementToken.address])).to.equal(0n)
     })
 

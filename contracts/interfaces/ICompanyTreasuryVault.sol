@@ -58,4 +58,10 @@ interface ICompanyTreasuryVault {
 
     /// @notice Returns the encrypted balance handle representing wrapped payroll funds held by the vault.
     function getConfidentialBalance() external returns (euint64);
+
+    /// @notice Grants one current manager access to the latest encrypted wrapped balance.
+    function grantManagerBalanceAccess(address account) external;
+
+    /// @notice Refreshes encrypted wrapped balance access after manager permissions change.
+    function refreshManagerBalanceAccess() external;
 }

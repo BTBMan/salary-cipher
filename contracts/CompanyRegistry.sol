@@ -9,6 +9,7 @@ pragma solidity ^0.8.27;
 
 /* Interfaces ****/
 import {ICompanyRegistry} from "./interfaces/ICompanyRegistry.sol";
+import {ICompanyTreasuryVault} from "./interfaces/ICompanyTreasuryVault.sol";
 
 /* Libraries *****/
 
@@ -240,9 +241,16 @@ contract CompanyRegistry is ICompanyRegistry {
             revert CompanyRegistry__CannotModifyOwner();
         }
 
+        Role oldRole = companyEmployees[companyId][account].role;
         delete companyEmployees[companyId][account];
         _removeEmployeeFromCompanyList(companyId, account);
         _removeCompanyFromUserList(account, companyId);
+        _syncTreasuryVaultAccessAfterRoleChange(
+            companyId,
+            account,
+            oldRole,
+            Role.None
+        );
 
         emit EmployeeRemoved(companyId, account);
     }
@@ -262,6 +270,12 @@ contract CompanyRegistry is ICompanyRegistry {
 
         Role oldRole = companyEmployees[companyId][account].role;
         companyEmployees[companyId][account].role = newRole;
+        _syncTreasuryVaultAccessAfterRoleChange(
+            companyId,
+            account,
+            oldRole,
+            newRole
+        );
 
         emit RoleUpdated(companyId, account, oldRole, newRole);
     }
@@ -284,6 +298,12 @@ contract CompanyRegistry is ICompanyRegistry {
         Role oldRole = companyEmployees[companyId][account].role;
         companyEmployees[companyId][account].role = newRole;
         companyEmployees[companyId][account].displayName = displayName;
+        _syncTreasuryVaultAccessAfterRoleChange(
+            companyId,
+            account,
+            oldRole,
+            newRole
+        );
 
         if (oldRole != newRole) {
             emit RoleUpdated(companyId, account, oldRole, newRole);
@@ -417,8 +437,36 @@ contract CompanyRegistry is ICompanyRegistry {
         userCompanies[account].push(companyId);
         userCompanyIndexPlusOne[account][companyId] = userCompanies[account]
             .length;
+        _syncTreasuryVaultAccessAfterRoleChange(
+            companyId,
+            account,
+            Role.None,
+            role
+        );
 
         emit EmployeeAdded(companyId, account, role, _blockTimestamp());
+    }
+
+    /// @dev Keeps vault balance decrypt access aligned when owner/HR permissions change.
+    function _syncTreasuryVaultAccessAfterRoleChange(
+        uint256 companyId,
+        address account,
+        Role oldRole,
+        Role newRole
+    ) private {
+        address vault = treasuryVaults[companyId];
+        if (vault == address(0)) {
+            return;
+        }
+
+        if (newRole == Role.Owner || newRole == Role.HR) {
+            ICompanyTreasuryVault(vault).grantManagerBalanceAccess(account);
+            return;
+        }
+
+        if (oldRole == Role.Owner || oldRole == Role.HR) {
+            ICompanyTreasuryVault(vault).refreshManagerBalanceAccess();
+        }
     }
 
     /// @dev Removes one account from the enumerable company member list via swap-and-pop.
