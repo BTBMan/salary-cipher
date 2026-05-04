@@ -2,14 +2,15 @@
 
 import type { AssignableCompanyRole } from '@/constants'
 import type { CompanySummary } from '@/contexts'
-import type { Address, Hash } from 'viem'
+import type { Address, Hash, Hex } from 'viem'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { toast } from 'sonner'
-import { parseUnits, toHex } from 'viem'
+import { formatUnits, parseUnits, toHex, zeroAddress, zeroHash } from 'viem'
 import { useConnection, useReadContract, useReadContracts, useWaitForTransactionReceipt, useWriteContract } from 'wagmi'
 import { CompanyRegistry } from '@/contract-data/company-registry'
 import { SalaryCipherCore } from '@/contract-data/salary-cipher-core'
 import { RolesEnum } from '@/enums'
+import { useFHEDecrypt } from './fhevm/use-fhe-decrypt'
 import { useFHEEncrypt } from './fhevm/use-fhe-encrypt'
 import { useStoreContext } from './use-store-context'
 
@@ -26,6 +27,8 @@ export interface CompanyEmployee {
   account: Address
   addedAt: number
   displayName: string
+  monthlySalary: string | null
+  monthlySalaryHandle: Hex | null
   payoutWallet: Address
   role: RolesEnum
 }
@@ -43,8 +46,28 @@ interface ReceiptWaiter {
   reject: (error: Error) => void
 }
 
+const DECIMAL_STRING_REGEX = /^\d+$/
+
 function filterEmployees<T extends CompanyEmployee>(value: T | null): value is T {
   return value !== null && value.role !== RolesEnum.Owner
+}
+
+function isActiveHandle(value: unknown): value is Hex {
+  return typeof value === 'string' && value !== '0x' && value !== zeroAddress && value !== zeroHash
+}
+
+function getDecryptedValue(results: Record<string, string | bigint | boolean>, handle: Hex) {
+  return results[handle] ?? results[handle.toLowerCase()] ?? results[handle.toUpperCase()]
+}
+
+function toTokenAmount(value: bigint | string | boolean | undefined, decimals: number) {
+  if (typeof value === 'bigint') {
+    return formatUnits(value, decimals)
+  }
+  if (typeof value === 'string' && DECIMAL_STRING_REGEX.test(value)) {
+    return formatUnits(BigInt(value), decimals)
+  }
+  return null
 }
 
 /**
@@ -169,6 +192,59 @@ export function useCompanyEmployees(selectedCompany: CompanySummary | null) {
     },
   })
 
+  const salaryContracts = useMemo(() => {
+    if (!companyId) {
+      return []
+    }
+
+    return employeeAccountList.map(employeeAccount => ({
+      abi: SalaryCipherCore.abi,
+      address: SalaryCipherCore.address,
+      functionName: 'monthlySalary',
+      args: [companyId, employeeAccount],
+    }) as const)
+  }, [companyId, employeeAccountList])
+
+  const {
+    data: salaryResults,
+    isLoading: isLoadingSalaryHandles,
+    refetch: refetchSalaryHandles,
+  } = useReadContracts({
+    contracts: salaryContracts,
+    query: {
+      enabled: salaryContracts.length > 0,
+    },
+  })
+
+  const salaryHandles = useMemo(() => {
+    return employeeAccountList.map((employeeAccount, index) => {
+      const result = salaryResults?.[index]
+      return {
+        account: employeeAccount,
+        handle: result?.status === 'success' && isActiveHandle(result.result) ? result.result : null,
+      }
+    })
+  }, [employeeAccountList, salaryResults])
+
+  const salaryDecryptRequests = useMemo(() => {
+    const canReadAllSalaries = selectedCompany?.role === RolesEnum.Owner || selectedCompany?.role === RolesEnum.HR
+    const readableHandles = salaryHandles
+      .filter(({ account }) => canReadAllSalaries || account.toLowerCase() === address?.toLowerCase())
+      .map(({ handle }) => handle
+        ? {
+            contractAddress: SalaryCipherCore.address,
+            handle,
+          }
+        : null)
+      .filter((request): request is { contractAddress: Address, handle: Hex } => Boolean(request))
+
+    return readableHandles.length > 0 ? readableHandles : undefined
+  }, [address, salaryHandles, selectedCompany?.role])
+
+  const salaryDecrypt = useFHEDecrypt({
+    requests: salaryDecryptRequests,
+  })
+
   const employees = useMemo(() => {
     return (employeeResults ?? []).map((employeeResult, index) => {
       if (employeeResult.status !== 'success') {
@@ -176,22 +252,28 @@ export function useCompanyEmployees(selectedCompany: CompanySummary | null) {
       }
 
       const employee = employeeResult.result as CompanyEmployeeRecord
+      const salaryHandle = salaryHandles[index]?.handle ?? null
       return {
         account: employeeAccountList[index],
         addedAt: Number(employee.addedAt),
         displayName: employee.displayName,
+        monthlySalary: salaryHandle
+          ? toTokenAmount(getDecryptedValue(salaryDecrypt.results, salaryHandle), selectedSettlementAsset?.decimals ?? 6)
+          : null,
+        monthlySalaryHandle: salaryHandle,
         payoutWallet: employee.payoutWallet,
         role: employee.role,
       } satisfies CompanyEmployee
     }).filter(filterEmployees)
-  }, [employeeAccountList, employeeResults])
+  }, [employeeAccountList, employeeResults, salaryDecrypt.results, salaryHandles, selectedSettlementAsset?.decimals])
 
-  const isLoadingEmployees = isLoadingEmployeeAccounts || isLoadingEmployeeRecords
+  const isLoadingEmployees = isLoadingEmployeeAccounts || isLoadingEmployeeRecords || isLoadingSalaryHandles
 
   const refetchEmployees = useCallback(async () => {
     await refetchEmployeeAccounts()
     await refetchEmployeeRecords()
-  }, [refetchEmployeeAccounts, refetchEmployeeRecords])
+    await refetchSalaryHandles()
+  }, [refetchEmployeeAccounts, refetchEmployeeRecords, refetchSalaryHandles])
 
   useEffect(() => {
     if (employeeAccountsError || employeeRecordsError) {
@@ -370,13 +452,17 @@ export function useCompanyEmployees(selectedCompany: CompanySummary | null) {
 
   return {
     canEncryptSalary: canEncrypt,
+    canDecryptSalary: salaryDecrypt.canDecrypt,
+    decryptSalary: salaryDecrypt.decrypt,
     deleteEmployee,
     deletingEmployee,
     employees,
     isAddingEmployee,
+    isDecryptingSalary: salaryDecrypt.isDecrypting,
     isLoadingEmployees,
     isUpdatingEmployee,
     refreshEmployees: refetchEmployees,
+    salaryDecryptError: salaryDecrypt.error,
     selectedSettlementAsset,
     addEmployee,
     updateEmployee,

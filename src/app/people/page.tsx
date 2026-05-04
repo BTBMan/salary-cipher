@@ -41,11 +41,14 @@ export default function PeoplePage() {
   const canManageEmployees = canManagePeople(selectedCompany?.role)
   const {
     addEmployee,
+    canDecryptSalary,
     canEncryptSalary,
+    decryptSalary,
     deleteEmployee,
     deletingEmployee,
     employees,
     isAddingEmployee,
+    isDecryptingSalary,
     isLoadingEmployees,
     isUpdatingEmployee,
     selectedSettlementAsset,
@@ -178,10 +181,13 @@ export default function PeoplePage() {
                               && (
                                 <div className="flex items-center gap-2 bg-surface-container-lowest border border-tertiary/10 px-3 py-1.5 rounded-sm w-fit group-hover:border-tertiary/30 transition-colors">
                                   <EncryptedField
+                                    canDecrypt={canDecryptSalary}
                                     className="space-y-0"
-                                    isEncrypted
-                                    value="••••••••"
+                                    isDecrypting={isDecryptingSalary}
+                                    isEncrypted={!emp.monthlySalary && Boolean(emp.monthlySalaryHandle)}
+                                    value={emp.monthlySalary ?? (emp.monthlySalaryHandle ? formatAddress(emp.monthlySalaryHandle) : 'Handle missing')}
                                     valueClassName="text-tertiary font-mono tracking-[0.3em] text-[10px] font-black"
+                                    onDecrypt={decryptSalary}
                                   />
                                   <span className="text-[10px] font-black text-outline tracking-tighter">{confidentialTokenSymbol}</span>
                                 </div>

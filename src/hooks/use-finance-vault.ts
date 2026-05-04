@@ -33,6 +33,16 @@ interface VaultEventLog {
   transactionHash: Hex
 }
 
+interface ConfidentialTransferLog {
+  args: {
+    amount?: Hex
+    to?: Address
+  }
+  blockNumber?: bigint
+  logIndex?: number
+  transactionHash: Hex
+}
+
 interface DecodedEventLog {
   eventName?: string
   args?: unknown
@@ -40,6 +50,7 @@ interface DecodedEventLog {
 
 export interface FinanceTransactionRow {
   amount: string | null
+  amountHandle: Hex | null
   blockNumber: bigint
   executedAt: number | null
   hash: Hex
@@ -91,6 +102,14 @@ function toUint64Amount(value: unknown) {
 
 function getPublicDecryptClearValue(clearValues: Record<string, unknown>, handle: Hex) {
   return clearValues[handle] ?? clearValues[handle.toLowerCase()] ?? clearValues[handle.toUpperCase()]
+}
+
+function getDecryptedValue(results: Record<string, string | bigint | boolean>, handle: Hex) {
+  return results[handle] ?? results[handle.toLowerCase()] ?? results[handle.toUpperCase()]
+}
+
+function getTransferKey(transactionHash: string, recipient: Address) {
+  return `${transactionHash.toLowerCase()}-${recipient.toLowerCase()}`
 }
 
 function getRefundUnwrapData(receipt: TransactionReceipt, treasuryVault: Address, settlementToken: Address) {
@@ -343,6 +362,25 @@ export function useFinanceVault(selectedCompany: CompanySummary | null) {
     },
   })
 
+  const transferEventArgs = useMemo(() => {
+    return treasuryVaultConfigured ? { from: treasuryVault } : undefined
+  }, [treasuryVault, treasuryVaultConfigured])
+
+  const {
+    data: payrollTransferLogs,
+    refetch: refetchPayrollTransferLogs,
+  } = useContractEvents({
+    abi: ERC7984Wrapper.abi,
+    address: selectedSettlementAsset?.settlementToken as Address | undefined,
+    eventName: 'ConfidentialTransfer',
+    args: transferEventArgs,
+    fromBlock: 0n,
+    toBlock: 'latest',
+    query: {
+      enabled: Boolean(selectedSettlementAsset?.settlementToken && treasuryVaultConfigured),
+    },
+  })
+
   const {
     data: refundRequestLogs,
     refetch: refetchRefundRequestLogs,
@@ -365,12 +403,14 @@ export function useFinanceVault(selectedCompany: CompanySummary | null) {
       refetchConfidentialBalance(),
       refetchDepositAndWrapLogs(),
       refetchPayrollLogs(),
+      refetchPayrollTransferLogs(),
       refetchRefundRequestLogs(),
     ])
   }, [
     refetchConfidentialBalance,
     refetchDepositAndWrapLogs,
     refetchPayrollLogs,
+    refetchPayrollTransferLogs,
     refetchPublicBalances,
     refetchRefundRequestLogs,
     refetchTreasuryVault,
@@ -409,11 +449,64 @@ export function useFinanceVault(selectedCompany: CompanySummary | null) {
     },
   })
 
+  useWatchContractEvent({
+    abi: ERC7984Wrapper.abi,
+    address: selectedSettlementAsset?.settlementToken as Address | undefined,
+    eventName: 'ConfidentialTransfer',
+    args: transferEventArgs,
+    enabled: Boolean(selectedSettlementAsset?.settlementToken && treasuryVaultConfigured),
+    onLogs: () => {
+      void refetchFinanceData()
+    },
+  })
+
+  const payrollTransferAmountByTxAndRecipient = useMemo(() => {
+    const transferMap = new Map<string, Hex>()
+
+    for (const transferLog of (payrollTransferLogs ?? []) as ConfidentialTransferLog[]) {
+      const amountHandle = normalizeHandle(transferLog.args.amount)
+      const recipient = transferLog.args.to
+      if (amountHandle && recipient) {
+        transferMap.set(getTransferKey(transferLog.transactionHash, recipient), amountHandle)
+      }
+    }
+
+    return transferMap
+  }, [payrollTransferLogs])
+
+  const transactionAmountDecryptRequests = useMemo(() => {
+    if (!selectedSettlementAsset?.settlementToken) {
+      return undefined
+    }
+
+    const payrollAmountHandles = ((payrollLogs ?? []) as VaultEventLog[])
+      .map((log) => {
+        const recipient = log.args.to
+        return recipient
+          ? payrollTransferAmountByTxAndRecipient.get(getTransferKey(log.transactionHash, recipient)) ?? null
+          : null
+      })
+      .filter((handle): handle is Hex => Boolean(handle))
+
+    const requests = Array.from(new Set(payrollAmountHandles))
+      .map(handle => ({
+        contractAddress: selectedSettlementAsset.settlementToken as Address,
+        handle,
+      }))
+
+    return requests.length > 0 ? requests : undefined
+  }, [payrollLogs, payrollTransferAmountByTxAndRecipient, selectedSettlementAsset?.settlementToken])
+
+  const transactionAmountDecrypt = useFHEDecrypt({
+    requests: transactionAmountDecryptRequests,
+  })
+
   const transactionRows = useMemo(() => {
     const decimals = selectedSettlementAsset?.decimals ?? 6
     const rows: FinanceTransactionRow[] = [
       ...((depositAndWrapLogs ?? []) as VaultEventLog[]).map(log => ({
         amount: typeof log.args.amount === 'bigint' ? formatUnits(log.args.amount, decimals) : null,
+        amountHandle: null,
         blockNumber: getSortableBlockNumber(log),
         executedAt: null,
         hash: log.transactionHash,
@@ -421,17 +514,26 @@ export function useFinanceVault(selectedCompany: CompanySummary | null) {
         requestId: null,
         type: 'deposit' as const,
       })),
-      ...((payrollLogs ?? []) as VaultEventLog[]).map(log => ({
-        amount: null,
-        blockNumber: getSortableBlockNumber(log),
-        executedAt: typeof log.args.executedAt === 'bigint' ? Number(log.args.executedAt) : null,
-        hash: log.transactionHash,
-        logIndex: getSortableLogIndex(log),
-        requestId: null,
-        type: 'payroll' as const,
-      })),
+      ...((payrollLogs ?? []) as VaultEventLog[]).map((log) => {
+        const recipient = log.args.to
+        const amountHandle = recipient
+          ? payrollTransferAmountByTxAndRecipient.get(getTransferKey(log.transactionHash, recipient)) ?? null
+          : null
+
+        return {
+          amount: amountHandle ? toTokenAmount(getDecryptedValue(transactionAmountDecrypt.results, amountHandle), decimals) : null,
+          amountHandle,
+          blockNumber: getSortableBlockNumber(log),
+          executedAt: typeof log.args.executedAt === 'bigint' ? Number(log.args.executedAt) : null,
+          hash: log.transactionHash,
+          logIndex: getSortableLogIndex(log),
+          requestId: null,
+          type: 'payroll' as const,
+        }
+      }),
       ...((refundRequestLogs ?? []) as VaultEventLog[]).map(log => ({
         amount: null,
+        amountHandle: null,
         blockNumber: getSortableBlockNumber(log),
         executedAt: null,
         hash: log.transactionHash,
@@ -448,7 +550,14 @@ export function useFinanceVault(selectedCompany: CompanySummary | null) {
 
       return a.blockNumber > b.blockNumber ? -1 : 1
     })
-  }, [depositAndWrapLogs, payrollLogs, refundRequestLogs, selectedSettlementAsset?.decimals])
+  }, [
+    depositAndWrapLogs,
+    payrollLogs,
+    payrollTransferAmountByTxAndRecipient,
+    refundRequestLogs,
+    selectedSettlementAsset?.decimals,
+    transactionAmountDecrypt.results,
+  ])
 
   const depositAndWrap = useCallback(async (amountText: string) => {
     if (!address || !selectedSettlementAsset || !treasuryVaultConfigured) {
@@ -584,8 +693,12 @@ export function useFinanceVault(selectedCompany: CompanySummary | null) {
 
   return {
     canDecryptVaultBalance: vaultBalanceDecrypt.canDecrypt,
+    canDecryptTransactionAmounts: transactionAmountDecrypt.canDecrypt,
     decryptVaultBalance: vaultBalanceDecrypt.decrypt,
+    decryptTransactionAmounts: transactionAmountDecrypt.decrypt,
+    financeHistoryDecryptError: transactionAmountDecrypt.error,
     isDecryptingVaultBalance: vaultBalanceDecrypt.isDecrypting,
+    isDecryptingTransactionAmounts: transactionAmountDecrypt.isDecrypting,
     isDepositing,
     isLoading: isLoadingPublicBalances || isLoadingConfidentialBalance,
     isWithdrawingWrapped,

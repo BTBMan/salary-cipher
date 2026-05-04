@@ -220,9 +220,12 @@ export function PayrollManagerView({ overview, selectedCompany }: PayrollManager
 
         <PayrollExecutionHistory
           error={overview.companyPayrollHistoryError}
+          canDecryptAmount={overview.canDecryptSalary}
           historyRows={historyRows}
           indexedTransferCount={overview.companyPayrollHistory.length}
+          isDecryptingAmount={overview.isDecryptingSalary}
           isLoading={overview.isLoadingCompanyPayrollHistory}
+          onDecryptAmount={overview.decryptSalary}
           salarySymbol={salarySymbol}
           showTreasuryVaultFooter
           treasuryVault={overview.treasuryVault}

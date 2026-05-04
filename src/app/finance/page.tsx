@@ -386,10 +386,13 @@ export default function FinancePage() {
                                       ? `Full wrapped balance ${confidentialTokenSymbol}`
                                       : (
                                           <EncryptedField
+                                            canDecrypt={finance.canDecryptTransactionAmounts}
                                             className="space-y-0"
-                                            isEncrypted
-                                            value={`•••••••• ${confidentialTokenSymbol}`}
+                                            isDecrypting={finance.isDecryptingTransactionAmounts}
+                                            isEncrypted={Boolean(tx.amountHandle)}
+                                            value={tx.amountHandle ? `${formatAddress(tx.amountHandle)} ${confidentialTokenSymbol}` : `Handle missing ${confidentialTokenSymbol}`}
                                             valueClassName="text-sm font-['JetBrains_Mono'] font-bold text-white"
+                                            onDecrypt={finance.decryptTransactionAmounts}
                                           />
                                         )}
                                 </div>
