@@ -17,6 +17,7 @@ import { useCompanyEmployees } from './use-company-employees'
 export interface EmployeePayrollHistoryItem {
   amount: string | null
   amountHandle: Hex | null
+  blockNumber: bigint
   executedAt: number
   transactionHash: Hex
 }
@@ -24,6 +25,7 @@ export interface EmployeePayrollHistoryItem {
 export interface CompanyPayrollHistoryItem {
   amount: string | null
   amountHandle: Hex | null
+  blockNumber: bigint
   executedAt: number
   recipient: Address
   recipientName: string | null
@@ -35,6 +37,7 @@ interface PayrollTransferredLog {
     executedAt?: bigint
     to?: Address
   }
+  blockNumber?: bigint
   transactionHash: Hex
 }
 
@@ -43,6 +46,7 @@ interface ConfidentialTransferLog {
     amount?: Hex
     to?: Address
   }
+  blockNumber?: bigint
   transactionHash: Hex
 }
 
@@ -447,6 +451,7 @@ export function useOverviewChainData(
         return {
           amount: null,
           amountHandle,
+          blockNumber: payrollLog.blockNumber ?? 0n,
           executedAt: Number(payrollLog.args.executedAt ?? 0),
           transactionHash: payrollLog.transactionHash,
         } satisfies EmployeePayrollHistoryItem
@@ -483,6 +488,7 @@ export function useOverviewChainData(
         return {
           amount: null,
           amountHandle,
+          blockNumber: payrollLog.blockNumber ?? 0n,
           executedAt: Number(payrollLog.args.executedAt ?? 0),
           recipient,
           recipientName: recipient !== zeroAddress ? employeeByPayoutWallet.get(recipient.toLowerCase()) ?? null : null,

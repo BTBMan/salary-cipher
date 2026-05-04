@@ -9,13 +9,14 @@ import {
   MdAutorenew as AutorenewIcon,
   // MdDownload as DownloadIcon,
   // MdFilterList as FilterListIcon,
-  MdOpenInNew as OpenInNewIcon,
   MdPayments as PaymentsIcon,
   MdShield as ShieldLockIcon,
 } from 'react-icons/md'
 import { z } from 'zod'
 import { EncryptedField } from '@/components/encrypted-field'
 import { AppLayout } from '@/components/layout/app-layout'
+import { OnchainTransactionLink } from '@/components/onchain-transaction-link'
+import { StatusLabel } from '@/components/status-label'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import {
@@ -70,7 +71,7 @@ function getTransactionMeta(type: FinanceTransactionRow['type']) {
         icon: AccountBalanceWalletIcon,
         iconColor: 'text-primary',
         label: 'Vault Deposit',
-        status: 'Confirmed',
+        status: 'Deposited',
       }
     case 'wrap':
       return {
@@ -86,7 +87,7 @@ function getTransactionMeta(type: FinanceTransactionRow['type']) {
         icon: PaymentsIcon,
         iconColor: 'text-tertiary',
         label: 'Payroll Execution',
-        status: 'Confirmed',
+        status: 'Settled',
       }
     case 'refund-request':
       return {
@@ -406,13 +407,10 @@ export default function FinancePage() {
                               </div>
                             </TableCell>
                             <TableCell className="px-8 py-6 text-center">
-                              <span className="px-3 py-1 bg-emerald-500/10 text-emerald-400 text-[10px] font-black uppercase tracking-widest rounded-sm border border-emerald-500/20">{meta.status}</span>
+                              <StatusLabel status={meta.status} />
                             </TableCell>
                             <TableCell className="px-8 py-6 text-right">
-                              <div className="font-['JetBrains_Mono'] text-[11px] text-outline hover:text-primary transition-colors cursor-pointer inline-flex items-center gap-2 font-bold group/hash">
-                                {formatAddress(tx.hash)}
-                                <OpenInNewIcon className="size-3 opacity-60 group-hover/hash:opacity-100" />
-                              </div>
+                              <OnchainTransactionLink className="justify-end" transactionHash={tx.hash} />
                             </TableCell>
                           </TableRow>
                         )

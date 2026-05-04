@@ -3,12 +3,12 @@
 import type { PayrollHistoryRow } from './types'
 import {
   MdAutorenew as AutorenewIcon,
-  MdOpenInNew as OpenInNewIcon,
   MdShield as ShieldPersonIcon,
 } from 'react-icons/md'
 import { EncryptedField } from '@/components/encrypted-field'
+import { OnchainTransactionLink } from '@/components/onchain-transaction-link'
+import { StatusLabel } from '@/components/status-label'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
-import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import {
   Table,
@@ -98,7 +98,7 @@ export function PayrollExecutionHistory({
                 <TableHead className="px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em] text-on-surface-variant">Employee Entity</TableHead>
                 <TableHead className="px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em] text-on-surface-variant">Amount (FHE)</TableHead>
                 <TableHead className="px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em] text-on-surface-variant">Status</TableHead>
-                <TableHead className="px-6 py-4 text-right text-[10px] font-black uppercase tracking-[0.2em] text-on-surface-variant">Verification</TableHead>
+                <TableHead className="px-6 py-4 text-right text-[10px] font-black uppercase tracking-[0.2em] text-on-surface-variant">Onchain Hash</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -126,7 +126,7 @@ export function PayrollExecutionHistory({
                         <TableCell className="px-6 py-5">
                           <div className="flex flex-col">
                             <span className="font-mono text-sm font-bold text-on-surface">{formatUnixDate(row.executedAt)}</span>
-                            <span className="mt-1 font-mono text-[10px] font-bold uppercase tracking-tighter text-outline">Tx: {formatAddress(row.transactionHash)}</span>
+                            <span className="mt-1 font-mono text-[10px] font-bold uppercase tracking-tighter text-outline">Block {row.blockNumber.toString()}</span>
                           </div>
                         </TableCell>
                         <TableCell className="px-6 py-5">
@@ -161,16 +161,10 @@ export function PayrollExecutionHistory({
                           </div>
                         </TableCell>
                         <TableCell className="px-6 py-5">
-                          <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest bg-primary/10 text-primary border border-primary/20">
-                            <div className="w-1.5 h-1.5 rounded-full bg-primary" />
-                            Paid
-                          </span>
+                          <StatusLabel status="Settled" />
                         </TableCell>
                         <TableCell className="px-6 py-5 text-right">
-                          <Button disabled variant="link" size="sm" className="ml-auto h-auto px-0 text-[10px] font-black text-outline uppercase tracking-widest">
-                            Indexed Event
-                            <OpenInNewIcon className="size-3" />
-                          </Button>
+                          <OnchainTransactionLink className="justify-end" transactionHash={row.transactionHash} />
                         </TableCell>
                       </TableRow>
                     ))}

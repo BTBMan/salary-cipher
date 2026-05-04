@@ -6,6 +6,7 @@ export type PayrollOverviewData = ReturnType<typeof useOverviewChainData>
 export interface PayrollHistoryRow {
   amount: string | null
   amountHandle: Hex | null
+  blockNumber: bigint
   executedAt: number
   recipient: Address | string | null | undefined
   recipientName: string

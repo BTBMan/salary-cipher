@@ -12,6 +12,7 @@ import {
 } from 'react-icons/md'
 import { EncryptedField } from '@/components/encrypted-field'
 import { AppLayout } from '@/components/layout/app-layout'
+import { StatusLabel } from '@/components/status-label'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import {
@@ -174,7 +175,7 @@ export default function DashboardPage() {
                               <TableCell className="px-6 py-5">
                                 <div className="flex flex-col">
                                   <span className="text-sm font-bold text-on-surface">{formatUnixDate(row.executedAt)}</span>
-                                  <span className="text-[10px] text-outline font-mono mt-1 font-bold uppercase tracking-widest">Tx: {formatAddress(row.transactionHash)}</span>
+                                  <span className="text-[10px] text-outline font-mono mt-1 font-bold uppercase tracking-widest">Block {row.blockNumber.toString()}</span>
                                 </div>
                               </TableCell>
                               <TableCell className="px-6 py-5">
@@ -205,9 +206,7 @@ export default function DashboardPage() {
                                 </div>
                               </TableCell>
                               <TableCell className="px-6 py-5 text-right">
-                                <span className="px-2.5 py-1 bg-primary/10 text-primary text-[9px] font-black rounded-sm border border-primary/20 uppercase tracking-widest">
-                                  {row.amount ? 'Decrypted' : row.amountHandle ? 'Encrypted' : 'Pending'}
-                                </span>
+                                <StatusLabel status="Settled" />
                               </TableCell>
                             </TableRow>
                           ))}

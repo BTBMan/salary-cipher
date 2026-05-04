@@ -37,6 +37,7 @@ export function PayrollEmployeeView({ overview, selectedCompany }: PayrollEmploy
     return overview.employeePayrollHistory.map(row => ({
       amount: row.amount,
       amountHandle: row.amountHandle,
+      blockNumber: row.blockNumber,
       executedAt: row.executedAt,
       recipient: overview.currentEmployee?.payoutWallet,
       recipientName: overview.currentEmployee?.displayName ?? 'Me',

@@ -56,6 +56,7 @@ export function PayrollManagerView({ overview, selectedCompany }: PayrollManager
     return overview.companyPayrollHistory.map(row => ({
       amount: row.amount,
       amountHandle: row.amountHandle,
+      blockNumber: row.blockNumber,
       executedAt: row.executedAt,
       recipient: row.recipient,
       recipientName: row.recipientName ?? 'Unknown employee',
