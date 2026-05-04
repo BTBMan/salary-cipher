@@ -53,11 +53,18 @@ export function PayrollEmployeeView({ overview }: PayrollEmployeeViewProps) {
                   <EncryptedField
                     canDecrypt={overview.canDecryptSalary}
                     className="space-y-0"
-                    isDecrypting={overview.isDecryptingSalary}
+                    isDecrypting={overview.employeeBalanceHandle && overview.selectedSettlementAsset?.settlementToken ? overview.isDecryptingSalaryHandle(overview.employeeBalanceHandle, overview.selectedSettlementAsset.settlementToken) : overview.isDecryptingSalary}
                     isEncrypted={!overview.employeeConfidentialBalance}
                     value={formatTokenAmount(overview.employeeConfidentialBalance)}
                     valueClassName="font-mono text-5xl font-bold tracking-tight text-primary md:text-6xl"
-                    onDecrypt={overview.decryptSalary}
+                    onDecrypt={() => {
+                      if (overview.employeeBalanceHandle && overview.selectedSettlementAsset?.settlementToken) {
+                        overview.decryptSalaryHandle(overview.employeeBalanceHandle, overview.selectedSettlementAsset.settlementToken)
+                      }
+                      else {
+                        overview.decryptSalary()
+                      }
+                    }}
                   />
                   <span className="font-mono text-lg font-bold text-on-surface-variant">{salarySymbol}</span>
                 </div>
@@ -117,10 +124,17 @@ export function PayrollEmployeeView({ overview }: PayrollEmployeeViewProps) {
       <PayrollExecutionHistory
         error={overview.employeePayrollHistoryError}
         canDecryptAmount={overview.canDecryptSalary}
+        getIsDecryptingAmount={row => row.amountHandle && overview.selectedSettlementAsset?.settlementToken
+          ? overview.isDecryptingSalaryHandle(row.amountHandle, overview.selectedSettlementAsset.settlementToken)
+          : false}
         historyRows={historyRows}
         isDecryptingAmount={overview.isDecryptingSalary}
         isLoading={overview.isLoadingEmployeePayrollHistory}
-        onDecryptAmount={overview.decryptSalary}
+        onDecryptAmount={(row) => {
+          if (row.amountHandle && overview.selectedSettlementAsset?.settlementToken) {
+            overview.decryptSalaryHandle(row.amountHandle, overview.selectedSettlementAsset.settlementToken)
+          }
+        }}
         salarySymbol={salarySymbol}
       />
     </div>

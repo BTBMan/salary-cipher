@@ -388,11 +388,18 @@ export default function FinancePage() {
                                           <EncryptedField
                                             canDecrypt={finance.canDecryptTransactionAmounts}
                                             className="space-y-0"
-                                            isDecrypting={finance.isDecryptingTransactionAmounts}
+                                            isDecrypting={tx.amountHandle ? finance.isDecryptingTransactionAmount(tx.amountHandle) : finance.isDecryptingTransactionAmounts}
                                             isEncrypted={Boolean(tx.amountHandle)}
                                             value={tx.amountHandle ? `${formatAddress(tx.amountHandle)} ${confidentialTokenSymbol}` : `Handle missing ${confidentialTokenSymbol}`}
                                             valueClassName="text-sm font-['JetBrains_Mono'] font-bold text-white"
-                                            onDecrypt={finance.decryptTransactionAmounts}
+                                            onDecrypt={() => {
+                                              if (tx.amountHandle) {
+                                                finance.decryptTransactionAmount(tx.amountHandle)
+                                              }
+                                              else {
+                                                finance.decryptTransactionAmounts()
+                                              }
+                                            }}
                                           />
                                         )}
                                 </div>

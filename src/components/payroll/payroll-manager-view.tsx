@@ -221,11 +221,18 @@ export function PayrollManagerView({ overview, selectedCompany }: PayrollManager
         <PayrollExecutionHistory
           error={overview.companyPayrollHistoryError}
           canDecryptAmount={overview.canDecryptSalary}
+          getIsDecryptingAmount={row => row.amountHandle && overview.selectedSettlementAsset?.settlementToken
+            ? overview.isDecryptingSalaryHandle(row.amountHandle, overview.selectedSettlementAsset.settlementToken)
+            : false}
           historyRows={historyRows}
           indexedTransferCount={overview.companyPayrollHistory.length}
           isDecryptingAmount={overview.isDecryptingSalary}
           isLoading={overview.isLoadingCompanyPayrollHistory}
-          onDecryptAmount={overview.decryptSalary}
+          onDecryptAmount={(row) => {
+            if (row.amountHandle && overview.selectedSettlementAsset?.settlementToken) {
+              overview.decryptSalaryHandle(row.amountHandle, overview.selectedSettlementAsset.settlementToken)
+            }
+          }}
           salarySymbol={salarySymbol}
           showTreasuryVaultFooter
           treasuryVault={overview.treasuryVault}

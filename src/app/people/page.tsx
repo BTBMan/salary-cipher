@@ -44,11 +44,13 @@ export default function PeoplePage() {
     canDecryptSalary,
     canEncryptSalary,
     decryptSalary,
+    decryptSalaryHandle,
     deleteEmployee,
     deletingEmployee,
     employees,
     isAddingEmployee,
     isDecryptingSalary,
+    isDecryptingSalaryHandle,
     isLoadingEmployees,
     isUpdatingEmployee,
     selectedSettlementAsset,
@@ -183,11 +185,18 @@ export default function PeoplePage() {
                                   <EncryptedField
                                     canDecrypt={canDecryptSalary}
                                     className="space-y-0"
-                                    isDecrypting={isDecryptingSalary}
+                                    isDecrypting={emp.monthlySalaryHandle ? isDecryptingSalaryHandle(emp.monthlySalaryHandle) : isDecryptingSalary}
                                     isEncrypted={!emp.monthlySalary && Boolean(emp.monthlySalaryHandle)}
                                     value={emp.monthlySalary ?? (emp.monthlySalaryHandle ? formatAddress(emp.monthlySalaryHandle) : 'Handle missing')}
                                     valueClassName="text-tertiary font-mono tracking-[0.3em] text-[10px] font-black"
-                                    onDecrypt={decryptSalary}
+                                    onDecrypt={() => {
+                                      if (emp.monthlySalaryHandle) {
+                                        decryptSalaryHandle(emp.monthlySalaryHandle)
+                                      }
+                                      else {
+                                        decryptSalary()
+                                      }
+                                    }}
                                   />
                                   <span className="text-[10px] font-black text-outline tracking-tighter">{confidentialTokenSymbol}</span>
                                 </div>

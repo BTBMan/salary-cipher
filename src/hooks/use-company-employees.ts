@@ -449,15 +449,29 @@ export function useCompanyEmployees(selectedCompany: CompanySummary | null) {
     mutateAsync,
     waitForReceipt,
   ])
+  const decryptSalaryHandle = useCallback((handle: Hex) => {
+    salaryDecrypt.decryptRequest({
+      contractAddress: SalaryCipherCore.address,
+      handle,
+    })
+  }, [salaryDecrypt])
+  const isDecryptingSalaryHandle = useCallback((handle: Hex) => {
+    return salaryDecrypt.isDecryptingRequest({
+      contractAddress: SalaryCipherCore.address,
+      handle,
+    })
+  }, [salaryDecrypt])
 
   return {
     canEncryptSalary: canEncrypt,
     canDecryptSalary: salaryDecrypt.canDecrypt,
+    decryptSalaryHandle,
     decryptSalary: salaryDecrypt.decrypt,
     deleteEmployee,
     deletingEmployee,
     employees,
     isAddingEmployee,
+    isDecryptingSalaryHandle,
     isDecryptingSalary: salaryDecrypt.isDecrypting,
     isLoadingEmployees,
     isUpdatingEmployee,

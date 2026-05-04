@@ -188,11 +188,18 @@ export default function DashboardPage() {
                                   <EncryptedField
                                     canDecrypt={overview.canDecryptSalary}
                                     className="space-y-0"
-                                    isDecrypting={overview.isDecryptingSalary}
+                                    isDecrypting={row.amountHandle && overview.selectedSettlementAsset?.settlementToken ? overview.isDecryptingSalaryHandle(row.amountHandle, overview.selectedSettlementAsset.settlementToken) : overview.isDecryptingSalary}
                                     isEncrypted={!row.amount && Boolean(row.amountHandle)}
                                     value={row.amount ? formatTokenAmount(row.amount) : row.amountHandle ? formatAddress(row.amountHandle) : 'Handle missing'}
                                     valueClassName="font-mono text-sm text-on-surface-variant font-bold"
-                                    onDecrypt={overview.decryptSalary}
+                                    onDecrypt={() => {
+                                      if (row.amountHandle && overview.selectedSettlementAsset?.settlementToken) {
+                                        overview.decryptSalaryHandle(row.amountHandle, overview.selectedSettlementAsset.settlementToken)
+                                      }
+                                      else {
+                                        overview.decryptSalary()
+                                      }
+                                    }}
                                   />
                                   <span className="text-[10px] font-black text-outline tracking-tighter">{confidentialTokenSymbol}</span>
                                 </div>

@@ -637,12 +637,19 @@ export function useOverviewChainData(
     const result = overviewResults?.[3]
     return result?.status === 'success' ? Number(result.result) : 0
   }, [overviewResults])
+  const decryptSalaryHandle = useCallback((handle: Hex, contractAddress: Address = SalaryCipherCore.address) => {
+    salaryDecrypt.decryptRequest({ contractAddress, handle })
+  }, [salaryDecrypt])
+  const isDecryptingSalaryHandle = useCallback((handle: Hex, contractAddress: Address = SalaryCipherCore.address) => {
+    return salaryDecrypt.isDecryptingRequest({ contractAddress, handle })
+  }, [salaryDecrypt])
 
   return {
     canDecryptSalary: salaryDecrypt.canDecrypt,
     companyPayrollHistory: displayedCompanyPayrollHistory,
     companyPayrollHistoryError,
     currentEmployee,
+    decryptSalaryHandle,
     decryptSalary: salaryDecrypt.decrypt,
     decryptedSalaryRows,
     employeeBalanceHandle,
@@ -654,6 +661,7 @@ export function useOverviewChainData(
     employeeStartDate,
     employeeTotalReceived,
     employees,
+    isDecryptingSalaryHandle,
     isDecryptingSalary: salaryDecrypt.isDecrypting,
     isLoading: isLoadingEmployees || isLoadingOverview || isLoadingSalaryHandles || isLoadingBalanceHandle || isLoadingEmployeePayrollHistory || isLoadingCompanyPayrollHistory,
     isLoadingCompanyPayrollHistory,

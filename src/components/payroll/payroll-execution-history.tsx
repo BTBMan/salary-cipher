@@ -23,11 +23,12 @@ import { formatAddress, formatUnixDate, getAvatarFallback } from '@/utils'
 interface PayrollExecutionHistoryProps {
   canDecryptAmount?: boolean
   error: string | null
+  getIsDecryptingAmount?: (row: PayrollHistoryRow) => boolean
   historyRows: PayrollHistoryRow[]
   indexedTransferCount?: number
   isDecryptingAmount?: boolean
   isLoading: boolean
-  onDecryptAmount?: () => void
+  onDecryptAmount?: (row: PayrollHistoryRow) => void
   salarySymbol: string
   showTreasuryVaultFooter?: boolean
   treasuryVault?: string
@@ -37,6 +38,7 @@ interface PayrollExecutionHistoryProps {
 export function PayrollExecutionHistory({
   canDecryptAmount = false,
   error,
+  getIsDecryptingAmount,
   historyRows,
   indexedTransferCount = 0,
   isDecryptingAmount = false,
@@ -148,11 +150,11 @@ export function PayrollExecutionHistory({
                               <EncryptedField
                                 canDecrypt={canDecryptAmount}
                                 className="inline-flex space-y-0"
-                                isDecrypting={isDecryptingAmount}
+                                isDecrypting={getIsDecryptingAmount ? getIsDecryptingAmount(row) : isDecryptingAmount}
                                 isEncrypted={!row.amount && Boolean(row.amountHandle)}
                                 value={row.amount ?? (row.amountHandle ? formatAddress(row.amountHandle) : 'Handle missing')}
                                 valueClassName="font-mono text-sm text-tertiary font-bold"
-                                onDecrypt={onDecryptAmount}
+                                onDecrypt={() => onDecryptAmount?.(row)}
                               />
                               <span className="text-[10px] text-outline font-black"> {salarySymbol}</span>
                             </div>

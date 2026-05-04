@@ -690,14 +690,36 @@ export function useFinanceVault(selectedCompany: CompanySummary | null) {
     treasuryVaultConfigured,
     waitForReceipt,
   ])
+  const decryptTransactionAmount = useCallback((handle: Hex) => {
+    if (!selectedSettlementAsset?.settlementToken) {
+      return
+    }
+
+    transactionAmountDecrypt.decryptRequest({
+      contractAddress: selectedSettlementAsset.settlementToken as Address,
+      handle,
+    })
+  }, [selectedSettlementAsset?.settlementToken, transactionAmountDecrypt])
+  const isDecryptingTransactionAmount = useCallback((handle: Hex) => {
+    if (!selectedSettlementAsset?.settlementToken) {
+      return false
+    }
+
+    return transactionAmountDecrypt.isDecryptingRequest({
+      contractAddress: selectedSettlementAsset.settlementToken as Address,
+      handle,
+    })
+  }, [selectedSettlementAsset?.settlementToken, transactionAmountDecrypt])
 
   return {
     canDecryptVaultBalance: vaultBalanceDecrypt.canDecrypt,
     canDecryptTransactionAmounts: transactionAmountDecrypt.canDecrypt,
+    decryptTransactionAmount,
     decryptVaultBalance: vaultBalanceDecrypt.decrypt,
     decryptTransactionAmounts: transactionAmountDecrypt.decrypt,
     financeHistoryDecryptError: transactionAmountDecrypt.error,
     isDecryptingVaultBalance: vaultBalanceDecrypt.isDecrypting,
+    isDecryptingTransactionAmount,
     isDecryptingTransactionAmounts: transactionAmountDecrypt.isDecrypting,
     isDepositing,
     isLoading: isLoadingPublicBalances || isLoadingConfidentialBalance,

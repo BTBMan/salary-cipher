@@ -4,6 +4,10 @@ import { FhevmDecryptionSignature } from '@/libs/fhevm'
 
 export interface FHEDecryptRequest { handle: string, contractAddress: `0x${string}` }
 
+function getRequestKey(request: FHEDecryptRequest) {
+  return `${request.contractAddress.toLowerCase()}:${request.handle.toLowerCase()}`
+}
+
 export function useFHEDecrypt(params: {
   requests: readonly FHEDecryptRequest[] | undefined
 }) {
@@ -15,6 +19,7 @@ export function useFHEDecrypt(params: {
   const [message, setMessage] = useState<string>('')
   const [results, setResults] = useState<Record<string, string | bigint | boolean>>({})
   const [error, setError] = useState<string | null>(null)
+  const [activeDecryptKey, setActiveDecryptKey] = useState<string | null>(null)
 
   const isDecryptingRef = useRef<boolean>(isDecrypting)
   const lastReqKeyRef = useRef<string>('')
@@ -32,27 +37,28 @@ export function useFHEDecrypt(params: {
     return Boolean(instance && ethersSigner && requests && requests.length > 0 && !isDecrypting)
   }, [instance, ethersSigner, requests, isDecrypting])
 
-  const decrypt = useCallback(() => {
+  const decryptRequests = useCallback((requestsToDecrypt: readonly FHEDecryptRequest[], activeKey: string, expectedRequestsKey?: string) => {
     if (isDecryptingRef.current)
       return
-    if (!instance || !ethersSigner || !requests || requests.length === 0)
+    if (!instance || !ethersSigner || requestsToDecrypt.length === 0)
       return
 
     const thisChainId = chainId
     const thisSigner = ethersSigner
-    const thisRequests = requests
+    const thisRequests = requestsToDecrypt
 
     // Capture the current requests key to avoid false "stale" detection on first run
-    lastReqKeyRef.current = requestsKey
+    lastReqKeyRef.current = expectedRequestsKey ?? activeKey
 
     isDecryptingRef.current = true
     setIsDecrypting(true)
+    setActiveDecryptKey(activeKey)
     setMessage('Start decrypt')
     setError(null)
 
     const run = async () => {
       const isStale = () =>
-        thisChainId !== chainId || thisSigner !== ethersSigner || requestsKey !== lastReqKeyRef.current
+        thisChainId !== chainId || thisSigner !== ethersSigner || (expectedRequestsKey !== undefined && expectedRequestsKey !== lastReqKeyRef.current)
 
       try {
         const uniqueAddresses = Array.from(new Set(thisRequests.map(r => r.contractAddress)))
@@ -107,7 +113,7 @@ export function useFHEDecrypt(params: {
           return
         }
 
-        setResults(res)
+        setResults(currentResults => ({ ...currentResults, ...res }))
       }
       catch (e) {
         const err = e as unknown as { name?: string, message?: string }
@@ -120,12 +126,28 @@ export function useFHEDecrypt(params: {
       finally {
         isDecryptingRef.current = false
         setIsDecrypting(false)
-        lastReqKeyRef.current = requestsKey
+        setActiveDecryptKey(null)
+        lastReqKeyRef.current = expectedRequestsKey ?? activeKey
       }
     }
 
     run()
-  }, [instance, ethersSigner, fhevmDecryptionSignatureStorage, chainId, requests, requestsKey])
+  }, [instance, ethersSigner, fhevmDecryptionSignatureStorage, chainId])
 
-  return { canDecrypt, decrypt, isDecrypting, message, results, error, setMessage, setError } as const
+  const decrypt = useCallback(() => {
+    if (!requests || requests.length === 0)
+      return
+
+    decryptRequests(requests, 'all', requestsKey)
+  }, [decryptRequests, requests, requestsKey])
+
+  const decryptRequest = useCallback((request: FHEDecryptRequest) => {
+    decryptRequests([request], getRequestKey(request))
+  }, [decryptRequests])
+
+  const isDecryptingRequest = useCallback((request: FHEDecryptRequest) => {
+    return isDecrypting && activeDecryptKey === getRequestKey(request)
+  }, [activeDecryptKey, isDecrypting])
+
+  return { canDecrypt, decrypt, decryptRequest, isDecrypting, isDecryptingRequest, message, results, error, setMessage, setError } as const
 }

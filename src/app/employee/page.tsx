@@ -69,11 +69,18 @@ export default function EmployeeDashboardPage() {
               <EncryptedField
                 canDecrypt={overview.canDecryptSalary}
                 className="space-y-0"
-                isDecrypting={overview.isDecryptingSalary}
+                isDecrypting={overview.employeeSalaryHandle ? overview.isDecryptingSalaryHandle(overview.employeeSalaryHandle) : overview.isDecryptingSalary}
                 isEncrypted={!overview.employeeMonthlySalary}
                 value={formatTokenAmount(overview.employeeMonthlySalary)}
                 valueClassName="font-mono text-2xl font-black text-white"
-                onDecrypt={overview.decryptSalary}
+                onDecrypt={() => {
+                  if (overview.employeeSalaryHandle) {
+                    overview.decryptSalaryHandle(overview.employeeSalaryHandle)
+                  }
+                  else {
+                    overview.decryptSalary()
+                  }
+                }}
               />
               <span className="font-mono text-[10px] font-black text-outline tracking-tighter">{confidentialTokenSymbol}</span>
             </div>
@@ -110,11 +117,18 @@ export default function EmployeeDashboardPage() {
               <EncryptedField
                 canDecrypt={overview.canDecryptSalary}
                 className="space-y-0"
-                isDecrypting={overview.isDecryptingSalary}
+                isDecrypting={overview.employeeBalanceHandle && overview.selectedSettlementAsset?.settlementToken ? overview.isDecryptingSalaryHandle(overview.employeeBalanceHandle, overview.selectedSettlementAsset.settlementToken) : overview.isDecryptingSalary}
                 isEncrypted={!overview.employeeConfidentialBalance}
                 value={formatTokenAmount(overview.employeeConfidentialBalance)}
                 valueClassName="font-mono text-2xl font-black text-white"
-                onDecrypt={overview.decryptSalary}
+                onDecrypt={() => {
+                  if (overview.employeeBalanceHandle && overview.selectedSettlementAsset?.settlementToken) {
+                    overview.decryptSalaryHandle(overview.employeeBalanceHandle, overview.selectedSettlementAsset.settlementToken)
+                  }
+                  else {
+                    overview.decryptSalary()
+                  }
+                }}
               />
               <span className="font-mono text-[10px] font-black text-outline tracking-tighter">{confidentialTokenSymbol}</span>
             </div>
@@ -250,11 +264,18 @@ export default function EmployeeDashboardPage() {
                                   <EncryptedField
                                     canDecrypt={overview.canDecryptSalary}
                                     className="space-y-0"
-                                    isDecrypting={overview.isDecryptingSalary}
-                                    isEncrypted={!row.amount}
+                                    isDecrypting={row.amountHandle && overview.selectedSettlementAsset?.settlementToken ? overview.isDecryptingSalaryHandle(row.amountHandle, overview.selectedSettlementAsset.settlementToken) : overview.isDecryptingSalary}
+                                    isEncrypted={!row.amount && Boolean(row.amountHandle)}
                                     value={formatTokenAmount(row.amount)}
                                     valueClassName="font-mono text-sm text-on-surface-variant font-bold"
-                                    onDecrypt={overview.decryptSalary}
+                                    onDecrypt={() => {
+                                      if (row.amountHandle && overview.selectedSettlementAsset?.settlementToken) {
+                                        overview.decryptSalaryHandle(row.amountHandle, overview.selectedSettlementAsset.settlementToken)
+                                      }
+                                      else {
+                                        overview.decryptSalary()
+                                      }
+                                    }}
                                   />
                                   <span className="text-[10px] font-black text-outline tracking-tighter">{confidentialTokenSymbol}</span>
                                 </div>
