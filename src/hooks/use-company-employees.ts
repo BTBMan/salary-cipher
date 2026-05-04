@@ -282,16 +282,16 @@ export function useCompanyEmployees(selectedCompany: CompanySummary | null) {
 
     try {
       const hash = await mutateAsync({
-        abi: CompanyRegistry.abi,
-        address: CompanyRegistry.address,
-        functionName: 'removeEmployee',
+        abi: SalaryCipherCore.abi,
+        address: SalaryCipherCore.address,
+        functionName: 'terminateEmployee',
         args: [companyId, employeeAccount],
         account: address,
       })
       await waitForReceipt(hash)
 
       await Promise.all([refetchEmployees(), refreshCompanies()])
-      toast.success('Employee removed.')
+      toast.success('Employee terminated and final salary settled.')
       return true
     }
     catch (error) {

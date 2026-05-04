@@ -312,7 +312,6 @@ contract SalaryCipherCore is ISalaryCipherCore, ZamaEthereumConfig {
         euint128 terminationPayout = _calculateTerminationPayout(
             companyId,
             employee,
-            payrollConfig.dayOfMonth,
             _floorToDay(_blockTimestamp())
         );
 
@@ -560,19 +559,27 @@ contract SalaryCipherCore is ISalaryCipherCore, ZamaEthereumConfig {
         }
     }
 
-    /// @dev Settles the unpaid interval up to the termination day, splitting across natural payroll periods when needed.
+    /// @dev Settles unpaid work through the termination day using calendar-month salary periods.
     function _calculateTerminationPayout(
         uint256 companyId,
         address employee,
-        uint8 dayOfMonth,
         uint64 terminationDay
     ) private returns (euint128 totalPayout) {
         uint64 employeeStartDay = _floorToDay(startDate[companyId][employee]);
         uint64 cursor = employeeStartDay;
         uint64 companyLastPaidAt = lastPayrollTime[companyId];
 
-        if (companyLastPaidAt != 0 && companyLastPaidAt > cursor) {
-            cursor = companyLastPaidAt;
+        if (companyLastPaidAt != 0) {
+            // lastPayrollTime stores the scheduled payroll date. That payroll
+            // settles the previous complete calendar month, so termination
+            // payout starts on the day after that settled month ends.
+            (, uint64 lastSettledWorkDay) = _previousCalendarMonthRange(
+                companyLastPaidAt
+            );
+            uint64 nextUnpaidWorkDay = lastSettledWorkDay + DAY_SECONDS;
+            if (nextUnpaidWorkDay > cursor) {
+                cursor = nextUnpaidWorkDay;
+            }
         }
         if (cursor > terminationDay) {
             return FHE.asEuint128(0);
@@ -580,9 +587,9 @@ contract SalaryCipherCore is ISalaryCipherCore, ZamaEthereumConfig {
 
         totalPayout = FHE.asEuint128(0);
         while (cursor <= terminationDay) {
-            uint64 periodStart = _periodStartForDate(dayOfMonth, cursor);
-            uint64 periodEnd = _nextPayrollDate(periodStart, dayOfMonth) -
-                DAY_SECONDS;
+            (uint64 periodStart, uint64 periodEnd) = _calendarMonthRangeForDate(
+                cursor
+            );
             uint64 intervalStart = cursor > periodStart ? cursor : periodStart;
             uint64 intervalEnd = terminationDay < periodEnd
                 ? terminationDay
@@ -784,14 +791,6 @@ contract SalaryCipherCore is ISalaryCipherCore, ZamaEthereumConfig {
         return _payrollDateForMonth(year, month, dayOfMonth);
     }
 
-    /// @dev Returns the payroll period start that contains the given reference day.
-    function _periodStartForDate(
-        uint8 dayOfMonth,
-        uint64 referenceDay
-    ) private pure returns (uint64) {
-        return _latestPayrollDate(dayOfMonth, referenceDay);
-    }
-
     /// @dev Returns the payroll timestamp for a specific month, clamped to month end when the day exceeds that month length.
     function _payrollDateForMonth(
         uint256 year,
@@ -804,6 +803,24 @@ contract SalaryCipherCore is ISalaryCipherCore, ZamaEthereumConfig {
             : dayOfMonth;
 
         return uint64(DateTimeLib.dateToTimestamp(year, month, targetDay));
+    }
+
+    /// @dev Returns the full calendar month that contains the supplied reference day.
+    function _calendarMonthRangeForDate(
+        uint64 referenceDay
+    ) private pure returns (uint64 periodStart, uint64 periodEnd) {
+        (uint256 year, uint256 month, , , , ) = DateTimeLib.timestampToDateTime(
+            referenceDay
+        );
+
+        periodStart = uint64(DateTimeLib.dateToTimestamp(year, month, 1));
+        periodEnd = uint64(
+            DateTimeLib.dateToTimestamp(
+                year,
+                month,
+                DateTimeLib.daysInMonth(year, month)
+            )
+        );
     }
 
     /// @dev Returns the complete calendar month settled by a scheduled payroll date.

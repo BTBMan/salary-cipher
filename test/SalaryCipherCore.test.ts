@@ -323,8 +323,11 @@ for (const assetCase of assetCases) {
     })
 
     it('terminates employee after settling leftover salary and removes them from the registry', async () => {
-      const { companyRegistry, salaryCipherCore, companyTreasuryVault, underlyingToken, owner, employee, publicClient, companyId }
-        = await loadFixture(companyFixture)
+      const companyStartTime = computeNextMonthlyPayrollTimestamp(BigInt(await time.latest()), 1)
+      await time.increaseTo(companyStartTime)
+
+      const { companyRegistry, salaryCipherCore, companyTreasuryVault, settlementToken, underlyingToken, owner, employee, publicClient, companyId }
+        = await createSalaryCipherCompanyFixture({ asset: assetCase.asset })
 
       const addEmployeeHash = await companyRegistry.write.addEmployee(
         [companyId, employee.account.address, RolesEnum.Employee, 'Alice'],
@@ -351,16 +354,8 @@ for (const assetCase of assetCases) {
       )
       await publicClient.waitForTransactionReceipt({ hash: setSalaryHash })
 
-      const latestBlock = await publicClient.getBlock()
-      const nextPayrollTime = computeNextMonthlyPayrollTimestamp(latestBlock.timestamp, 15)
-      const payrollTime = computeFollowingMonthlyPayrollTimestamp(nextPayrollTime, 15)
-
-      await time.increaseTo(payrollTime)
-
-      const executeHash = await salaryCipherCore.write.executePayroll([companyId], {
-        account: owner.account,
-      })
-      await publicClient.waitForTransactionReceipt({ hash: executeHash })
+      const terminationTime = companyStartTime + 9n * DAY_SECONDS
+      await time.increaseTo(terminationTime)
 
       const terminateHash = await salaryCipherCore.write.terminateEmployee(
         [companyId, employee.account.address],
@@ -368,10 +363,20 @@ for (const assetCase of assetCases) {
       )
       await publicClient.waitForTransactionReceipt({ hash: terminateHash })
 
+      const employeeEncryptedBalance = await settlementToken.read.confidentialBalanceOf([
+        employee.account.address,
+      ]) as string
+      const vaultEncryptedBalance = await settlementToken.read.confidentialBalanceOf([
+        companyTreasuryVault.address,
+      ]) as string
+      const expectedTerminationPayout = (300_000n * 10n) / BigInt(getUtcDaysInMonth(companyStartTime))
+
+      expect(await decryptUint64(employeeEncryptedBalance, settlementToken.address, employee)).to.equal(expectedTerminationPayout)
+      expect(await decryptUint64(vaultEncryptedBalance, settlementToken.address, owner)).to.equal(600_000n - expectedTerminationPayout)
       expect(await companyRegistry.read.getRole([companyId, employee.account.address])).to.equal(RolesEnum.None)
       expect(await companyRegistry.read.getUserCompanies([employee.account.address])).to.deep.equal([])
       expect(await salaryCipherCore.read.startDate([companyId, employee.account.address])).to.equal(0n)
-      expect(await salaryCipherCore.read.lastPayrollTime([companyId])).to.equal(payrollTime)
+      expect(await salaryCipherCore.read.lastPayrollTime([companyId])).to.equal(0n)
     })
   })
 }
