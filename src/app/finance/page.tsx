@@ -7,8 +7,8 @@ import {
   MdAddCircle as AddCircleIcon,
   MdArrowUpward as ArrowUpwardIcon,
   MdAutorenew as AutorenewIcon,
-  MdDownload as DownloadIcon,
-  MdFilterList as FilterListIcon,
+  // MdDownload as DownloadIcon,
+  // MdFilterList as FilterListIcon,
   MdOpenInNew as OpenInNewIcon,
   MdPayments as PaymentsIcon,
   MdShield as ShieldLockIcon,
@@ -185,7 +185,7 @@ export default function FinancePage() {
                         onDecrypt={finance.decryptVaultBalance}
                       />
                     </div>
-                    <span className="text-outline text-xl font-black uppercase tracking-tighter">{confidentialTokenSymbol}</span>
+                    <span className="text-outline text-xl font-black tracking-tighter">{confidentialTokenSymbol}</span>
                   </div>
                   <div className="mb-6 grid grid-cols-2 gap-3">
                     <div className="rounded-lg border border-white/5 bg-surface-container-lowest p-3">
@@ -320,7 +320,7 @@ export default function FinancePage() {
           <CardContent className="px-0">
             <div className="px-8 py-6 border-b border-white/5 flex justify-between items-center bg-surface-container-high/30">
               <h3 className="text-white font-heading text-xl font-bold tracking-tight">Transaction History</h3>
-              <div className="flex items-center gap-6">
+              {/* <div className="flex items-center gap-6">
                 <Button disabled variant="ghost" size="sm" className="text-[10px] font-black uppercase tracking-widest text-on-surface-variant hover:text-white">
                   <FilterListIcon className="size-4" />
                   Filter
@@ -329,7 +329,7 @@ export default function FinancePage() {
                   <DownloadIcon className="size-4" />
                   Export
                 </Button>
-              </div>
+              </div> */}
             </div>
             <Table className="text-left">
               <TableHeader className="bg-surface-container-low">
@@ -471,7 +471,7 @@ export default function FinancePage() {
           <DialogHeader className="border-b border-white/5 px-6 py-5">
             <DialogTitle>Withdraw wrapped treasury balance</DialogTitle>
             <DialogDescription className="text-on-surface-variant">
-              This requests an unwrap of the vault&apos;s full confidential balance back to the company owner.
+              This unwraps the vault&apos;s full confidential balance and returns the underlying token to the company owner.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 px-6 py-5">
@@ -491,7 +491,7 @@ export default function FinancePage() {
               </div>
             </div>
             <p className="text-xs font-medium leading-relaxed text-on-surface-variant">
-              The unwrap flow is asynchronous. The request will be visible on-chain after this transaction confirms.
+              This flow submits the unwrap request, decrypts the public unwrap amount, then finalizes the underlying token transfer.
             </p>
           </div>
           <DialogFooter className="border-t border-white/5 px-6 py-5">

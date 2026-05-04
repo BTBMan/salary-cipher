@@ -1,21 +1,22 @@
 'use client'
 
 import type { CompanySummary } from '@/contexts'
-import type { Address, Hash, Hex } from 'viem'
+import type { Address, Hash, Hex, TransactionReceipt } from 'viem'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { toast } from 'sonner'
-import { formatUnits, parseUnits, zeroAddress, zeroHash } from 'viem'
+import { decodeEventLog, formatUnits, parseUnits, zeroAddress, zeroHash } from 'viem'
 import { useConnection, useContractEvents, useReadContract, useReadContracts, useWaitForTransactionReceipt, useWatchContractEvent, useWriteContract } from 'wagmi'
 import { CompanyRegistry } from '@/contract-data/company-registry'
 import { CompanyTreasuryVault } from '@/contract-data/company-treasury-vault'
 import { ERC20 } from '@/contract-data/erc20'
 import { ERC7984Wrapper } from '@/contract-data/erc7984-wrapper'
+import { useFHEContext } from './fhevm'
 import { useFHEDecrypt } from './fhevm/use-fhe-decrypt'
 import { useStoreContext } from './use-store-context'
 
 interface ReceiptWaiter {
   hash: Hash
-  resolve: () => void
+  resolve: (receipt: TransactionReceipt) => void
   reject: (error: Error) => void
 }
 
@@ -30,6 +31,11 @@ interface VaultEventLog {
   blockNumber?: bigint
   logIndex?: number
   transactionHash: Hex
+}
+
+interface DecodedEventLog {
+  eventName?: string
+  args?: unknown
 }
 
 export interface FinanceTransactionRow {
@@ -66,8 +72,72 @@ function getSortableLogIndex(log: VaultEventLog) {
   return log.logIndex ?? 0
 }
 
+function normalizeHandle(value: unknown): Hex | null {
+  return isActiveHandle(value) ? value : null
+}
+
+function toUint64Amount(value: unknown) {
+  if (typeof value === 'bigint') {
+    return value
+  }
+  if (typeof value === 'number' && Number.isSafeInteger(value) && value >= 0) {
+    return BigInt(value)
+  }
+  if (typeof value === 'string' && DECIMAL_STRING_REGEX.test(value)) {
+    return BigInt(value)
+  }
+  return null
+}
+
+function getPublicDecryptClearValue(clearValues: Record<string, unknown>, handle: Hex) {
+  return clearValues[handle] ?? clearValues[handle.toLowerCase()] ?? clearValues[handle.toUpperCase()]
+}
+
+function getRefundUnwrapData(receipt: TransactionReceipt, treasuryVault: Address, settlementToken: Address) {
+  let unwrapRequestId: Hex | null = null
+  let unwrapAmountHandle: Hex | null = null
+  const treasuryVaultAddress = treasuryVault.toLowerCase()
+  const settlementTokenAddress = settlementToken.toLowerCase()
+
+  for (const log of receipt.logs) {
+    try {
+      if (log.address.toLowerCase() === treasuryVaultAddress) {
+        const decoded = decodeEventLog({
+          abi: CompanyTreasuryVault.abi,
+          data: log.data,
+          topics: log.topics,
+        }) as DecodedEventLog
+
+        if (decoded.eventName === 'UnderlyingUnwrapRequested') {
+          const args = decoded.args as { unwrapRequestId?: Hex } | undefined
+          unwrapRequestId = args?.unwrapRequestId ?? null
+        }
+      }
+
+      if (log.address.toLowerCase() === settlementTokenAddress) {
+        const decoded = decodeEventLog({
+          abi: ERC7984Wrapper.abi,
+          data: log.data,
+          topics: log.topics,
+        }) as DecodedEventLog
+
+        if (decoded.eventName === 'UnwrapRequested') {
+          const args = decoded.args as { amount?: Hex } | undefined
+          unwrapAmountHandle = normalizeHandle(args?.amount)
+        }
+      }
+    }
+    catch {
+      // Ignore unrelated logs emitted by contracts that share the same transaction.
+    }
+  }
+
+  return { unwrapRequestId, unwrapAmountHandle }
+}
+
 export function useFinanceVault(selectedCompany: CompanySummary | null) {
   const { address } = useConnection()
+  const { instance } = useFHEContext()
   const { settlementAssets } = useStoreContext()
   const { mutateAsync } = useWriteContract()
   const receiptWaiterRef = useRef<ReceiptWaiter | null>(null)
@@ -102,7 +172,7 @@ export function useFinanceVault(selectedCompany: CompanySummary | null) {
     }
 
     receiptWaiterRef.current = null
-    waiter.resolve()
+    waiter.resolve(receiptQuery.data)
   }, [receiptQuery.data])
 
   useEffect(() => {
@@ -127,7 +197,7 @@ export function useFinanceVault(selectedCompany: CompanySummary | null) {
       return Promise.reject(new Error('Another transaction receipt is already pending.'))
     }
 
-    return new Promise<void>((resolve, reject) => {
+    return new Promise<TransactionReceipt>((resolve, reject) => {
       receiptWaiterRef.current = {
         hash,
         resolve,
@@ -445,8 +515,12 @@ export function useFinanceVault(selectedCompany: CompanySummary | null) {
   ])
 
   const withdrawWrappedBalance = useCallback(async () => {
-    if (!address || !treasuryVaultConfigured) {
-      toast.error('Wallet or treasury vault is not ready.')
+    if (!address || !selectedSettlementAsset || !treasuryVaultConfigured) {
+      toast.error('Wallet, asset, or treasury vault is not ready.')
+      return false
+    }
+    if (!instance) {
+      toast.error('FHEVM is not ready.')
       return false
     }
 
@@ -460,21 +534,53 @@ export function useFinanceVault(selectedCompany: CompanySummary | null) {
         args: [],
         account: address,
       })
-      await waitForReceipt(hash)
+      const refundReceipt = await waitForReceipt(hash)
+      const { unwrapRequestId, unwrapAmountHandle } = getRefundUnwrapData(
+        refundReceipt,
+        treasuryVault,
+        selectedSettlementAsset.settlementToken as Address,
+      )
+      if (!unwrapRequestId || !unwrapAmountHandle) {
+        throw new Error('Unable to locate unwrap request data.')
+      }
+
+      const decrypted = await instance.publicDecrypt([unwrapAmountHandle])
+      const clearAmount = toUint64Amount(getPublicDecryptClearValue(decrypted.clearValues, unwrapAmountHandle))
+      if (clearAmount === null) {
+        throw new Error('Unable to decrypt unwrap amount.')
+      }
+
+      const finalizeHash = await mutateAsync({
+        abi: ERC7984Wrapper.abi,
+        address: selectedSettlementAsset.settlementToken as Address,
+        functionName: 'finalizeUnwrap',
+        args: [unwrapRequestId, clearAmount, decrypted.decryptionProof],
+        account: address,
+      })
+      await waitForReceipt(finalizeHash)
 
       await refetchFinanceData()
-      toast.success('Withdraw request submitted.')
+      toast.success('Treasury balance withdrawn.')
       return true
     }
     catch (error) {
       console.error(error)
-      toast.error('Failed to request treasury withdrawal.')
+      toast.error('Failed to withdraw treasury balance.')
       return false
     }
     finally {
       setIsWithdrawingWrapped(false)
     }
-  }, [address, mutateAsync, refetchFinanceData, treasuryVault, treasuryVaultConfigured, waitForReceipt])
+  }, [
+    address,
+    instance,
+    mutateAsync,
+    refetchFinanceData,
+    selectedSettlementAsset,
+    treasuryVault,
+    treasuryVaultConfigured,
+    waitForReceipt,
+  ])
 
   return {
     canDecryptVaultBalance: vaultBalanceDecrypt.canDecrypt,

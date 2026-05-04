@@ -1,5 +1,6 @@
 'use client'
 
+import Link from 'next/link'
 import {
   MdArrowForward as ArrowForwardIcon,
   MdAutorenew as AutorenewIcon,
@@ -77,7 +78,7 @@ export default function DashboardPage() {
                   valueClassName="text-3xl font-mono font-bold text-white"
                   onDecrypt={overview.decryptSalary}
                 />
-                <span className="text-[#c4abff] text-xs font-black uppercase tracking-tighter">{confidentialTokenSymbol}</span>
+                <span className="text-[#c4abff] text-xs font-black tracking-tighter">{confidentialTokenSymbol}</span>
               </div>
               <div className="mt-3 text-[9px] text-[#c4abff]/60 tracking-[0.2em] font-black uppercase relative z-10">
                 {overview.totalMonthlyPayroll ? 'DECRYPTED LOCALLY' : 'FHE ENCRYPTED'}
@@ -125,9 +126,15 @@ export default function DashboardPage() {
                 <h2 className="font-heading text-2xl font-bold text-on-surface tracking-tight">Recent Payroll History</h2>
                 <p className="text-on-surface-variant text-sm mt-1">Immutable ledger of last encrypted disbursements</p>
               </div>
-              <Button variant="link" className="text-primary text-xs font-bold uppercase tracking-widest hover:no-underline group p-0">
-                View Full Ledger <ArrowForwardIcon className="size-3.5 ml-1.5 group-hover:translate-x-1 transition-transform" />
-              </Button>
+              <Button
+                variant="link"
+                className="text-primary text-xs font-bold uppercase tracking-widest hover:no-underline group p-0"
+                render={(
+                  <Link href="/payroll">
+                    View Full Ledger <ArrowForwardIcon className="size-3.5 ml-1.5 group-hover:translate-x-1 transition-transform" />
+                  </Link>
+                )}
+              />
             </div>
 
             <Card className="overflow-hidden rounded-xl border border-white/5 bg-surface-container-low py-0 shadow-2xl">
@@ -183,7 +190,7 @@ export default function DashboardPage() {
                                     value={row.amountHandle ? formatAddress(row.amountHandle) : 'Handle missing'}
                                     valueClassName="font-mono text-sm text-on-surface-variant font-bold"
                                   />
-                                  <span className="text-[10px] font-black text-outline uppercase tracking-tighter">{confidentialTokenSymbol}</span>
+                                  <span className="text-[10px] font-black text-outline tracking-tighter">{confidentialTokenSymbol}</span>
                                 </div>
                               </TableCell>
                               <TableCell className="px-6 py-5 text-right">

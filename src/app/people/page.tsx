@@ -183,7 +183,7 @@ export default function PeoplePage() {
                                     value="••••••••"
                                     valueClassName="text-tertiary font-mono tracking-[0.3em] text-[10px] font-black"
                                   />
-                                  <span className="text-[10px] font-black text-outline uppercase tracking-tighter">{confidentialTokenSymbol}</span>
+                                  <span className="text-[10px] font-black text-outline tracking-tighter">{confidentialTokenSymbol}</span>
                                 </div>
                               )}
                           </TableCell>

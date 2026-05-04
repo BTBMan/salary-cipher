@@ -1,14 +1,16 @@
 'use client'
 
+import Link from 'next/link'
 import {
   MdAccountBalance as AccountBalanceIcon,
   MdAdd as AddIcon,
   MdAutorenew as AutorenewIcon,
   MdDescription as DescriptionIcon,
   MdDirectionsCar as DirectionsCarIcon,
-  MdGeneratingTokens as EncryptedIcon,
   MdHome as HomeIcon,
   MdLock as LockIcon,
+  MdAccountBalanceWallet,
+  MdArrowForward,
   MdSchedule as ScheduleIcon,
   MdVerifiedUser as VerifiedUserIcon,
   MdVisibility as VisibilityIcon,
@@ -73,7 +75,7 @@ export default function EmployeeDashboardPage() {
                 valueClassName="font-mono text-2xl font-black text-white"
                 onDecrypt={overview.decryptSalary}
               />
-              <span className="font-mono text-[10px] font-black text-outline uppercase tracking-tighter">{confidentialTokenSymbol}</span>
+              <span className="font-mono text-[10px] font-black text-outline tracking-tighter">{confidentialTokenSymbol}</span>
             </div>
             <p className="mt-3 text-[9px] text-slate-500 font-black uppercase tracking-widest">
               {overview.employeeMonthlySalary ? 'DECRYPTED LOCALLY' : 'FHE ENCRYPTED'}
@@ -102,7 +104,7 @@ export default function EmployeeDashboardPage() {
           <div className="bg-surface-container p-5 rounded-lg border-l-2 border-tertiary group hover:bg-surface-container-high transition-all cursor-pointer border-y-none border-r-none">
             <div className="flex justify-between items-start mb-3">
               <span className="text-[10px] font-black text-on-surface-variant tracking-[0.15em] uppercase">Balance</span>
-              <EncryptedIcon className="text-tertiary size-3.5 fill-current" />
+              <MdAccountBalanceWallet className="text-tertiary size-3.5 fill-current" />
             </div>
             <div className="flex items-baseline gap-1.5">
               <EncryptedField
@@ -114,7 +116,7 @@ export default function EmployeeDashboardPage() {
                 valueClassName="font-mono text-2xl font-black text-white"
                 onDecrypt={overview.decryptSalary}
               />
-              <span className="font-mono text-[10px] font-black text-outline uppercase tracking-tighter">{confidentialTokenSymbol}</span>
+              <span className="font-mono text-[10px] font-black text-outline tracking-tighter">{confidentialTokenSymbol}</span>
             </div>
             <p className="mt-3 text-[9px] text-slate-500 font-black uppercase tracking-widest">
               {overview.employeeBalanceHandle ? 'CONFIDENTIAL TOKEN BALANCE' : 'BALANCE HANDLE NOT FOUND'}
@@ -137,7 +139,7 @@ export default function EmployeeDashboardPage() {
                 valueClassName="font-mono text-2xl font-black text-white"
                 onDecrypt={overview.decryptSalary}
               />
-              <span className="font-mono text-[10px] font-black text-outline uppercase tracking-tighter">{confidentialTokenSymbol}</span>
+              <span className="font-mono text-[10px] font-black text-outline tracking-tighter">{confidentialTokenSymbol}</span>
             </div>
             <p className="mt-3 text-[9px] text-slate-500 font-black uppercase tracking-widest">FROM PAYROLL EVENTS</p>
           </div>
@@ -193,7 +195,16 @@ export default function EmployeeDashboardPage() {
           <div className="lg:col-span-6 space-y-5">
             <div className="flex items-center justify-between px-1">
               <h3 className="font-heading text-xl font-bold text-on-surface tracking-tight">My Salary History</h3>
-              <Button variant="link" size="sm" className="px-0 text-[10px] font-black uppercase tracking-widest">Download CSV</Button>
+              {/* <Button variant="link" size="sm" className="px-0 text-[10px] font-black uppercase tracking-widest">Download CSV</Button> */}
+              <Button
+                variant="link"
+                className="text-primary text-xs font-bold uppercase tracking-widest hover:no-underline group p-0"
+                render={(
+                  <Link href="/payroll">
+                    View Full Ledger <MdArrowForward className="size-3.5 ml-1.5 group-hover:translate-x-1 transition-transform" />
+                  </Link>
+                )}
+              />
             </div>
             <Card className="overflow-hidden rounded-xl border border-white/5 bg-surface-container-low py-0 shadow-2xl">
               <CardContent className="px-0">
@@ -244,7 +255,7 @@ export default function EmployeeDashboardPage() {
                                     valueClassName="font-mono text-sm text-on-surface-variant font-bold"
                                     onDecrypt={overview.decryptSalary}
                                   />
-                                  <span className="text-[10px] font-black text-outline uppercase tracking-tighter">{confidentialTokenSymbol}</span>
+                                  <span className="text-[10px] font-black text-outline tracking-tighter">{confidentialTokenSymbol}</span>
                                 </div>
                               </TableCell>
                               <TableCell className="px-6 py-5 text-right">

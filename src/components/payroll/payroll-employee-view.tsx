@@ -49,17 +49,17 @@ export function PayrollEmployeeView({ overview }: PayrollEmployeeViewProps) {
                   <LockIcon className="size-4 text-primary fill-current" />
                   <h3 className="text-xs font-bold uppercase tracking-widest text-on-surface-variant">Available Balance (Encrypted)</h3>
                 </div>
-                <div className="mt-4 mb-8 flex items-end gap-3">
+                <div className="mt-4 mb-8 flex items-baseline gap-3">
                   <EncryptedField
                     canDecrypt={overview.canDecryptSalary}
                     className="space-y-0"
                     isDecrypting={overview.isDecryptingSalary}
                     isEncrypted={!overview.employeeConfidentialBalance}
                     value={formatTokenAmount(overview.employeeConfidentialBalance)}
-                    valueClassName="font-mono text-sm font-bold text-on-surface"
+                    valueClassName="font-mono text-5xl font-bold tracking-tight text-primary md:text-6xl"
                     onDecrypt={overview.decryptSalary}
                   />
-                  <span className="mb-2 font-mono text-lg text-on-surface-variant">{salarySymbol}</span>
+                  <span className="font-mono text-lg font-bold text-on-surface-variant">{salarySymbol}</span>
                 </div>
               </div>
 
@@ -87,10 +87,10 @@ export function PayrollEmployeeView({ overview }: PayrollEmployeeViewProps) {
                     isDecrypting={overview.isDecryptingSalary}
                     isEncrypted={!overview.employeeTotalReceived}
                     value={formatTokenAmount(overview.employeeTotalReceived)}
-                    valueClassName="font-mono text-5xl font-bold tracking-tight text-primary md:text-6xl"
+                    valueClassName="font-mono text-4xl font-bold tracking-tight text-primary md:text-5xl"
                     onDecrypt={overview.decryptSalary}
                   />
-                  <span className="font-mono text-sm text-on-surface-variant">{salarySymbol}</span>
+                  <span className="font-mono text-lg font-bold text-on-surface-variant">{salarySymbol}</span>
                 </div>
                 <p className="mt-2 font-mono text-[10px] uppercase tracking-tighter text-outline">
                   Wallet: {overview.currentEmployee ? formatAddress(overview.currentEmployee.payoutWallet) : '-'}
