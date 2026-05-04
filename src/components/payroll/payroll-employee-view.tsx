@@ -1,8 +1,10 @@
 'use client'
 
 import type { PayrollOverviewData } from './types'
+import type { CompanySummary } from '@/contexts'
 import { useMemo } from 'react'
 import {
+  MdAutorenew as AutorenewIcon,
   MdLock as LockIcon,
   MdLockOpen as LockOpenIcon,
   MdPolicy as PolicyIcon,
@@ -10,17 +12,27 @@ import {
 import { EncryptedField } from '@/components/encrypted-field'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
-import { formatAddress, getConfidentialTokenSymbol } from '@/utils'
+import { useEmployeePayrollWithdraw } from '@/hooks'
+import { formatAddress, getConfidentialTokenSymbol, getUnderlyingTokenSymbol } from '@/utils'
 import { PayrollExecutionHistory } from './payroll-execution-history'
 import { formatTokenAmount, getBalanceShare } from './payroll-formatters'
 
 interface PayrollEmployeeViewProps {
   overview: PayrollOverviewData
+  selectedCompany: CompanySummary
 }
 
-export function PayrollEmployeeView({ overview }: PayrollEmployeeViewProps) {
+export function PayrollEmployeeView({ overview, selectedCompany }: PayrollEmployeeViewProps) {
   const salarySymbol = getConfidentialTokenSymbol(overview.selectedSettlementAsset)
+  const underlyingTokenSymbol = getUnderlyingTokenSymbol(overview.selectedSettlementAsset)
   const balanceShare = getBalanceShare(overview.employeeConfidentialBalance, overview.employeeTotalReceived)
+  const employeeWithdraw = useEmployeePayrollWithdraw({
+    encryptedBalanceHandle: overview.employeeBalanceHandle,
+    onWithdrawn: overview.refetchBalanceHandle,
+    payoutWallet: overview.currentEmployee?.payoutWallet,
+    selectedCompany,
+    selectedSettlementAsset: overview.selectedSettlementAsset,
+  })
   const historyRows = useMemo(() => {
     return overview.employeePayrollHistory.map(row => ({
       amount: row.amount,
@@ -68,11 +80,29 @@ export function PayrollEmployeeView({ overview }: PayrollEmployeeViewProps) {
                   />
                   <span className="font-mono text-lg font-bold text-on-surface-variant">{salarySymbol}</span>
                 </div>
+                <div className="mt-2 flex flex-wrap items-center gap-3 font-mono text-[10px] font-black uppercase tracking-widest text-outline">
+                  <span>
+                    Underlying Balance:
+                    {' '}
+                    <span className="text-on-surface">{formatTokenAmount(employeeWithdraw.underlyingBalance)}</span>
+                    {' '}
+                    {underlyingTokenSymbol}
+                  </span>
+                  <span>Wallet: {overview.currentEmployee ? formatAddress(overview.currentEmployee.payoutWallet) : '-'}</span>
+                </div>
               </div>
 
               <div className="relative z-10 mt-auto flex flex-col gap-4 sm:flex-row">
-                <Button className="h-12 rounded bg-primary px-8 text-xs font-bold uppercase tracking-wide text-on-primary shadow-none hover:bg-primary-fixed hover:shadow-[0_0_20px_rgba(192,193,255,0.3)]">
-                  <LockOpenIcon className="size-5" />
+                <Button
+                  className="h-12 rounded bg-primary px-8 text-xs font-bold uppercase tracking-wide text-on-primary shadow-none hover:bg-primary-fixed hover:shadow-[0_0_20px_rgba(192,193,255,0.3)]"
+                  disabled={employeeWithdraw.isWithdrawingEncryptedSalary || !overview.employeeBalanceHandle || !employeeWithdraw.canUsePayoutWallet}
+                  onClick={() => {
+                    void employeeWithdraw.withdrawEncryptedSalary()
+                  }}
+                >
+                  {employeeWithdraw.isWithdrawingEncryptedSalary
+                    ? <AutorenewIcon className="size-5 animate-spin" />
+                    : <LockOpenIcon className="size-5" />}
                   Unwrap &amp; Withdraw
                 </Button>
                 <Button className="h-12 rounded border border-outline-variant/30 bg-surface-variant/50 px-8 text-xs font-bold uppercase tracking-wide text-on-surface shadow-none hover:bg-surface-variant" variant="outline">

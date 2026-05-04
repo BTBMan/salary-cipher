@@ -14,7 +14,7 @@ export default function PayrollHistoryPage() {
   return (
     <AppLayout>
       {selectedCompany?.role === RolesEnum.Employee
-        ? <PayrollEmployeeView overview={overview} />
+        ? <PayrollEmployeeView overview={overview} selectedCompany={selectedCompany} />
         : canManagePayroll(selectedCompany?.role) && selectedCompany
           ? <PayrollManagerView overview={overview} selectedCompany={selectedCompany} />
           : null}
