@@ -129,6 +129,7 @@ export default function DashboardPage() {
               <Button
                 variant="link"
                 className="text-primary text-xs font-bold uppercase tracking-widest hover:no-underline group p-0"
+                nativeButton={false}
                 render={(
                   <Link href="/payroll">
                     View Full Ledger <ArrowForwardIcon className="size-3.5 ml-1.5 group-hover:translate-x-1 transition-transform" />
