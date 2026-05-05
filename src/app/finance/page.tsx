@@ -1,5 +1,6 @@
 'use client'
 
+import type { StatusLabelStatus } from '@/components/status-label'
 import type { FinanceTransactionRow } from '@/hooks'
 import { useMemo, useState } from 'react'
 import {
@@ -71,7 +72,7 @@ function getTransactionMeta(type: FinanceTransactionRow['type']) {
         icon: AccountBalanceWalletIcon,
         iconColor: 'text-primary',
         label: 'Vault Deposit',
-        status: 'Deposited',
+        status: 'Deposited' as StatusLabelStatus,
       }
     case 'wrap':
       return {
@@ -79,7 +80,7 @@ function getTransactionMeta(type: FinanceTransactionRow['type']) {
         icon: ShieldLockIcon,
         iconColor: 'text-tertiary',
         label: 'Confidential Wrap',
-        status: 'Confirmed',
+        status: 'Confirmed' as StatusLabelStatus,
       }
     case 'payroll':
       return {
@@ -87,7 +88,7 @@ function getTransactionMeta(type: FinanceTransactionRow['type']) {
         icon: PaymentsIcon,
         iconColor: 'text-tertiary',
         label: 'Payroll Execution',
-        status: 'Settled',
+        status: 'Settled' as StatusLabelStatus,
       }
     case 'refund-request':
       return {
@@ -95,7 +96,7 @@ function getTransactionMeta(type: FinanceTransactionRow['type']) {
         icon: ArrowUpwardIcon,
         iconColor: 'text-primary',
         label: 'Withdraw Request',
-        status: 'Requested',
+        status: 'Requested' as StatusLabelStatus,
       }
   }
 }
