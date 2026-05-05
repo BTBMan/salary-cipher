@@ -39,6 +39,8 @@ contract SalaryCipherCore is ISalaryCipherCore, ZamaEthereumConfig {
     ICompanyRegistry public immutable companyRegistry;
     // Contract allowed to request encrypted salary condition checks.
     address public salaryProofAddress;
+    // Contract allowed to apply encrypted salary adjustment results.
+    address public salaryNegotiationAddress;
 
     // Encrypted monthly salary stored per company member.
     mapping(uint256 companyId => mapping(address account => euint128 salary))
@@ -77,6 +79,14 @@ contract SalaryCipherCore is ISalaryCipherCore, ZamaEthereumConfig {
     modifier onlySalaryProof() {
         if (msg.sender != salaryProofAddress) {
             revert SalaryCipherCore__OnlySalaryProof();
+        }
+        _;
+    }
+
+    /// @notice Restricts execution to the configured SalaryNegotiation contract.
+    modifier onlySalaryNegotiation() {
+        if (msg.sender != salaryNegotiationAddress) {
+            revert SalaryCipherCore__OnlySalaryNegotiation();
         }
         _;
     }
@@ -128,12 +138,42 @@ contract SalaryCipherCore is ISalaryCipherCore, ZamaEthereumConfig {
     }
 
     /// @inheritdoc ISalaryCipherCore
-    function executePayroll(uint256 companyId) external onlyOwnerOrHR(companyId) {
+    function setNegotiatedSalary(
+        uint256 companyId,
+        address employee,
+        euint128 negotiatedSalary
+    ) external onlySalaryNegotiation {
+        _requireActiveEmployee(companyId, employee);
+        if (!FHE.isInitialized(negotiatedSalary)) {
+            revert SalaryCipherCore__SalaryNotSet();
+        }
+
+        monthlySalary[companyId][employee] = negotiatedSalary;
+
+        if (startDate[companyId][employee] == 0) {
+            // Negotiated salary application is still a normal salary update,
+            // so payroll eligibility remains anchored to the registry join time.
+            startDate[companyId][employee] = companyRegistry
+                .getEmployee(companyId, employee)
+                .addedAt;
+        }
+
+        _grantSalaryAccess(companyId, employee);
+
+        emit SalarySet(companyId, employee);
+    }
+
+    /// @inheritdoc ISalaryCipherCore
+    function executePayroll(
+        uint256 companyId
+    ) external onlyOwnerOrHR(companyId) {
         _executePayroll(companyId, false);
     }
 
     /// @inheritdoc ISalaryCipherCore
-    function executePayrollNow(uint256 companyId) external onlyOwnerOrHR(companyId) {
+    function executePayrollNow(
+        uint256 companyId
+    ) external onlyOwnerOrHR(companyId) {
         _executePayroll(companyId, true);
     }
 
@@ -193,16 +233,14 @@ contract SalaryCipherCore is ISalaryCipherCore, ZamaEthereumConfig {
         uint64 latestDuePayrollDate = currentTimestamp >=
             currentMonthPayrollDate
             ? currentMonthPayrollDate
-            : _previousPayrollDate(
-                currentMonthPayrollDate,
-                dayOfMonth
-        );
+            : _previousPayrollDate(currentMonthPayrollDate, dayOfMonth);
         uint64 previousPaidAt = lastPayrollTime[companyId];
         if (previousPaidAt == 0) {
             // The first payroll target is the first configured payroll date on
             // or after company creation, so late first execution can catch up
             // every scheduled payroll instead of skipping old dates.
-            plan.nextPayrollDateToSettle = _firstPayrollDateOnOrAfterCompanyStart(
+            plan
+                .nextPayrollDateToSettle = _firstPayrollDateOnOrAfterCompanyStart(
                 companyId,
                 dayOfMonth
             );
@@ -315,12 +353,7 @@ contract SalaryCipherCore is ISalaryCipherCore, ZamaEthereumConfig {
             _floorToDay(_blockTimestamp())
         );
 
-        _transferPayroll(
-            companyId,
-            treasuryVault,
-            employee,
-            terminationPayout
-        );
+        _transferPayroll(companyId, treasuryVault, employee, terminationPayout);
 
         monthlySalary[companyId][employee] = FHE.asEuint128(0);
         startDate[companyId][employee] = 0;
@@ -467,6 +500,19 @@ contract SalaryCipherCore is ISalaryCipherCore, ZamaEthereumConfig {
         emit SalaryProofAddressSet(salaryProof);
     }
 
+    /// @inheritdoc ISalaryCipherCore
+    function setSalaryNegotiationAddress(
+        address salaryNegotiation
+    ) external onlyAdmin {
+        if (salaryNegotiation == address(0)) {
+            revert SalaryCipherCore__InvalidAddress();
+        }
+
+        salaryNegotiationAddress = salaryNegotiation;
+
+        emit SalaryNegotiationAddressSet(salaryNegotiation);
+    }
+
     /// @dev Uses the registry getter as the single source of company existence validation.
     function _requireCompanyExists(uint256 companyId) private view {
         companyRegistry.getEmployeeCount(companyId);
@@ -546,13 +592,19 @@ contract SalaryCipherCore is ISalaryCipherCore, ZamaEthereumConfig {
         uint64 payrollDate = nextPayrollDateToSettle;
         while (payrollDate <= latestDuePayrollDate) {
             // Example: a May 15 payroll settles Apr 1 through Apr 30.
-            (uint64 periodStart, uint64 periodEnd) = _previousCalendarMonthRange(
-                payrollDate
-            );
+            (
+                uint64 periodStart,
+                uint64 periodEnd
+            ) = _previousCalendarMonthRange(payrollDate);
 
             totalPayout = FHE.add(
                 totalPayout,
-                _calculatePeriodPayout(companyId, employee, periodStart, periodEnd)
+                _calculatePeriodPayout(
+                    companyId,
+                    employee,
+                    periodStart,
+                    periodEnd
+                )
             );
 
             payrollDate = _nextPayrollDate(payrollDate, dayOfMonth);

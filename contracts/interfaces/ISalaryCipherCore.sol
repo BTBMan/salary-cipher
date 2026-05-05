@@ -57,6 +57,8 @@ interface ISalaryCipherCore {
     event AuditFinalized(uint256 indexed companyId, uint256 indexed auditId);
     /// @notice Emitted when the authorized SalaryProof contract is configured.
     event SalaryProofAddressSet(address indexed salaryProof);
+    /// @notice Emitted when the authorized SalaryNegotiation contract is configured.
+    event SalaryNegotiationAddressSet(address indexed salaryNegotiation);
 
     ////////////////////////////////////
     // Errors                         //
@@ -64,6 +66,7 @@ interface ISalaryCipherCore {
     error SalaryCipherCore__Unauthorized();
     error SalaryCipherCore__OnlyAdmin();
     error SalaryCipherCore__OnlySalaryProof();
+    error SalaryCipherCore__OnlySalaryNegotiation();
     error SalaryCipherCore__InvalidAddress();
     error SalaryCipherCore__SalaryNotSet();
     error SalaryCipherCore__AuditDoesNotExist();
@@ -88,6 +91,13 @@ interface ISalaryCipherCore {
         address employee,
         externalEuint128 encryptedSalary,
         bytes calldata inputProof
+    ) external;
+
+    /// @notice Stores a matched salary adjustment produced by SalaryNegotiation.
+    function setNegotiatedSalary(
+        uint256 companyId,
+        address employee,
+        euint128 negotiatedSalary
     ) external;
 
     /// @notice Executes payroll for the company and immediately transfers confidential salary funds.
@@ -120,6 +130,9 @@ interface ISalaryCipherCore {
 
     /// @notice Sets the contract allowed to request salary condition checks.
     function setSalaryProofAddress(address salaryProof) external;
+
+    /// @notice Sets the contract allowed to apply encrypted salary negotiation results.
+    function setSalaryNegotiationAddress(address salaryNegotiation) external;
 
     ////////////////////////////////////
     // Getter functions               //

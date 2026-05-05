@@ -23,7 +23,7 @@
 - **全局单例合约**，用 `companyId` 命名空间隔离数据（而不是每家公司部署一套合约，否则 Gas 成本和管理复杂度都很高）
 - **职责单一**，每个合约只做一件事
 - **访问控制集中**，所有合约的权限校验都指向同一个 CompanyRegistry
-- **消除跨合约 FHE 共享**，操作相同加密数据的逻辑合并到同一合约内
+- **减少跨合约 FHE 共享**，操作相同加密数据的逻辑尽量合并到同一合约内；需要跨合约流转时只传递明确授权的结果值
 
 ---
 
@@ -37,7 +37,7 @@
 | ------------------- | ------ | ---------------- | ----------------------------------------- |
 | 薪资金额            | 高     | 链上（FHE 加密） | 核心隐私数据，必须加密上链                |
 | 接收钱包地址        | 低     | 链上明文         | V2 改为明文 address（提取时链上本就可见） |
-| 谈判报价            | 高     | 链上（FHE 加密） | 核心隐私数据，必须加密上链                |
+| 调薪谈判报价        | 高     | 链上（FHE 加密） | 已入职员工调薪时的核心隐私数据，必须加密上链 |
 | 公司名称            | 低     | 链上明文         | 数据量小，不敏感，直接存链上              |
 | 员工显示名称        | 低     | 链上明文         | 数据量小，不敏感，直接存链上              |
 | 公司 Logo           | 低     | IPFS             | 图片文件大，存链上 Gas 费极高             |
@@ -200,6 +200,11 @@ modifier：
     → onlyOwnerOrHR
     → TFHE.allow(monthlySalary, [employee, owner, hr, salaryCipherCore, salaryProofAddr])
 
+  setNegotiatedSalary(companyId, employee, euint128 negotiatedSalary)
+    → onlySalaryNegotiation
+    → 仅用于匹配成功后的调薪谈判结果应用
+    → 写入新的 monthlySalary，并刷新员工 / Owner / HR 解密权限
+
   // --- 发薪 ---
   executePayroll(companyId)
     → onlyOwner
@@ -283,9 +288,11 @@ Events：
 
 ---
 
-### 4. `SalaryNegotiation.sol` — 谈判撮合
+### 4. `SalaryNegotiation.sol` — 已入职员工调薪谈判
 
-其 FHE 数据（employer budget, employee expectation）与薪资数据完全独立，无需合并。
+用于已入职员工的加密调薪谈判。员工必须已经存在于公司内，并且已经配置过当前月薪；该合约不用于新员工入职前 offer。Owner 和员工本人都可以发起谈判，区别只在于谁先提交加密报价。
+
+谈判数据独立存储，但匹配成功后可以通过 `SalaryCipherCore.setNegotiatedSalary()` 将匹配结果应用为员工新的正式月薪。
 
 ```
 存储：
@@ -293,40 +300,76 @@ Events：
   negotiationId → Negotiation {
     companyId,
     employeeAddr,
-    euint256 employerBudget,
-    euint256 employeeExpectation,
+    address  initiator,
+    uint256  currentRound,
+    Status:  Open / WaitingEmployerOffer / WaitingEmployeeAsk / ReadyToMatch / Computed / Applied / Cancelled,
+    uint64   createdAt,
+    uint64   updatedAt
+  }
+  negotiationId → round → NegotiationRound {
+    euint128 employerOffer,
+    euint128 employeeAsk,
+    euint128 finalSalary,
     ebool    matched,
-    Status:  Open / BothSubmitted / Matched / NoMatch,   // 细化状态
-    uint256  round,                                       // 轮次
-    uint256  createdAt
+    bool     hasEmployerOffer,
+    bool     hasEmployeeAsk,
+    uint64   createdAt,
+    uint64   resolvedAt
   }
   companyId → employee → uint256[] negotiationHistory    // 历史记录
+  companyId → employee → uint256 activeNegotiationId     // 防止同一员工并发调薪
 
 核心函数：
   createNegotiation(companyId, employeeAddr) → negotiationId
-    → onlyOwnerOrHR
-  submitEmployerBudget(negotiationId, einput budget, inputProof)
-    → onlyOwnerOrHR
-  submitEmployeeExpectation(negotiationId, einput expectation, inputProof)
+    → Owner 可为任意 HR / Employee 创建
+    → 指定 employee 本人可为自己创建
+    → employee 必须是已存在的 HR / Employee，不能是 Owner
+    → employee 必须已有月薪
+    → 同一员工不能存在未结束的 active negotiation
+  submitEmployerOffer(negotiationId, einput offer, inputProof)
+    → onlyOwner
+    → 写入公司愿意调整到的新月薪
+  submitEmployeeAsk(negotiationId, einput ask, inputProof)
     → 仅指定 employee
+    → 写入员工希望调整到的新月薪
   computeMatch(negotiationId)
-    → 要求 status == BothSubmitted
-    → matched = TFHE.le(employeeExpectation, employerBudget)
-    → TFHE.allow(matched, [employer, employee])
-    → 更新 status 为 Matched 或 NoMatch
+    → 要求 status == ReadyToMatch
+    → matched = TFHE.le(employeeAsk, employerOffer)
+    → finalSalary = employerOffer
+    → TFHE.allow(matched, [owner, employee])
+    → TFHE.allow(finalSalary, [owner, employee, SalaryCipherCore])
+    → 更新 status 为 Computed
+    → Match / No Match 由双方解密 matched 得到，不作为公开链上状态
+  applyMatchedSalary(negotiationId)
+    → onlyOwner
+    → 要求 status == Computed
+    → 前端应只在 Owner 解密 matched == true 后展示该操作
+    → 调用 SalaryCipherCore.setNegotiatedSalary(companyId, employee, finalSalary)
+    → status → Applied
   newRound(negotiationId)
-    → 清空双方报价，round++，status → Open
+    → onlyOwner 或指定 employee
+    → 要求 status == Computed
+    → 前端应只在双方解密 matched == false 后展示该操作
+    → currentRound++，status → Open
+  cancelNegotiation(negotiationId)
+    → Owner 可取消任意未 Applied 谈判
+    → 指定 employee 只能取消自己发起且未 Applied 的谈判
+    → status → Cancelled
 
 Events：
-  NegotiationCreated(negotiationId, companyId, employee)
-  BudgetSubmitted(negotiationId)
-  ExpectationSubmitted(negotiationId)
-  MatchComputed(negotiationId)
+  NegotiationCreated(negotiationId, companyId, employee, initiator)
+  EmployerOfferSubmitted(negotiationId, round)
+  EmployeeAskSubmitted(negotiationId, round)
+  MatchComputed(negotiationId, round)
+  NegotiatedSalaryApplied(negotiationId, companyId, employee)
   NewRoundStarted(negotiationId, round)
+  NegotiationCancelled(negotiationId)
 
 解密权限：
-  matched（ebool）：双方各自可解密
-  原始报价：        永不对任何人开放解密
+  employerOffer：原始公司报价，不开放给任何外部账户解密
+  employeeAsk：   原始员工要价，不开放给任何外部账户解密
+  matched：       Owner 与指定 employee 可解密
+  finalSalary：   匹配成功后的新月薪候选值，Owner 与指定 employee 可解密，并授权 SalaryCipherCore 应用
 ```
 
 ---
@@ -415,9 +458,10 @@ Events：
 | 审计薪资总额     | SalaryCipherCore     | `euint256` | Owner only                           |
 | 审计差距结论     | SalaryCipherCore     | `ebool`    | Owner + HR                           |
 | 公司结算资产余额 | CompanyTreasuryVault | `euint256` | Owner + HR                           |
-| 雇主预算上限     | SalaryNegotiation    | `euint256` | 合约内部，不对外开放                 |
-| 员工期望薪资     | SalaryNegotiation    | `euint256` | 合约内部，不对外开放                 |
-| 谈判匹配结果     | SalaryNegotiation    | `ebool`    | 双方各自可解密                       |
+| 公司调薪报价     | SalaryNegotiation    | `euint128` | 合约内部，不对外开放                 |
+| 员工调薪要价     | SalaryNegotiation    | `euint128` | 合约内部，不对外开放                 |
+| 谈判匹配结果     | SalaryNegotiation    | `ebool`    | Owner + 指定 employee                |
+| 匹配后的新月薪   | SalaryNegotiation    | `euint128` | 本人 + Owner + SalaryCipherCore      |
 | 证明比较结果     | SalaryProof          | `ebool`    | 本人 + 授权第三方                    |
 
 **FHE 加密字段已从“待领取账本模型”切换为“真实资产转账模型”：工资在发薪时直接到账，不再额外维护 pendingPayout。**
@@ -442,13 +486,26 @@ Employee → 直接收到 confidential token
 ### 谈判流程
 
 ```
-Owner    → SalaryNegotiation.createNegotiation()
-Owner    → SalaryNegotiation.submitEmployerBudget()
-Employee → SalaryNegotiation.submitEmployeeExpectation()
-任意方   → SalaryNegotiation.computeMatch()
-双方     → 各自解密 matched（ebool），只看到 true / false
-           ↓ 如不匹配
-Owner    → SalaryNegotiation.newRound()                       // 开新轮次
+Owner 发起：
+  Owner    → SalaryNegotiation.createNegotiation(employee)
+  Owner    → SalaryNegotiation.submitEmployerOffer()           // 公司愿意调整到的新月薪
+  Employee → SalaryNegotiation.submitEmployeeAsk()             // 员工希望调整到的新月薪
+
+员工发起：
+  Employee → SalaryNegotiation.createNegotiation(self)
+  Employee → SalaryNegotiation.submitEmployeeAsk()
+  Owner    → SalaryNegotiation.submitEmployerOffer()
+
+双方都提交后：
+  任意方   → SalaryNegotiation.computeMatch()
+  链上状态 → Computed
+  双方     → 各自解密 matched（ebool），只看到 Match / No Match
+             ↓ 如匹配
+  Owner    → SalaryNegotiation.applyMatchedSalary()
+             ↓
+  SalaryNegotiation → SalaryCipherCore.setNegotiatedSalary()
+             ↓ 如不匹配
+  Owner 或 Employee → SalaryNegotiation.newRound()
 ```
 
 ### 薪资证明流程
@@ -506,7 +563,7 @@ Owner/HR → 解密 gapWithinThreshold（ebool），只看到 true / false
       ↓
 4. ERC7984 / ERC7984Wrapper
       ↓
-5. SalaryNegotiation       （依赖 CompanyRegistry）
+5. SalaryNegotiation       （依赖 CompanyRegistry + SalaryCipherCore）
 6. ProofNFT                （无依赖）
       ↓
 7. SalaryProof             （依赖 CompanyRegistry + SalaryCipherCore + ProofNFT）
@@ -523,7 +580,7 @@ Owner/HR → 解密 gapWithinThreshold（ebool），只看到 true / false
 | `CompanyRegistry`      | P0     | 所有合约的权限基础，必须最先完成               |
 | `SalaryCipherCore`     | P0     | 核心业务逻辑，负责薪资计算、真实发薪调度、审计 |
 | `CompanyTreasuryVault` | P0     | 真实资产转账入口，负责资金托管和发薪执行       |
-| `SalaryNegotiation`    | P1     | FHE 双向加密撮合，评审亮点                     |
+| `SalaryNegotiation`    | P1     | 已入职员工加密调薪谈判，匹配成功后可更新正式月薪 |
 | `SalaryProof`          | P1     | RWA 叙事亮点                                   |
 | `ProofNFT`             | P1     | NFT 铸造，依赖 SalaryProof                     |
 
