@@ -12,7 +12,6 @@
     "hardhat.config.ts",
     "ignition/**/*.ts",
     "test/**/*.ts",
-    "utils/**/*.ts",
     "artifacts/**/*"
   ],
   "exclude": ["node_modules"]

@@ -28,7 +28,7 @@ export function PayrollEmployeeView({ overview, selectedCompany }: PayrollEmploy
   const balanceShare = getBalanceShare(overview.employeeConfidentialBalance, overview.employeeTotalReceived)
   const employeeWithdraw = useEmployeePayrollWithdraw({
     encryptedBalanceHandle: overview.employeeBalanceHandle,
-    onWithdrawn: overview.refetchBalanceHandle,
+    onWithdrawnAction: overview.refetchBalanceHandle,
     payoutWallet: overview.currentEmployee?.payoutWallet,
     selectedCompany,
     selectedSettlementAsset: overview.selectedSettlementAsset,

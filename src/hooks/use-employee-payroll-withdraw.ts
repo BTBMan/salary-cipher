@@ -86,13 +86,13 @@ function getUnwrapRequestData(receipt: TransactionReceipt, settlementToken: Addr
 
 export function useEmployeePayrollWithdraw({
   encryptedBalanceHandle,
-  onWithdrawn,
+  onWithdrawnAction,
   payoutWallet,
   selectedCompany,
   selectedSettlementAsset,
 }: {
   encryptedBalanceHandle: Hex | null
-  onWithdrawn?: () => Promise<void> | void
+  onWithdrawnAction?: () => Promise<any>
   payoutWallet: Address | null | undefined
   selectedCompany: CompanySummary | null
   selectedSettlementAsset: SettlementAssetOption | null | undefined
@@ -230,7 +230,7 @@ export function useEmployeePayrollWithdraw({
 
       await Promise.all([
         refetchUnderlyingBalance(),
-        onWithdrawn?.(),
+        onWithdrawnAction?.(),
       ])
       toast.success('Encrypted salary withdrawn.')
       return true
@@ -249,7 +249,7 @@ export function useEmployeePayrollWithdraw({
     encryptedBalanceHandle,
     instance,
     mutateAsync,
-    onWithdrawn,
+    onWithdrawnAction,
     payoutWallet,
     refetchUnderlyingBalance,
     selectedCompany,

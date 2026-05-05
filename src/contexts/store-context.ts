@@ -1,6 +1,7 @@
 'use client'
 
 import type { RolesEnum, SettlementAssetEnum } from '@/enums'
+import type { Address } from 'viem'
 import { createContext } from 'react'
 
 export interface CreateCompanyInput {
@@ -29,7 +30,7 @@ export interface SettlementAssetOption {
   symbol: string
   decimals: number
   underlyingToken: string
-  settlementToken: string
+  settlementToken: Address
 }
 
 export interface StoreContextState {
