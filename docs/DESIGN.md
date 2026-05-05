@@ -24,6 +24,7 @@
 Button（Primary / Secondary / Ghost / Danger，含 loading 态）、Input（含加密标识变体：紫色左边框 + 锁图标前缀）、Badge、Avatar（钱包地址自动生成 Jazzicon）、Tag（角色色：Owner 金 / HR 蓝 / Employee 灰）、Tooltip、Toast（右上角，success/error/warning/info）、Divider
 
 **复合组件：**
+
 - **EncryptedField**（核心）：默认显示 `••••••` + 锁图标 + 紫色背景，点击眼睛图标触发钱包签名，签名成功后展示明文并倒计时自动遮蔽，可手动提前遮蔽
 - **WalletAddress**：缩略格式 `0x1234...5678`，等宽字体，右侧一键复制
 - **TokenAmount**：带 token 图标，支持加密态和明文态
@@ -89,10 +90,12 @@ Button（Primary / Secondary / Ghost / Danger，含 loading 态）、Input（含
 ### 四、主应用布局（所有功能页共用）
 
 **Topbar（顶部固定，高60px）：**
+
 - 左侧：**CompanySwitcher 组件** —— 显示当前公司 Avatar + 公司名 + 我的角色 Tag + 下拉箭头，点击展开下拉列表，列出所有公司（含角色标记），点击切换公司，切换后全局数据刷新、菜单根据新角色重新渲染；列表底部有「+ Create Company」选项
 - 右侧：网络标识 Badge + 钱包 Avatar + 地址缩略
 
 **Sidebar（左侧固定，宽220px）：**
+
 - 顶部：SalaryCipher Logo
 - 导航菜单（图标 + 文字，含 active/hover 状态）：
   - 概览 Overview（所有角色可见）
@@ -112,12 +115,14 @@ Button（Primary / Secondary / Ghost / Danger，含 loading 态）、Input（含
 **所有角色可见，数据按角色过滤。**
 
 顶部 4 个统计卡片（一行）：
+
 - Owner/HR：管理员工数 / 本期应发总额（EncryptedField）/ 资金池剩余天数 / 下次发薪日倒计时
 - Employee：我的月薪（EncryptedField）/ 累计待发（EncryptedField）/ 累计已收（EncryptedField）/ 下次发薪日倒计时
 
 中部左列（60%）：最近薪资记录表，列含发放时间 / 金额（EncryptedField）/ 状态 Badge，底部「查看全部」跳转发薪记录页。
 
 中部右列（40%）：
+
 - Owner/HR：资金池健康度卡片（余额 EncryptedField + 可撑月数 + 颜色进度条）+ 待处理事项（资金不足警告 / 待确认谈判）
 - Employee：薪资证明快捷入口卡片 + 最近生成的证明列表
 
@@ -128,10 +133,12 @@ Button（Primary / Secondary / Ghost / Danger，含 loading 态）、Input（含
 **Owner/HR：完整管理权限。Employee：只读，看不到他人薪资。**
 
 **页面顶部操作栏：**
+
 - 搜索框（按姓名 / 钱包地址）
 - 「+ Add Employee」按钮（Owner/HR 可见）
 
 **员工列表（DataTable）：**
+
 - 员工（Avatar + 钱包地址缩略）
 - 角色 Tag
 - 月薪（Owner/HR 显示 EncryptedField；Employee 自己行显示 EncryptedField，他人行显示「—」）
@@ -141,11 +148,12 @@ Button（Primary / Secondary / Ghost / Danger，含 loading 态）、Input（含
 - 操作列（Owner/HR 可见）：Edit 图标 + Remove 图标
 
 **「Add Employee」弹出 StepModal（md，2步）：**
+
 - Step 1：钱包地址输入（必填，格式校验）/ 角色选择（Employee / HR）/ 月薪（必填，带加密标识 Input）/ 薪资接收钱包（选填，带加密标识 Input，placeholder 提示「默认同员工地址」）
 - Step 2：信息确认 + 「Add & Sign」按钮，触发钱包签名，签名中按钮 loading，签名完成关闭 Modal 并 toast 提示
 
 **「Edit Employee」弹出 Modal（md）：**
-预填当前值，月薪字段显示 EncryptedField，点击「解密编辑」先触发签名解密再输入新值，保存触发签名。
+预填当前值，只允许修改显示名称和角色。月薪字段只读展示，提示「Salary changes require negotiation」。月薪不能在员工编辑弹窗中直接修改。
 
 **「Remove Employee」点击 Remove 图标：**
 弹出 ConfirmModal（danger），标题「Remove Employee」，说明「本期累计薪资将立即发放」，显示结算金额（EncryptedField），「Remove & Pay Out」按钮触发签名，取消按钮。
@@ -164,8 +172,9 @@ Sidebar 中 Payroll 为可展开父项，含三个子页：
 **Owner/HR 可完整操作；Employee 只读查看自己的设置。**
 
 页面分两区：
+
 - 左：发薪周期设置（Select：每月1日 / 每月15日 / 每两周）+ 「Save」按钮（Owner/HR 可操作，Employee 只读）
-- 右：员工薪资列表，聚焦薪资字段，Owner/HR 可直接点击 Edit 修改月薪
+- 右：员工薪资列表，月薪只读展示；调薪入口跳转到薪资谈判，不能直接 Edit 修改月薪
 
 #### 7.2 发薪记录
 
@@ -184,11 +193,13 @@ Owner/HR 视角表格底部显示期末汇总行：本期发放总额（Encrypte
 页面说明文字：「双方报价全程加密，合约自动匹配，仅告知结果。」
 
 **Owner/HR 视角：**
+
 - 待匹配员工列表：员工地址 / 状态（待员工报价 / 待雇主报价 / 已匹配 / 未匹配）/ 操作
 - 对每个员工可设置「预算上限」（带加密标识 Input）并提交签名
 - 已匹配行显示「✓ Match」绿色 Badge；未匹配显示「✗ No Match」红色 Badge
 
 **Employee 视角：**
+
 - 只看到自己的谈判状态卡片
 - 可提交「期望薪资」（带加密标识 Input）并签名
 - 状态显示：等待中 / 已匹配 / 未匹配（仅结论，无数字）
@@ -208,6 +219,7 @@ Sidebar 中 Compliance 为可展开父项，含两个子页：
 配置区（卡片）：选择分析维度（部门 / 入职年限 / 角色），「Generate Report」按钮触发签名，签名中显示「Computing on encrypted data...」loading 态。
 
 报告结果卡片（生成后展示）：
+
 - 各维度薪资分布区间描述（结论性文字，无具体数字）
 - 薪资差距指数结论（如「最高与最低比值在合理范围内」）
 - 生成时间 + 报告哈希（等宽字体）
@@ -222,6 +234,7 @@ Sidebar 中 Compliance 为可展开父项，含两个子页：
 页面说明：「生成链上隐私收入证明，无需暴露具体金额，可提交给租房 / 贷款 / DeFi 协议验证。」
 
 **Employee 视角 — 生成证明区（卡片）：**
+
 - 选择公司（如加入多家时显示 Dropdown）
 - 证明类型 Select：月薪超过 X / 月薪在 X~Y 之间 / 过去 N 月持续有收入
 - 阈值金额 Input
@@ -237,11 +250,13 @@ Sidebar 中 Compliance 为可展开父项，含两个子页：
 **仅 Owner 可见，菜单对 HR/Employee 不显示。**
 
 **左列：我的平台余额**
+
 - 当前加密余额（EncryptedField，大号展示）
 - 「Deposit」按钮：弹出 Modal，选择来源 Token（USDC / ETH），输入金额，预览获得的平台加密 Token 数，「Deposit & Encrypt」触发两步签名（Step 1/2 Approve → Step 2/2 Deposit），签名中按钮 loading + 步骤进度提示
 - 「Withdraw」按钮：弹出 Modal，选择目标 Token，输入金额，接收地址（默认当前钱包可修改），Warning Banner 提示「提取后金额链上可见，建议使用独立钱包」，「Withdraw & Sign」触发签名
 
 **右列：公司资金池**
+
 - Dropdown 选择公司（如有多个）
 - 当前资金池余额（EncryptedField）
 - 健康度进度条（绿 / 黄 / 红）+ 可撑月数文字
@@ -290,4 +305,4 @@ EncryptedField 自动遮蔽延迟（3s / 5s / 10s / 手动）
 
 ---
 
-*文档版本：v1.0 | 创建日期：2026-04-06*
+_文档版本：v1.0 | 创建日期：2026-04-06_

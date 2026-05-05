@@ -21,7 +21,7 @@ export interface AddCompanyEmployeeInput {
   monthlySalary: string
 }
 
-export type UpdateCompanyEmployeeInput = AddCompanyEmployeeInput
+export type UpdateCompanyEmployeeInput = Omit<AddCompanyEmployeeInput, 'monthlySalary'>
 
 export interface CompanyEmployee {
   account: Address
@@ -387,22 +387,14 @@ export function useCompanyEmployees(selectedCompany: CompanySummary | null) {
   }, [address, companyId, refetchEmployees, refreshCompanies, mutateAsync, waitForReceipt])
 
   const updateEmployee = useCallback(async (input: UpdateCompanyEmployeeInput) => {
-    if (!address || !companyId || !selectedSettlementAsset) {
-      toast.error('Wallet, company, or settlement asset is not ready.')
+    if (!address || !companyId) {
+      toast.error('Wallet or company is not ready.')
       return false
     }
 
     setIsUpdatingEmployee(true)
 
     try {
-      const salaryAmount = parseUnits(input.monthlySalary, selectedSettlementAsset.decimals)
-      const encryptedSalary = await encryptWith(builder => builder.add128(salaryAmount))
-
-      if (!encryptedSalary) {
-        toast.error('FHE encryption is not ready.')
-        return false
-      }
-
       const updateEmployeeHash = await mutateAsync({
         abi: CompanyRegistry.abi,
         address: CompanyRegistry.address,
@@ -411,20 +403,6 @@ export function useCompanyEmployees(selectedCompany: CompanySummary | null) {
         account: address,
       })
       await waitForReceipt(updateEmployeeHash)
-
-      const setSalaryHash = await mutateAsync({
-        abi: SalaryCipherCore.abi,
-        address: SalaryCipherCore.address,
-        functionName: 'setSalary',
-        args: [
-          companyId,
-          input.account,
-          toHex(encryptedSalary.handles[0]),
-          toHex(encryptedSalary.inputProof),
-        ],
-        account: address,
-      })
-      await waitForReceipt(setSalaryHash)
 
       await Promise.all([refetchEmployees(), refreshCompanies()])
       toast.success('Employee updated.')
@@ -442,10 +420,8 @@ export function useCompanyEmployees(selectedCompany: CompanySummary | null) {
   }, [
     address,
     companyId,
-    encryptWith,
     refetchEmployees,
     refreshCompanies,
-    selectedSettlementAsset,
     mutateAsync,
     waitForReceipt,
   ])

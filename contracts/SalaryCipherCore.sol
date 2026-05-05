@@ -120,7 +120,12 @@ contract SalaryCipherCore is ISalaryCipherCore, ZamaEthereumConfig {
         bytes calldata inputProof
     ) external onlyOwnerOrHR(companyId) {
         _requireActiveEmployee(companyId, employee);
+        if (FHE.isInitialized(monthlySalary[companyId][employee])) {
+            revert SalaryCipherCore__SalaryAlreadySet();
+        }
 
+        // Direct salary writes are limited to onboarding. Later salary changes
+        // must pass through SalaryNegotiation so both sides agree on-chain.
         euint128 salary = FHE.fromExternal(encryptedSalary, inputProof);
         monthlySalary[companyId][employee] = salary;
 

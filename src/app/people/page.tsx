@@ -1,5 +1,6 @@
 'use client'
 
+import type { AddEmployeeSubmitInput } from '@/components/dialogs/add-employee-dialog'
 import { useMemo, useState } from 'react'
 import {
   MdAutorenew as AutorenewIcon,
@@ -83,6 +84,22 @@ export default function PeoplePage() {
       )
     })
   }, [employees, searchQuery])
+  const handleSubmitEmployee = (input: AddEmployeeSubmitInput) => {
+    if (editingEmployee) {
+      return updateEmployee({
+        account: input.account,
+        displayName: input.displayName,
+        role: input.role,
+      })
+    }
+
+    return addEmployee({
+      account: input.account,
+      displayName: input.displayName,
+      monthlySalary: input.monthlySalary ?? '',
+      role: input.role,
+    })
+  }
 
   return (
     <AppLayout>
@@ -109,7 +126,7 @@ export default function PeoplePage() {
                   setEditingEmployee(null)
                 }
               }}
-              onSubmit={editingEmployee ? updateEmployee : addEmployee}
+              onSubmit={handleSubmitEmployee}
             />
           )}
         </div>

@@ -378,5 +378,43 @@ for (const assetCase of assetCases) {
       expect(await salaryCipherCore.read.startDate([companyId, employee.account.address])).to.equal(0n)
       expect(await salaryCipherCore.read.lastPayrollTime([companyId])).to.equal(0n)
     })
+
   })
 }
+
+describe('salaryCipherCore salary update guard', () => {
+  it('rejects direct salary reset after the initial encrypted salary is stored', async () => {
+    const { companyRegistry, salaryCipherCore, owner, employee, publicClient, companyId }
+      = await loadFixture(createSalaryCipherCompanyFixture)
+
+    const addEmployeeHash = await companyRegistry.write.addEmployee(
+      [companyId, employee.account.address, RolesEnum.Employee, 'Alice'],
+      { account: owner.account },
+    )
+    await publicClient.waitForTransactionReceipt({ hash: addEmployeeHash })
+
+    const [initialSalaryHandle, initialSalaryProof] = await encryptUint128(
+      salaryCipherCore.address,
+      owner.account.address,
+      500_000,
+    )
+    const setSalaryHash = await salaryCipherCore.write.setSalary(
+      [companyId, employee.account.address, initialSalaryHandle, initialSalaryProof],
+      { account: owner.account },
+    )
+    await publicClient.waitForTransactionReceipt({ hash: setSalaryHash })
+
+    const [updatedSalaryHandle, updatedSalaryProof] = await encryptUint128(
+      salaryCipherCore.address,
+      owner.account.address,
+      700_000,
+    )
+
+    await expect(
+      salaryCipherCore.write.setSalary(
+        [companyId, employee.account.address, updatedSalaryHandle, updatedSalaryProof],
+        { account: owner.account },
+      ),
+    ).to.be.rejectedWith(customErrorPattern('SalaryCipherCore__SalaryAlreadySet'))
+  })
+})

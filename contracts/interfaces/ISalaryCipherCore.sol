@@ -69,6 +69,7 @@ interface ISalaryCipherCore {
     error SalaryCipherCore__OnlySalaryNegotiation();
     error SalaryCipherCore__InvalidAddress();
     error SalaryCipherCore__SalaryNotSet();
+    error SalaryCipherCore__SalaryAlreadySet();
     error SalaryCipherCore__AuditDoesNotExist();
     error SalaryCipherCore__PayrollConfigNotSet();
     error SalaryCipherCore__PayrollNotDue();
@@ -85,7 +86,8 @@ interface ISalaryCipherCore {
     ////////////////////////////////////
     // Functions                      //
     ////////////////////////////////////
-    /// @notice Stores an employee's encrypted monthly salary and refreshes FHE access.
+    /// @notice Stores an employee's initial encrypted monthly salary and refreshes FHE access.
+    /// @dev Existing salaries can only be changed through SalaryNegotiation.
     function setSalary(
         uint256 companyId,
         address employee,

@@ -198,6 +198,9 @@ modifier：
   // --- 薪资管理 ---
   setSalary(companyId, employee, einputEncryptedSalary, inputProof)
     → onlyOwnerOrHR
+    → 仅用于员工入职后的初始月薪写入
+    → 如果 monthlySalary 已存在则 revert SalaryAlreadySet
+    → 后续月薪调整必须走 SalaryNegotiation.setNegotiatedSalary()
     → TFHE.allow(monthlySalary, [employee, owner, hr, salaryCipherCore, salaryProofAddr])
 
   setNegotiatedSalary(companyId, employee, euint128 negotiatedSalary)
@@ -476,6 +479,7 @@ Events：
 Owner → CompanyTreasuryVault.depositUnderlying()
 Owner → CompanyTreasuryVault.wrapUnderlying()
 Owner/HR → SalaryCipherCore.setSalary()（逐个员工）
+             ↓ setSalary 只允许设置初始月薪
 Owner → SalaryCipherCore.executePayroll(companyId)
              ↓ 内部读取 payoutWallet
              ↓ 内部计算每位员工本期应发金额

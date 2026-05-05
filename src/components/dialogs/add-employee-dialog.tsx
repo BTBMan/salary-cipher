@@ -36,7 +36,7 @@ import { cn } from '@/utils'
 export interface AddEmployeeSubmitInput {
   account: Address
   displayName: string
-  monthlySalary: string
+  monthlySalary?: string
   role: AssignableCompanyRole
 }
 
@@ -87,6 +87,10 @@ const addEmployeeSchema = z.object({
   wallet: z.string().trim().min(1, 'Wallet address is required.').refine(value => isAddress(value), 'Wallet address is invalid.'),
 })
 
+const editEmployeeSchema = addEmployeeSchema.omit({ salary: true }).extend({
+  salary: z.string(),
+})
+
 export function AddEmployeeDialog({
   canEncryptSalary,
   initialValues,
@@ -125,7 +129,7 @@ export function AddEmployeeDialog({
   }
 
   const validateDraft = () => {
-    const parsedForm = addEmployeeSchema.safeParse(draft)
+    const parsedForm = (isEditMode ? editEmployeeSchema : addEmployeeSchema).safeParse(draft)
 
     if (parsedForm.success) {
       setFormErrors({})
@@ -150,7 +154,7 @@ export function AddEmployeeDialog({
           render={(
             <Button
               className="primary-gradient text-on-primary-container px-6 py-6 rounded-sm text-sm flex items-center justify-center gap-2 shadow-lg shadow-primary/20 hover:opacity-90 active:scale-95 border-none"
-              disabled={!canEncryptSalary}
+              disabled={!isEditMode && !canEncryptSalary}
             >
               <PersonAddIcon className="size-5" />
               + Add Employee
@@ -165,7 +169,9 @@ export function AddEmployeeDialog({
             <div>
               <h2 className="text-xl font-heading font-bold text-foreground">{isEditMode ? 'Edit Employee' : 'Add New Employee'}</h2>
               <p className="text-sm text-on-surface-variant mt-1">
-                {step === 1 ? 'Step 1 of 2: Identity & Compensation' : 'Step 2 of 2: Confirm encrypted payload'}
+                {step === 1
+                  ? `Step 1 of 2: ${isEditMode ? 'Identity & Role' : 'Identity & Compensation'}`
+                  : `Step 2 of 2: ${isEditMode ? 'Confirm employee metadata' : 'Confirm encrypted payload'}`}
               </p>
             </div>
           </div>
@@ -267,31 +273,33 @@ export function AddEmployeeDialog({
                         </SelectContent>
                       </Select>
                     </div>
-                    <div className="space-y-2">
-                      <label className="text-[10px] font-bold uppercase tracking-widest text-on-surface-variant">
-                        Monthly Salary ({salarySymbol})
-                      </label>
-                      <div className="relative">
-                        <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                          <LockIcon className="size-4 text-tertiary fill-current" />
+                    {!isEditMode && (
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-bold uppercase tracking-widest text-on-surface-variant">
+                          Monthly Salary ({salarySymbol})
+                        </label>
+                        <div className="relative">
+                          <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                            <LockIcon className="size-4 text-tertiary fill-current" />
+                          </div>
+                          <Input
+                            className="h-12 rounded-lg border-none bg-surface-container-lowest pl-11 pr-24 font-mono text-sm focus-visible:ring-tertiary/30"
+                            min="0"
+                            placeholder="0.00"
+                            step="0.01"
+                            type="number"
+                            value={draft.salary}
+                            onChange={event => updateDraft('salary', event.target.value)}
+                          />
+                          <div className="absolute inset-y-0 right-0 pr-4 flex items-center pointer-events-none">
+                            <span className="text-[9px] font-black text-tertiary/60 uppercase tracking-tighter">FHE ENCRYPTED</span>
+                          </div>
                         </div>
-                        <Input
-                          className="h-12 rounded-lg border-none bg-surface-container-lowest pl-11 pr-24 font-mono text-sm focus-visible:ring-tertiary/30"
-                          min="0"
-                          placeholder="0.00"
-                          step="0.01"
-                          type="number"
-                          value={draft.salary}
-                          onChange={event => updateDraft('salary', event.target.value)}
-                        />
-                        <div className="absolute inset-y-0 right-0 pr-4 flex items-center pointer-events-none">
-                          <span className="text-[9px] font-black text-tertiary/60 uppercase tracking-tighter">FHE ENCRYPTED</span>
-                        </div>
+                        {formErrors.salary && (
+                          <p className="text-xs text-destructive">{formErrors.salary}</p>
+                        )}
                       </div>
-                      {formErrors.salary && (
-                        <p className="text-xs text-destructive">{formErrors.salary}</p>
-                      )}
-                    </div>
+                    )}
                   </div>
                 </>
               )
@@ -305,7 +313,9 @@ export function AddEmployeeDialog({
                       <div>
                         <h3 className="font-heading text-sm font-bold text-on-surface">Review Employee Payload</h3>
                         <p className="mt-1 text-xs leading-5 text-on-surface-variant">
-                          Confirm the wallet, role and encrypted compensation details before submitting the {isEditMode ? 'update' : 'transaction'}.
+                          {isEditMode
+                            ? 'Confirm the wallet and role before submitting the employee metadata update.'
+                            : 'Confirm the wallet, role and encrypted compensation details before submitting the transaction.'}
                         </p>
                       </div>
                     </div>
@@ -329,10 +339,12 @@ export function AddEmployeeDialog({
                       </div>
                       <div className="rounded-lg bg-surface-container-lowest p-4">
                         <div className="mb-1 flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-outline">
-                          Monthly Salary
-                          <LockIcon className="size-3 text-tertiary fill-current" />
+                          {isEditMode ? 'Salary Changes' : 'Monthly Salary'}
+                          {!isEditMode && <LockIcon className="size-3 text-tertiary fill-current" />}
                         </div>
-                        <div className="font-mono text-sm font-bold text-tertiary">{draft.salary || '0.00'} {salarySymbol}</div>
+                        <div className="font-mono text-sm font-bold text-tertiary">
+                          {isEditMode ? 'Negotiation only' : `${draft.salary || '0.00'} ${salarySymbol}`}
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -340,7 +352,9 @@ export function AddEmployeeDialog({
                   <div className="flex items-center gap-2 rounded-lg border border-primary/10 bg-primary/10 px-4 py-3">
                     <SecurityIcon className="size-4 shrink-0 text-tertiary fill-current" />
                     <span className="text-xs font-medium leading-5 text-on-surface-variant">
-                      Salary value will be encrypted before it is stored or processed by payroll contracts.
+                      {isEditMode
+                        ? 'Monthly salary cannot be edited here. Salary changes must be negotiated and applied on-chain.'
+                        : 'Salary value will be encrypted before it is stored or processed by payroll contracts.'}
                     </span>
                   </div>
                 </div>
@@ -370,7 +384,7 @@ export function AddEmployeeDialog({
             <Button
               type="submit"
               className="primary-gradient text-on-primary-container text-sm h-12 px-8 rounded-sm shadow-lg shadow-primary/20 hover:shadow-primary/40 transition-all active:scale-95 flex items-center gap-2 border-none"
-              disabled={!canEncryptSalary || isSubmitting}
+              disabled={(!isEditMode && !canEncryptSalary) || isSubmitting}
             >
               <span>{step === 1 ? 'Continue' : (isSubmitting ? 'Submitting...' : (isEditMode ? 'Confirm & Save' : 'Confirm & Add'))}</span>
               {step === 1 ? <ArrowForwardIcon className="size-4" /> : <CheckCircleIcon className="size-4" />}

@@ -8,16 +8,16 @@
 
 ### 存储分层
 
-| 数据 | 敏感性 | 存储位置 | 说明 |
-|------|--------|----------|------|
-| 薪资金额 | 高 | 链上（FHE 加密） | 核心隐私数据，必须加密上链 |
-| 接收钱包地址 | 高 | 链上（FHE 加密） | 核心隐私数据，必须加密上链 |
-| 谈判报价 | 高 | 链上（FHE 加密） | 核心隐私数据，必须加密上链 |
-| 公司名称 | 低 | 链上明文 | 数据量小，不敏感，直接存链上 |
-| 员工显示名称 | 低 | 链上明文 | 数据量小，不敏感，直接存链上 |
-| 公司 Logo | 低 | IPFS | 图片文件大，存链上 Gas 费极高 |
-| 员工头像 | 低 | IPFS | 图片文件大，存链上 Gas 费极高 |
-| 薪资证明 NFT 元数据 | 低 | IPFS | ERC721 标准的 tokenURI 指向 IPFS |
+| 数据                | 敏感性 | 存储位置         | 说明                             |
+| ------------------- | ------ | ---------------- | -------------------------------- |
+| 薪资金额            | 高     | 链上（FHE 加密） | 核心隐私数据，必须加密上链       |
+| 接收钱包地址        | 高     | 链上（FHE 加密） | 核心隐私数据，必须加密上链       |
+| 谈判报价            | 高     | 链上（FHE 加密） | 核心隐私数据，必须加密上链       |
+| 公司名称            | 低     | 链上明文         | 数据量小，不敏感，直接存链上     |
+| 员工显示名称        | 低     | 链上明文         | 数据量小，不敏感，直接存链上     |
+| 公司 Logo           | 低     | IPFS             | 图片文件大，存链上 Gas 费极高    |
+| 员工头像            | 低     | IPFS             | 图片文件大，存链上 Gas 费极高    |
+| 薪资证明 NFT 元数据 | 低     | IPFS             | ERC721 标准的 tokenURI 指向 IPFS |
 
 ### 链上存储（合约）
 
@@ -26,14 +26,17 @@
 ### IPFS 存储
 
 **公司 Logo / 员工头像：**
+
 - 前端上传图片到 IPFS，获得 CID
 - 链上合约只存储 CID（`string` 类型），不存图片本身
 - 前端通过 CID 拼接 IPFS 网关 URL 展示图片
 
 **薪资证明 NFT 元数据：**
+
 - 铸造前先将证明元数据（结论摘要、有效期、公司名等）上传 IPFS
 - 获得 metadata JSON 的 CID 作为 `tokenURI` 传入铸造函数
 - metadata 内容示例：
+
 ```json
 {
   "name": "Salary Proof #001",
@@ -46,6 +49,7 @@
   ]
 }
 ```
+
 注意：metadata 中**不包含具体薪资数字**，只包含结论性描述。
 
 ### CompanyRegistry 存储字段更新
@@ -165,7 +169,8 @@ modifier：
 
 核心函数：
   setSalary(companyId, employeeAddr, euint256 salary)
-    → Owner/HR，设置或修改月薪
+    → Owner/HR，仅设置初始月薪
+    → 已存在月薪后不能直接修改，后续调整必须走薪资谈判
   setReceivingWallet(companyId, eaddress wallet)
     → Employee 本人，设置接收钱包
   executePayroll(companyId)
@@ -283,19 +288,19 @@ modifier：
 
 ## 加密字段汇总
 
-| 字段 | 合约 | Zama 类型 | 可见权限 |
-|------|------|-----------|----------|
-| 员工月薪 | ConfidentialPayroll | `euint256` | 本人 + Owner + HR |
-| 累计待发薪资 | ConfidentialPayroll | `euint256` | 本人 + Owner + HR |
-| 员工接收钱包 | ConfidentialPayroll | `eaddress` | 本人 + Owner |
-| 公司资金池余额 | PayrollVault | `euint256` | Owner + HR |
-| 雇主预算上限 | SalaryNegotiation | `euint256` | 合约内部，不对外开放 |
-| 员工期望薪资 | SalaryNegotiation | `euint256` | 合约内部，不对外开放 |
-| 谈判匹配结果 | SalaryNegotiation | `ebool` | 双方各自可解密 |
-| 薪资总额（审计） | FairnessAudit | `euint256` | Owner only |
-| 审计差距结论 | FairnessAudit | `ebool` | Owner + HR |
-| 证明阈值 | SalaryProof | `euint256` | 本人 only |
-| 证明比较结果 | SalaryProof | `ebool` | 本人 + 授权第三方 |
+| 字段             | 合约                | Zama 类型  | 可见权限             |
+| ---------------- | ------------------- | ---------- | -------------------- |
+| 员工月薪         | ConfidentialPayroll | `euint256` | 本人 + Owner + HR    |
+| 累计待发薪资     | ConfidentialPayroll | `euint256` | 本人 + Owner + HR    |
+| 员工接收钱包     | ConfidentialPayroll | `eaddress` | 本人 + Owner         |
+| 公司资金池余额   | PayrollVault        | `euint256` | Owner + HR           |
+| 雇主预算上限     | SalaryNegotiation   | `euint256` | 合约内部，不对外开放 |
+| 员工期望薪资     | SalaryNegotiation   | `euint256` | 合约内部，不对外开放 |
+| 谈判匹配结果     | SalaryNegotiation   | `ebool`    | 双方各自可解密       |
+| 薪资总额（审计） | FairnessAudit       | `euint256` | Owner only           |
+| 审计差距结论     | FairnessAudit       | `ebool`    | Owner + HR           |
+| 证明阈值         | SalaryProof         | `euint256` | 本人 only            |
+| 证明比较结果     | SalaryProof         | `ebool`    | 本人 + 授权第三方    |
 
 ---
 
@@ -306,6 +311,7 @@ modifier：
 ```
 Owner → PayrollVault.deposit()
 Owner → ConfidentialPayroll.setSalary()（逐个员工）
+          ↓ setSalary 只写入初始月薪，后续调薪走谈判合约
 Owner → ConfidentialPayroll.executePayroll()
 Employee → ConfidentialPayroll.claimPayout()
 ```
@@ -357,14 +363,14 @@ Employee  → ConfidentialPayroll.claimPayout()（领取结算款）
 
 ## Hackathon 阶段优先级
 
-| 合约 | 优先级 | 理由 |
-|------|--------|------|
-| `CompanyRegistry` | P0 | 所有合约的权限基础，必须最先完成 |
-| `ConfidentialPayroll` | P0 | 核心业务逻辑，最主要的 FHE 展示 |
-| `PayrollVault` | P0 | 资金管理，发薪流程依赖 |
-| `SalaryNegotiation` | P1 | FHE 双向加密撮合，评审亮点 |
-| `SalaryProof` | P1 | RWA 叙事亮点，NFT 铸造 |
-| `FairnessAudit` | P2 | 可在 Demo 中 mock 输出，时间不足可简化 |
+| 合约                  | 优先级 | 理由                                   |
+| --------------------- | ------ | -------------------------------------- |
+| `CompanyRegistry`     | P0     | 所有合约的权限基础，必须最先完成       |
+| `ConfidentialPayroll` | P0     | 核心业务逻辑，最主要的 FHE 展示        |
+| `PayrollVault`        | P0     | 资金管理，发薪流程依赖                 |
+| `SalaryNegotiation`   | P1     | FHE 双向加密撮合，评审亮点             |
+| `SalaryProof`         | P1     | RWA 叙事亮点，NFT 铸造                 |
+| `FairnessAudit`       | P2     | 可在 Demo 中 mock 输出，时间不足可简化 |
 
 ---
 
@@ -374,16 +380,16 @@ Employee  → ConfidentialPayroll.claimPayout()（领取结算款）
 
 ### 存储分层
 
-| 数据 | 敏感性 | 存储位置 | 说明 |
-|------|--------|----------|------|
-| 薪资金额 | 高 | 链上（FHE 加密） | 核心隐私数据，必须加密上链 |
-| 接收钱包地址 | 高 | 链上（FHE 加密） | 核心隐私数据，必须加密上链 |
-| 谈判报价 | 高 | 链上（FHE 加密） | 核心隐私数据，必须加密上链 |
-| 公司名称 | 低 | 链上明文 | 数据量小，不敏感，直接存链上 |
-| 员工显示名称 | 低 | 链上明文 | 数据量小，不敏感，直接存链上 |
-| 公司 Logo | 低 | IPFS | 图片文件大，存链上 Gas 费极高 |
-| 员工头像 | 低 | IPFS | 图片文件大，存链上 Gas 费极高 |
-| 薪资证明 NFT 元数据 | 低 | IPFS | ERC721 标准的 tokenURI 指向 IPFS |
+| 数据                | 敏感性 | 存储位置         | 说明                             |
+| ------------------- | ------ | ---------------- | -------------------------------- |
+| 薪资金额            | 高     | 链上（FHE 加密） | 核心隐私数据，必须加密上链       |
+| 接收钱包地址        | 高     | 链上（FHE 加密） | 核心隐私数据，必须加密上链       |
+| 谈判报价            | 高     | 链上（FHE 加密） | 核心隐私数据，必须加密上链       |
+| 公司名称            | 低     | 链上明文         | 数据量小，不敏感，直接存链上     |
+| 员工显示名称        | 低     | 链上明文         | 数据量小，不敏感，直接存链上     |
+| 公司 Logo           | 低     | IPFS             | 图片文件大，存链上 Gas 费极高    |
+| 员工头像            | 低     | IPFS             | 图片文件大，存链上 Gas 费极高    |
+| 薪资证明 NFT 元数据 | 低     | IPFS             | ERC721 标准的 tokenURI 指向 IPFS |
 
 ### 链上存储（合约）
 
@@ -392,14 +398,17 @@ Employee  → ConfidentialPayroll.claimPayout()（领取结算款）
 ### IPFS 存储
 
 **公司 Logo / 员工头像：**
+
 - 前端上传图片到 IPFS，获得 CID
 - 链上合约只存储 CID（`string` 类型），不存图片本身
 - 前端通过 CID 拼接 IPFS 网关 URL 展示图片
 
 **薪资证明 NFT 元数据：**
+
 - 铸造前先将证明元数据（结论摘要、有效期、公司名等）上传 IPFS
 - 获得 metadata JSON 的 CID 作为 `tokenURI` 传入铸造函数
 - metadata 内容示例：
+
 ```json
 {
   "name": "Salary Proof #001",
@@ -412,6 +421,7 @@ Employee  → ConfidentialPayroll.claimPayout()（领取结算款）
   ]
 }
 ```
+
 注意：metadata 中**不包含具体薪资数字**，只包含结论性描述。
 
 ### CompanyRegistry 存储字段更新
@@ -438,4 +448,4 @@ address → EmployeeProfile {
 
 ---
 
-*文档版本：v1.0 | 创建日期：2026-04-06*
+_文档版本：v1.0 | 创建日期：2026-04-06_
