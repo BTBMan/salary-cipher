@@ -6,6 +6,13 @@ declare global {
       // WalletConnect
       NEXT_PUBLIC_WALLET_CONNECT_PROJECT_ID: string
 
+      // CoinMarketCap
+      COIN_MARKET_KEY: string
+
+      // Pinata
+      PINATA_JWT: string
+      NEXT_PUBLIC_GATEWAY_URL: string
+
       // Contract
       LOCAL_PRIVATE_KEY: string
       LOCAL_RPC_URL: string

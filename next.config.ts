@@ -4,7 +4,11 @@ const nextConfig: NextConfig = {
   reactStrictMode: false,
   redirects: async () => [],
   images: {
-    remotePatterns: [],
+    remotePatterns: [
+      {
+        hostname: '*.mypinata.cloud',
+      },
+    ],
   },
   typescript: {
     tsconfigPath: './tsconfig.app.json',
