@@ -50,8 +50,9 @@ Button（Primary / Secondary / Ghost / Danger，含 loading 态）、Input（含
     │   ├── 发薪记录
     │   └── 薪资谈判
     ├── 合规 Compliance
-    │   ├── 薪资公平审计
-    │   └── 薪资证明（RWA）
+    │   └── 薪资公平审计
+    ├── 薪资证明 Salary Proofs
+    │   └── 个人收入证明（RWA NFT）
     ├── 财务 Finance
     │   └── 资金管理
     └── 设置 Settings
@@ -101,7 +102,8 @@ Button（Primary / Secondary / Ghost / Danger，含 loading 态）、Input（含
   - 概览 Overview（所有角色可见）
   - 人员 People（Owner/HR 完整权限；Employee 只读）
   - 薪酬 Payroll（Owner/HR 完整；Employee 只见个人数据）
-  - 合规 Compliance（Owner/HR 完整；Employee 只能生成自己的证明）
+  - 合规 Compliance（仅 Owner/HR 可见，只包含薪资公平审计）
+  - 薪资证明 Salary Proofs（仅 HR/Employee 可见，只能查看和操作自己的证明；Owner 不显示）
   - 财务 Finance（仅 Owner 可见）
   - 设置 Settings（所有人可见，内容按角色裁剪）
 - 底部：主题切换 + 断开连接按钮
@@ -208,9 +210,7 @@ Owner/HR 视角表格底部显示期末汇总行：本期发放总额（Encrypte
 
 ### 八、合规页 Compliance
 
-Sidebar 中 Compliance 为可展开父项，含两个子页：
-
-#### 8.1 薪资公平审计
+Sidebar 中 Compliance 为独立页面，只包含公司级薪资公平审计。
 
 **仅 Owner/HR 可见，菜单对 Employee 不显示。**
 
@@ -227,25 +227,54 @@ Sidebar 中 Compliance 为可展开父项，含两个子页：
 
 历史报告列表（DataTable）：生成时间 / 分析维度 / 报告哈希 / 操作（查看 / 下载）
 
-#### 8.2 薪资证明（RWA）
+---
 
-**Owner/HR 可查看公司内所有证明记录；Employee 只能操作和查看自己的。**
+### 九、薪资证明页 Salary Proofs
+
+**仅 HR/Employee 可见，Owner 不显示该菜单。HR 只能查看和操作自己的证明，不能查看公司内其他员工证明。**
 
 页面说明：「生成链上隐私收入证明，无需暴露具体金额，可提交给租房 / 贷款 / DeFi 协议验证。」
 
-**Employee 视角 — 生成证明区（卡片）：**
+**生成证明区（卡片）：**
 
 - 选择公司（如加入多家时显示 Dropdown）
-- 证明类型 Select：月薪超过 X / 月薪在 X~Y 之间 / 过去 N 月持续有收入
-- 阈值金额 Input
-- 有效期 Select（7天 / 30天 / 永久）
-- 「Generate Proof」按钮 → 触发签名 → loading 显示「Computing on encrypted data...」→ 成功后展示结果卡片：结论摘要（如「Monthly salary ≥ 5,000 USDC — Verified」）+ 证明 ID（链上哈希，等宽字体）+ 有效期 + 操作按钮：「Copy Proof Link」「Mint as NFT」
+- 证明类型 Select：Monthly Salary >= X / Monthly Salary between X and Y / Employment Duration >= N months
+- 阈值金额 Input：前两类显示，输入 USDC / USDT 金额
+- 在职月数 Input：仅 Employment Duration 类型显示
+- 有效期 Select：7天 / 30天 / 90天
+- 「Generate Proof」按钮 → 触发签名 → loading 显示「Computing on encrypted data...」→ 成功后展示结果卡片：结论摘要（如「Monthly Salary >= Threshold」）+ 证明 ID（链上哈希，等宽字体）+ 有效期 + 操作按钮：「Copy Proof Link」「Authorize Verifier」「Mint as NFT」
 
-历史证明列表（DataTable）：公司 / 证明类型 / 生成时间 / 有效期 / 状态（Valid 绿 / Expired 灰）/ 操作（Copy / Revoke）。Revoke 触发 ConfirmModal。
+**历史证明列表（DataTable）：**
+
+公司 / 证明类型 / 生成时间 / 有效期 / 状态（Valid 绿 / Expired 灰 / Revoked 红）/ NFT 状态 / 操作（Copy / Authorize / Revoke / Mint / View RWA NFT）。Revoke 触发 ConfirmModal。
+
+**Mint as NFT 交互：**
+
+- 点击「Mint as NFT」后先生成 SVG 凭证图，loading 文案为「Generating NFT image...」
+- 上传 SVG 到 IPFS，loading 文案为「Uploading image to IPFS...」
+- 生成 NFT metadata，将 `image` 指向 SVG 的 `ipfs://` 地址
+- 上传 metadata 到 IPFS，loading 文案为「Uploading metadata to IPFS...」
+- 调用合约 mint，loading 文案为「Minting RWA NFT...」
+- 成功后展示 tokenId、metadata link、SVG 预览图和「View RWA NFT」按钮
+
+**RWA NFT 预览弹窗：**
+
+- 标题：RWA Salary Proof NFT
+- 内容：NFT SVG 图片 / Proof ID / Token ID / Proof Type / Company / Settlement Token / Created At / Expires At / Status / IPFS Metadata Link / View on Explorer
+- 本地网络不展示区块浏览器外链
+- SVG 和 metadata 不展示真实薪资，不展示员工姓名，不展示解密结果
+
+**SVG 视觉规范：**
+
+- 尺寸：1024 x 1024
+- 深色渐变背景 + 加密网格
+- 中央凭证卡片，包含 SalaryCipher 标识、RWA Income Proof、Proof ID、Proof Type、Company、Settlement Token、Expiry
+- 主状态展示 VALID / VERIFIED，但真实性仍以链上 proof 状态为准
+- 底部显示「Salary amount encrypted by FHE」和「Powered by Zama FHE」
 
 ---
 
-### 九、财务页 Finance — 资金管理
+### 十、财务页 Finance — 资金管理
 
 **仅 Owner 可见，菜单对 HR/Employee 不显示。**
 
@@ -268,7 +297,7 @@ Sidebar 中 Compliance 为可展开父项，含两个子页：
 
 ---
 
-### 十、设置页 Settings
+### 十一、设置页 Settings
 
 **左侧锚点导航 + 右侧内容分区。**
 
