@@ -3,7 +3,6 @@
 import Link from 'next/link'
 import {
   MdAccountBalance as AccountBalanceIcon,
-  MdAdd as AddIcon,
   MdAutorenew as AutorenewIcon,
   MdDescription as DescriptionIcon,
   MdDirectionsCar as DirectionsCarIcon,
@@ -323,11 +322,11 @@ export default function EmployeeDashboardPage() {
                   </div>
                   <h3 className="font-heading text-xl font-bold text-on-surface tracking-tight mb-2">RWA Income Proofs</h3>
                   <p className="text-on-surface-variant text-xs font-medium leading-relaxed mb-8 opacity-80">
-                    Proof generation is not connected yet. Current contract only exposes salary condition verification for a future proof contract.
+                    Generate private income credentials, upload RWA NFT metadata to IPFS, and control verifier access from your salary proofs page.
                   </p>
-                  <Button disabled className="primary-gradient text-on-primary-container text-sm h-10 px-6 rounded-sm shadow-lg shadow-primary/20 hover:shadow-primary/40 transition-all active:scale-95 flex items-center gap-2 border-none">
-                    <AddIcon className="size-4" />
-                    Proof Contract Missing
+                  <Button nativeButton={false} render={<Link href="/salary-proofs" />} className="primary-gradient text-on-primary-container text-sm h-10 px-6 rounded-sm shadow-lg shadow-primary/20 hover:shadow-primary/40 transition-all active:scale-95 flex items-center gap-2 border-none">
+                    Open Salary Proofs
+                    <MdArrowForward className="size-4" />
                   </Button>
                 </div>
                 <div className="absolute -right-6 -bottom-6 opacity-[0.03] group-hover:opacity-10 pointer-events-none transform rotate-12 group-hover:scale-110 transition-all duration-700">

@@ -15,6 +15,11 @@ export const OWNER_ONLY_ROLES = [
   RolesEnum.Owner,
 ] as const
 
+export const HR_EMPLOYEE_ROLES = [
+  RolesEnum.HR,
+  RolesEnum.Employee,
+] as const
+
 export const ROUTE_ROLE_ACCESS = {
   '/overview': ALL_COMPANY_ROLES,
   '/dashboard': OWNER_HR_ROLES,
@@ -22,7 +27,8 @@ export const ROUTE_ROLE_ACCESS = {
   '/people': ALL_COMPANY_ROLES,
   '/payroll': ALL_COMPANY_ROLES,
   '/negotiate': ALL_COMPANY_ROLES,
-  '/compliance': ALL_COMPANY_ROLES,
+  '/compliance': OWNER_HR_ROLES,
+  '/salary-proofs': HR_EMPLOYEE_ROLES,
   '/finance': OWNER_ONLY_ROLES,
 } as const satisfies Record<string, readonly RolesEnum[]>
 
@@ -58,6 +64,10 @@ export function canSubmitExpectedSalary(role: RolesEnum | undefined) {
 
 export function canRunCompanyAudit(role: RolesEnum | undefined) {
   return hasRoleAccess(role, OWNER_HR_ROLES)
+}
+
+export function canViewSalaryProofs(role: RolesEnum | undefined) {
+  return hasRoleAccess(role, HR_EMPLOYEE_ROLES)
 }
 
 export function canViewFinance(role: RolesEnum | undefined) {
