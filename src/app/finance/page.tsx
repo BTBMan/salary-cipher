@@ -231,7 +231,7 @@ export default function FinancePage() {
             </Card>
 
             {/* Yield Metric */}
-            <Card className="rounded-xl border border-white/5 bg-surface-container p-0 shadow-xl">
+            {/* <Card className="rounded-xl border border-white/5 bg-surface-container p-0 shadow-xl">
               <CardContent className="flex items-center justify-between p-6">
                 <div>
                   <span className="text-on-surface-variant text-[10px] font-black uppercase tracking-widest mb-1.5 block">Yield Generated (30d)</span>
@@ -244,7 +244,7 @@ export default function FinancePage() {
                   <div className="w-2 bg-primary h-full rounded-t-[1px] shadow-[0_0_8px_#c0c1ff]" />
                 </div>
               </CardContent>
-            </Card>
+            </Card> */}
           </div>
 
           {/* Right Column: Vault Health (7/12) */}
@@ -283,7 +283,7 @@ export default function FinancePage() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-6">
+                {/* <div className="grid grid-cols-2 gap-6">
                   <div className="bg-surface-container-low p-6 rounded-xl border border-white/5 shadow-inner">
                     <span className="text-on-surface-variant text-[10px] font-black uppercase tracking-widest mb-2 block">Months Remaining</span>
                     <div className="flex items-baseline gap-2">
@@ -311,7 +311,7 @@ export default function FinancePage() {
                       </Button>
                     </div>
                   </div>
-                </div>
+                </div> */}
               </div>
             </CardContent>
           </Card>
@@ -418,9 +418,9 @@ export default function FinancePage() {
                       })}
               </TableBody>
             </Table>
-            <div className="p-6 text-center border-t border-white/5 bg-surface-container-lowest/10">
+            {/* <div className="p-6 text-center border-t border-white/5 bg-surface-container-lowest/10">
               <Button disabled variant="ghost" className="text-[10px] font-black uppercase tracking-[0.2em] text-primary hover:text-white">Load More Transactions</Button>
-            </div>
+            </div> */}
           </CardContent>
         </Card>
       </div>

@@ -1,7 +1,8 @@
 'use client'
 
+import type { SalaryProofRow } from '@/hooks'
 import type { SalaryProofType } from '@/utils'
-import { useMemo, useState } from 'react'
+import { useState } from 'react'
 import {
   MdCheckCircle as CheckCircleIcon,
   MdContentCopy as ContentCopyIcon,
@@ -11,12 +12,12 @@ import {
   MdOpenInNew as OpenInNewIcon,
   MdRefresh as RefreshIcon,
   MdShield as ShieldIcon,
-  MdUpload as UploadIcon,
   MdVerifiedUser as VerifiedUserIcon,
   MdWorkspacePremium as WorkspacePremiumIcon,
 } from 'react-icons/md'
 import { toast } from 'sonner'
 import { z } from 'zod'
+import { EncryptedField } from '@/components/encrypted-field'
 import { AppLayout } from '@/components/layout/app-layout'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -45,33 +46,22 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import { useStoreContext } from '@/hooks'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
+import { useSalaryProofs, useStoreContext } from '@/hooks'
 import {
   buildSalaryProofMetadata,
   buildSalaryProofSvg,
   cn,
-  getUnderlyingTokenSymbol,
   SALARY_PROOF_TYPES,
 } from '@/utils'
 import { uploadSalaryProofNft } from './actions'
 
 type ProofStatus = 'valid' | 'expired' | 'revoked'
 
-interface ProofRow {
-  companyName: string
-  condition: string
-  createdAt: string
-  expiresAt: string
+type PreviewProof = SalaryProofRow & {
   imageGatewayUrl?: string
   metadataGatewayUrl?: string
-  nftStatus: 'not-minted' | 'minted'
-  proofId: string
-  proofType: SalaryProofType
-  proofTypeLabel: string
-  settlementToken: string
-  status: ProofStatus
   svg: string
-  tokenId?: string
   tokenUri?: string
 }
 
@@ -118,30 +108,6 @@ const proofFormSchema = z.object({
   }
 })
 
-const initialProofs: ProofRow[] = [
-  {
-    companyName: 'Acme Corp',
-    condition: 'Monthly salary >= threshold',
-    createdAt: 'Design sample',
-    expiresAt: '2026-07-06',
-    nftStatus: 'minted',
-    proofId: '#0001',
-    proofType: 'MONTHLY_GTE',
-    proofTypeLabel: 'Monthly Salary >= X',
-    settlementToken: 'USDC',
-    status: 'valid',
-    svg: buildSalaryProofSvg({
-      companyName: 'Acme Corp',
-      expiresAt: '2026-07-06',
-      proofId: '#0001',
-      proofTypeLabel: 'Monthly Salary >= X',
-      settlementToken: 'USDC',
-    }),
-    tokenId: '#12',
-    tokenUri: 'ipfs://metadata-cid-after-pinata-upload',
-  },
-]
-
 function getStatusLabel(status: ProofStatus) {
   switch (status) {
     case 'valid':
@@ -172,44 +138,58 @@ function formatDate(date: Date) {
   }).format(date)
 }
 
-function getProofCondition(proofType: SalaryProofType, minAmount: string, maxAmount: string, months: string, tokenSymbol: string) {
-  switch (proofType) {
-    case 'MONTHLY_GTE':
-      return `Monthly salary >= ${minAmount} ${tokenSymbol}`
-    case 'MONTHLY_BETWEEN':
-      return `Monthly salary between ${minAmount} and ${maxAmount} ${tokenSymbol}`
-    case 'EMPLOYMENT_DURATION_GTE':
-      return `Employment duration >= ${months} months`
-  }
+function formatTimestamp(timestamp: number) {
+  return timestamp ? formatDate(new Date(timestamp * 1000)) : '-'
+}
+
+function formatProofId(proofId: bigint) {
+  return `#${proofId.toString().padStart(4, '0')}`
 }
 
 export default function SalaryProofsPage() {
-  const { selectedCompany, settlementAssets } = useStoreContext()
+  const { selectedCompany } = useStoreContext()
+  const {
+    authorizeVerifier,
+    decryptProofResult,
+    generateProof,
+    isDecryptingProofResult,
+    mintProofNFT,
+    pendingAction,
+    revokeProof,
+    rows: proofs,
+    salaryProofAddress,
+  } = useSalaryProofs(selectedCompany)
   const [proofType, setProofType] = useState<SalaryProofType>('MONTHLY_GTE')
   const [minAmount, setMinAmount] = useState('5000')
   const [maxAmount, setMaxAmount] = useState('8000')
   const [months, setMonths] = useState('12')
   const [validityDays, setValidityDays] = useState<'7' | '30' | '90'>('30')
   const [formError, setFormError] = useState<string | null>(null)
-  const [proofs, setProofs] = useState<ProofRow[]>(initialProofs)
-  const [selectedProof, setSelectedProof] = useState<ProofRow | null>(null)
+  const [selectedProof, setSelectedProof] = useState<PreviewProof | null>(null)
   const [isPreviewOpen, setIsPreviewOpen] = useState(false)
-  const [mintingProofId, setMintingProofId] = useState<string | null>(null)
   const [mintStep, setMintStep] = useState<string | null>(null)
+  const [authorizingProof, setAuthorizingProof] = useState<SalaryProofRow | null>(null)
+  const [verifierAddress, setVerifierAddress] = useState('')
 
-  const selectedAsset = useMemo(() => {
-    if (!selectedCompany) {
-      return null
-    }
-
-    return settlementAssets.find(asset => asset.value === selectedCompany.settlementAsset) ?? null
-  }, [selectedCompany, settlementAssets])
-  const settlementTokenSymbol = getUnderlyingTokenSymbol(selectedAsset)
   const selectedProofType = SALARY_PROOF_TYPES.find(item => item.value === proofType) ?? SALARY_PROOF_TYPES[0]
   const activeProofs = proofs.filter(proof => proof.status === 'valid').length
   const mintedProofs = proofs.filter(proof => proof.nftStatus === 'minted').length
 
-  const handleGenerateProof = () => {
+  const buildPreviewProof = (proof: SalaryProofRow): PreviewProof => {
+    const proofId = formatProofId(proof.proofId)
+    return {
+      ...proof,
+      svg: buildSalaryProofSvg({
+        companyName: proof.companyName,
+        expiresAt: formatTimestamp(proof.expiresAt),
+        proofId,
+        proofTypeLabel: proof.proofTypeLabel,
+        settlementToken: proof.settlementToken,
+      }),
+    }
+  }
+
+  const handleGenerateProof = async () => {
     const result = proofFormSchema.safeParse({
       maxAmount,
       minAmount,
@@ -224,55 +204,31 @@ export default function SalaryProofsPage() {
     }
 
     setFormError(null)
-    const createdAt = new Date()
-    const expiresAt = new Date(createdAt)
-    expiresAt.setDate(createdAt.getDate() + Number(validityDays))
-    const proofId = `#${String(proofs.length + 1).padStart(4, '0')}`
-    const condition = getProofCondition(proofType, minAmount, maxAmount, months, settlementTokenSymbol)
-    const proofTypeLabel = selectedProofType.label
-    const svg = buildSalaryProofSvg({
-      companyName: selectedCompany?.name ?? 'Selected Company',
-      expiresAt: formatDate(expiresAt),
-      proofId,
-      proofTypeLabel,
-      settlementToken: settlementTokenSymbol,
-    })
-
-    const nextProof: ProofRow = {
-      companyName: selectedCompany?.name ?? 'Selected Company',
-      condition,
-      createdAt: formatDate(createdAt),
-      expiresAt: formatDate(expiresAt),
-      nftStatus: 'not-minted',
-      proofId,
+    await generateProof({
+      maxAmount,
+      minAmount,
+      months,
       proofType,
-      proofTypeLabel,
-      settlementToken: settlementTokenSymbol,
-      status: 'valid',
-      svg,
-    }
-
-    setProofs(current => [nextProof, ...current])
-    setSelectedProof(nextProof)
-    setIsPreviewOpen(true)
-    toast.success('Salary proof draft generated.')
+      validityDays: Number(validityDays),
+    })
   }
 
-  const handleMintProof = async (proof: ProofRow) => {
+  const handleMintProof = async (proof: SalaryProofRow | PreviewProof) => {
+    const previewProof = 'svg' in proof ? proof : buildPreviewProof(proof)
+
     if (proof.nftStatus === 'minted') {
-      setSelectedProof(proof)
+      setSelectedProof(previewProof)
       setIsPreviewOpen(true)
       return
     }
 
-    setMintingProofId(proof.proofId)
     try {
       setMintStep('Generating NFT image...')
       const metadataWithoutImage = buildSalaryProofMetadata({
         companyName: proof.companyName,
-        expiresAt: proof.expiresAt,
+        expiresAt: formatTimestamp(proof.expiresAt),
         imageUri: 'ipfs://pending-image-upload',
-        proofId: proof.proofId,
+        proofId: formatProofId(proof.proofId),
         proofTypeLabel: proof.proofTypeLabel,
         settlementToken: proof.settlementToken,
       })
@@ -286,24 +242,26 @@ export default function SalaryProofsPage() {
       setMintStep('Uploading image and metadata to IPFS...')
       const upload = await uploadSalaryProofNft({
         metadata,
-        proofId: proof.proofId,
-        svg: proof.svg,
+        proofId: formatProofId(proof.proofId),
+        svg: previewProof.svg,
       })
 
-      setMintStep('Preparing RWA NFT preview...')
-      const updatedProof: ProofRow = {
-        ...proof,
+      setMintStep('Minting NFT on-chain...')
+      const minted = await mintProofNFT(proof.proofId, upload.tokenUri)
+      if (!minted) {
+        return
+      }
+
+      const updatedProof: PreviewProof = {
+        ...previewProof,
         imageGatewayUrl: upload.imageGatewayUrl,
         metadataGatewayUrl: upload.metadataGatewayUrl,
         nftStatus: 'minted',
-        tokenId: `#${String(Date.now()).slice(-5)}`,
         tokenUri: upload.tokenUri,
       }
 
-      setProofs(current => current.map(item => (item.proofId === proof.proofId ? updatedProof : item)))
       setSelectedProof(updatedProof)
-      setIsPreviewOpen(true)
-      toast.success('RWA NFT metadata uploaded to Pinata.')
+      toast.success('NFT minted successfully.')
     }
     catch (error) {
       const message = error instanceof Error ? error.message : 'Failed to upload NFT metadata.'
@@ -311,54 +269,62 @@ export default function SalaryProofsPage() {
     }
     finally {
       setMintStep(null)
-      setMintingProofId(null)
     }
   }
 
-  const handleCopyProofLink = async (proof: ProofRow) => {
-    await navigator.clipboard.writeText(`${window.location.origin}/salary-proofs/${proof.proofId.replace('#', '')}`)
+  const handleCopyProofLink = async (proof: SalaryProofRow) => {
+    await navigator.clipboard.writeText(`${window.location.origin}/salary-proofs/${proof.proofId.toString()}`)
     toast.success('Proof link copied.')
   }
 
-  const handleRevokeProof = (proof: ProofRow) => {
-    setProofs(current => current.map(item => (item.proofId === proof.proofId ? { ...item, status: 'revoked' } : item)))
-    toast.success('Proof marked as revoked.')
+  const handleAuthorizeVerifier = async () => {
+    if (!authorizingProof) {
+      return
+    }
+
+    const authorized = await authorizeVerifier(authorizingProof.proofId, verifierAddress)
+    if (authorized) {
+      setAuthorizingProof(null)
+      setVerifierAddress('')
+    }
   }
 
   return (
     <AppLayout>
       <div className="flex flex-col gap-8">
-        <div className="relative overflow-hidden rounded-2xl border border-white/5 bg-surface-container-low p-8 shadow-2xl">
-          <div className="absolute -right-24 -top-24 size-80 rounded-full bg-primary/15 blur-3xl" />
-          <div className="absolute -bottom-28 left-24 size-72 rounded-full bg-tertiary/15 blur-3xl" />
-          <div className="relative z-10 flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
-            <div className="max-w-3xl space-y-4">
-              <div className="flex items-center gap-2">
-                <WorkspacePremiumIcon className="size-4 text-primary" />
-                <span className="text-[10px] font-black uppercase tracking-[0.24em] text-primary">Employee-controlled RWA credential</span>
+        <div className="grid grid-cols-1 gap-8 xl:grid-cols-2">
+          <Card className="rounded-xl border border-white/5 bg-surface-container-low p-0 shadow-2xl relative overflow-hidden">
+            <CardContent className="space-y-7 p-8 h-full">
+              <div className="absolute -right-24 -top-24 size-80 rounded-full bg-primary/15 blur-3xl" />
+              <div className="absolute -bottom-28 left-24 size-72 rounded-full bg-tertiary/15 blur-3xl" />
+              <div className="relative z-10 h-full flex flex-col gap-6 lg:justify-between">
+                <div className="max-w-3xl space-y-4">
+                  <div className="flex items-center gap-2">
+                    <WorkspacePremiumIcon className="size-4 text-primary" />
+                    <span className="text-[10px] font-black uppercase tracking-[0.24em] text-primary">Employee-controlled RWA credential</span>
+                  </div>
+                  <div className="space-y-3">
+                    <h1 className="font-heading text-4xl font-black tracking-tight text-on-surface">Salary Proofs</h1>
+                    <p className="text-sm font-medium leading-7 text-on-surface-variant">
+                      Generate privacy-preserving income proofs for rentals, mortgage checks, credit facilities, or DeFi integrations.
+                    </p>
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-3 max-w-72">
+                  <div className="rounded-xl border border-white/5 bg-surface-container-lowest p-4">
+                    <p className="text-[10px] font-black uppercase tracking-widest text-outline">Active</p>
+                    <p className="mt-2 font-heading text-2xl font-black text-on-surface">{activeProofs}</p>
+                  </div>
+                  <div className="rounded-xl border border-white/5 bg-surface-container-lowest p-4">
+                    <p className="text-[10px] font-black uppercase tracking-widest text-outline">RWA NFTs</p>
+                    <p className="mt-2 font-heading text-2xl font-black text-on-surface">{mintedProofs}</p>
+                  </div>
+                </div>
               </div>
-              <div className="space-y-3">
-                <h1 className="font-heading text-4xl font-black tracking-tight text-on-surface">Salary Proofs</h1>
-                <p className="text-sm font-medium leading-7 text-on-surface-variant">
-                  Generate privacy-preserving income proofs for rentals, mortgage checks, credit facilities, or DeFi integrations. Owner does not have access to this page.
-                </p>
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-3 sm:min-w-72">
-              <div className="rounded-xl border border-white/5 bg-surface-container-lowest p-4">
-                <p className="text-[10px] font-black uppercase tracking-widest text-outline">Active</p>
-                <p className="mt-2 font-heading text-2xl font-black text-on-surface">{activeProofs}</p>
-              </div>
-              <div className="rounded-xl border border-white/5 bg-surface-container-lowest p-4">
-                <p className="text-[10px] font-black uppercase tracking-widest text-outline">RWA NFTs</p>
-                <p className="mt-2 font-heading text-2xl font-black text-on-surface">{mintedProofs}</p>
-              </div>
-            </div>
-          </div>
-        </div>
+            </CardContent>
+          </Card>
 
-        <div className="grid grid-cols-1 gap-8 xl:grid-cols-12">
-          <Card className="xl:col-span-5 rounded-xl border border-white/5 bg-surface-container-low p-0 shadow-2xl">
+          <Card className="rounded-xl border border-white/5 bg-surface-container-low p-0 shadow-2xl">
             <CardContent className="space-y-7 p-8">
               <div className="flex items-center gap-4">
                 <div className="flex size-12 items-center justify-center rounded-xl border border-white/10 bg-secondary-container">
@@ -452,105 +418,147 @@ export default function SalaryProofsPage() {
 
               <Button
                 className="h-12 w-full rounded-sm border-none text-sm shadow-xl shadow-primary/20 vault-gradient text-on-primary-container"
-                onClick={handleGenerateProof}
+                disabled={pendingAction === 'generate' || !salaryProofAddress}
+                onClick={() => void handleGenerateProof()}
               >
-                <KeyIcon className="size-5" />
-                Generate Proof Draft
+                {pendingAction === 'generate' ? <RefreshIcon className="size-5 animate-spin" /> : <KeyIcon className="size-5" />}
+                {pendingAction === 'generate' ? 'Generating Proof...' : 'Generate On-chain Proof'}
               </Button>
-            </CardContent>
-          </Card>
-
-          <Card className="xl:col-span-7 overflow-hidden rounded-xl border border-white/5 bg-surface-container-low p-0 shadow-2xl">
-            <CardContent className="p-0">
-              <div className="flex flex-col gap-4 border-b border-white/5 px-6 py-5 sm:flex-row sm:items-center sm:justify-between">
-                <div>
-                  <h2 className="font-heading text-xl font-black text-on-surface">Proof History</h2>
-                  <p className="mt-1 text-xs font-medium text-on-surface-variant">Only your personal proof records are shown.</p>
-                </div>
-                <Badge className="rounded-full border-primary/20 bg-primary/10 px-3 text-primary">
-                  <LockIcon className="size-3" />
-                  Private by default
-                </Badge>
-              </div>
-
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Proof</TableHead>
-                    <TableHead>Created</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>NFT</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {proofs.map(proof => (
-                    <TableRow key={proof.proofId}>
-                      <TableCell>
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <span className="font-mono text-xs font-black text-primary">{proof.proofId}</span>
-                            <span className="font-heading text-sm font-black text-on-surface">{proof.proofTypeLabel}</span>
-                          </div>
-                          <p className="mt-1 max-w-72 truncate text-xs font-medium text-on-surface-variant">{proof.condition}</p>
-                        </div>
-                      </TableCell>
-                      <TableCell className="font-mono text-xs font-bold text-on-surface-variant">{proof.createdAt}</TableCell>
-                      <TableCell>
-                        <Badge className={cn('rounded-full px-3', getStatusClassName(proof.status))}>{getStatusLabel(proof.status)}</Badge>
-                      </TableCell>
-                      <TableCell>
-                        <Badge className={cn(
-                          'rounded-full px-3',
-                          proof.nftStatus === 'minted'
-                            ? 'border-tertiary/20 bg-tertiary/10 text-tertiary'
-                            : 'border-outline/20 bg-outline/10 text-outline',
-                        )}
-                        >
-                          {proof.nftStatus === 'minted' ? 'Minted' : 'Not minted'}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex justify-end gap-2">
-                          <Button variant="outline" size="sm" className="h-8 rounded-sm px-3 text-[10px] font-black uppercase tracking-widest" onClick={() => void handleCopyProofLink(proof)}>
-                            <ContentCopyIcon className="size-3.5" />
-                            Copy
-                          </Button>
-                          <Button variant="outline" size="sm" className="h-8 rounded-sm px-3 text-[10px] font-black uppercase tracking-widest" onClick={() => handleRevokeProof(proof)} disabled={proof.status === 'revoked'}>
-                            Revoke
-                          </Button>
-                          <Button
-                            size="sm"
-                            className="h-8 rounded-sm px-3 text-[10px] font-black uppercase tracking-widest"
-                            disabled={mintingProofId === proof.proofId || proof.status !== 'valid'}
-                            onClick={() => void handleMintProof(proof)}
-                          >
-                            {mintingProofId === proof.proofId ? <RefreshIcon className="size-3.5 animate-spin" /> : <ImageIcon className="size-3.5" />}
-                            {proof.nftStatus === 'minted' ? 'View NFT' : 'Mint'}
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
             </CardContent>
           </Card>
         </div>
 
-        <Card className="rounded-xl border border-tertiary/15 bg-tertiary/5 p-0">
-          <CardContent className="flex flex-col gap-4 p-6 md:flex-row md:items-center md:justify-between">
-            <div className="flex gap-4">
-              <div className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-tertiary/10">
-                <UploadIcon className="size-6 text-tertiary" />
-              </div>
+        <Card className="xl:col-span-7 overflow-hidden rounded-xl border border-white/5 bg-surface-container-low p-0 shadow-2xl">
+          <CardContent className="p-0">
+            <div className="flex flex-col gap-4 border-b border-white/5 px-6 py-5 sm:flex-row sm:items-center sm:justify-between">
               <div>
-                <h3 className="font-heading text-base font-black text-on-surface">Pinata IPFS upload</h3>
-                <p className="mt-1 max-w-3xl text-sm font-medium leading-6 text-on-surface-variant">
-                  Mint flow currently generates the SVG credential, uploads it to Pinata, writes the SVG URI into metadata, then uploads metadata. The final on-chain NFT mint waits for SalaryProof and ProofNFT contracts to be implemented.
-                </p>
+                <h2 className="font-heading text-xl font-black text-on-surface">Proof History</h2>
+                <p className="mt-1 text-xs font-medium text-on-surface-variant">Only your personal proof records are shown.</p>
               </div>
+              <Badge className="rounded-full border-primary/20 bg-primary/10 px-3 text-primary">
+                <LockIcon className="size-3" />
+                Private by default
+              </Badge>
             </div>
+
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Proof</TableHead>
+                  <TableHead>Created</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Result</TableHead>
+                  <TableHead>NFT</TableHead>
+                  <TableHead className="text-center">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {proofs.length === 0 && (
+                  <TableRow>
+                    <TableCell className="py-8 text-center text-sm font-medium text-on-surface-variant" colSpan={6}>
+                      No on-chain salary proofs yet.
+                    </TableCell>
+                  </TableRow>
+                )}
+                {proofs.map(proof => (
+                  <TableRow key={proof.proofId.toString()}>
+                    <TableCell>
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className="font-mono text-xs font-black text-primary">{formatProofId(proof.proofId)}</span>
+                          <span className="font-heading text-sm font-black text-on-surface">{proof.proofTypeLabel}</span>
+                        </div>
+                        <Tooltip>
+                          <TooltipTrigger render={<p className="mt-1 max-w-72 truncate text-xs font-medium text-on-surface-variant">{proof.condition}</p>} />
+                          <TooltipContent>
+                            {proof.condition}
+                          </TooltipContent>
+                        </Tooltip>
+                      </div>
+                    </TableCell>
+                    <TableCell className="font-mono text-xs font-bold text-on-surface-variant">{formatTimestamp(proof.createdAt)}</TableCell>
+                    <TableCell>
+                      <Badge className={cn('rounded-full px-3', getStatusClassName(proof.status))}>{getStatusLabel(proof.status)}</Badge>
+                    </TableCell>
+                    <TableCell>
+                      {proof.proofResultHandle
+                        ? (
+                            <EncryptedField
+                              className="max-w-30"
+                              canDecrypt={Boolean(salaryProofAddress)}
+                              isDecrypting={salaryProofAddress
+                                ? isDecryptingProofResult({
+                                    contractAddress: salaryProofAddress,
+                                    handle: proof.proofResultHandle,
+                                  })
+                                : false}
+                              isEncrypted={proof.proofResult === null}
+                              onDecrypt={salaryProofAddress
+                                ? () => decryptProofResult({
+                                    contractAddress: salaryProofAddress,
+                                    handle: proof.proofResultHandle!,
+                                  })
+                                : undefined}
+                              value={proof.proofResult === null ? proof.proofResultHandle : proof.proofResult ? 'Passed' : 'Not passed'}
+                            />
+                          )
+                        : <span className="text-xs font-bold text-outline">-</span>}
+                    </TableCell>
+                    <TableCell>
+                      <Badge className={cn(
+                        'rounded-full px-3',
+                        proof.nftStatus === 'minted'
+                          ? 'border-tertiary/20 bg-tertiary/10 text-tertiary'
+                          : 'border-outline/20 bg-outline/10 text-outline',
+                      )}
+                      >
+                        {proof.nftStatus === 'minted' ? 'Minted' : 'Not minted'}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex justify-center gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="h-8 rounded-sm px-3 text-[10px] font-black uppercase tracking-widest"
+                          onClick={() => handleCopyProofLink(proof)}
+                        >
+                          <ContentCopyIcon className="size-3.5" />
+                          Copy
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="h-8 rounded-sm px-3 text-[10px] font-black uppercase tracking-widest"
+                          onClick={() => setAuthorizingProof(proof)}
+                          disabled={proof.status !== 'valid'}
+                        >
+                          Authorize
+                        </Button>
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          className="h-8 rounded-sm px-3 text-[10px] font-black uppercase tracking-widest"
+                          onClick={() => revokeProof(proof.proofId)}
+                          disabled={proof.status === 'revoked' || pendingAction === `revoke:${proof.proofId.toString()}`}
+                        >
+                          Revoke
+                        </Button>
+                        <Button
+                          size="sm"
+                          className="h-8 rounded-sm px-3 text-[10px] font-black uppercase tracking-widest"
+                          disabled={pendingAction === `mint:${proof.proofId.toString()}` || proof.status !== 'valid'}
+                          onClick={() => handleMintProof(proof)}
+                        >
+                          {pendingAction === `mint:${proof.proofId.toString()}` ? <RefreshIcon className="size-3.5 animate-spin" /> : <ImageIcon className="size-3.5" />}
+                          {proof.nftStatus === 'minted' ? 'View' : 'Mint'}
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
           </CardContent>
         </Card>
       </div>
@@ -577,7 +585,7 @@ export default function SalaryProofsPage() {
               <div className="space-y-5 p-6">
                 <div>
                   <p className="text-[10px] font-black uppercase tracking-[0.2em] text-outline">Proof ID</p>
-                  <p className="mt-1 font-mono text-lg font-black text-on-surface">{selectedProof.proofId}</p>
+                  <p className="mt-1 font-mono text-lg font-black text-on-surface">{formatProofId(selectedProof.proofId)}</p>
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
@@ -591,11 +599,11 @@ export default function SalaryProofsPage() {
                   </div>
                   <div className="rounded-xl border border-white/5 bg-surface-container-lowest p-4">
                     <p className="text-[10px] font-black uppercase tracking-widest text-outline">Expires</p>
-                    <p className="mt-2 text-sm font-bold text-on-surface">{selectedProof.expiresAt}</p>
+                    <p className="mt-2 text-sm font-bold text-on-surface">{formatTimestamp(selectedProof.expiresAt)}</p>
                   </div>
                   <div className="rounded-xl border border-white/5 bg-surface-container-lowest p-4">
                     <p className="text-[10px] font-black uppercase tracking-widest text-outline">NFT</p>
-                    <p className="mt-2 text-sm font-bold text-on-surface">{selectedProof.tokenId ?? 'Not minted'}</p>
+                    <p className="mt-2 text-sm font-bold text-on-surface">{selectedProof.tokenId ? `#${selectedProof.tokenId.toString()}` : 'Not minted'}</p>
                   </div>
                 </div>
 
@@ -621,7 +629,7 @@ export default function SalaryProofsPage() {
                   </a>
                 )}
 
-                {mintStep && selectedProof.proofId === mintingProofId && (
+                {mintStep && (
                   <div className="flex items-center gap-3 rounded-xl border border-primary/20 bg-primary/10 px-4 py-3 text-sm font-bold text-primary">
                     <RefreshIcon className="size-4 animate-spin" />
                     {mintStep}
@@ -635,13 +643,51 @@ export default function SalaryProofsPage() {
             {selectedProof && (
               <Button
                 className="rounded-sm"
-                disabled={mintingProofId === selectedProof.proofId || selectedProof.status !== 'valid'}
+                disabled={pendingAction === `mint:${selectedProof.proofId.toString()}` || selectedProof.status !== 'valid'}
                 onClick={() => void handleMintProof(selectedProof)}
               >
                 {selectedProof.nftStatus === 'minted' ? <CheckCircleIcon className="size-4" /> : <WorkspacePremiumIcon className="size-4" />}
                 {selectedProof.nftStatus === 'minted' ? 'NFT Ready' : 'Mint as NFT'}
               </Button>
             )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={Boolean(authorizingProof)}
+        onOpenChange={(open) => {
+          if (!open) {
+            setAuthorizingProof(null)
+            setVerifierAddress('')
+          }
+        }}
+      >
+        <DialogContent className="max-w-md rounded-xl border-white/10 bg-surface-container">
+          <DialogHeader>
+            <DialogTitle>Authorize Verifier</DialogTitle>
+            <DialogDescription className="text-on-surface-variant">
+              The verifier will be able to decrypt this proof result, but not your salary amount.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <label className="text-[10px] font-black uppercase tracking-[0.2em] text-on-surface-variant">Verifier Address</label>
+            <Input
+              className="h-12 rounded-lg border-none bg-surface-container-lowest px-5 font-mono text-xs font-bold shadow-inner focus-visible:ring-tertiary/30"
+              onChange={event => setVerifierAddress(event.target.value)}
+              placeholder="0x..."
+              value={verifierAddress}
+            />
+          </div>
+          <DialogFooter>
+            <Button
+              className="rounded-sm"
+              disabled={!authorizingProof || pendingAction === `authorize:${authorizingProof.proofId.toString()}`}
+              onClick={() => void handleAuthorizeVerifier()}
+            >
+              {authorizingProof && pendingAction === `authorize:${authorizingProof.proofId.toString()}` && <RefreshIcon className="size-4 animate-spin" />}
+              Authorize
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

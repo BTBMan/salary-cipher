@@ -298,7 +298,7 @@ export default function EmployeeDashboardPage() {
                     className="text-[10px] font-black uppercase tracking-[0.2em] text-outline hover:text-on-surface"
                     disabled={overview.isLoadingEmployeePayrollHistory}
                     onClick={() => {
-                      void overview.refetchEmployeePayrollHistory()
+                      overview.refetchEmployeePayrollHistory()
                     }}
                   >
                     Refresh History

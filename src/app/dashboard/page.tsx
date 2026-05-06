@@ -223,7 +223,7 @@ export default function DashboardPage() {
                     className="text-[10px] font-black uppercase tracking-[0.2em] text-outline hover:text-on-surface"
                     disabled={overview.isLoadingCompanyPayrollHistory}
                     onClick={() => {
-                      void overview.refetchCompanyPayrollHistory()
+                      overview.refetchCompanyPayrollHistory()
                     }}
                   >
                     Refresh History

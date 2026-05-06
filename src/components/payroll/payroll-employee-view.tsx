@@ -2,6 +2,7 @@
 
 import type { PayrollOverviewData } from './types'
 import type { CompanySummary } from '@/contexts'
+import Link from 'next/link'
 import { useMemo } from 'react'
 import {
   MdAutorenew as AutorenewIcon,
@@ -106,10 +107,19 @@ export function PayrollEmployeeView({ overview, selectedCompany }: PayrollEmploy
                     : <LockOpenIcon className="size-5" />}
                   Unwrap &amp; Withdraw
                 </Button>
-                <Button className="h-12 rounded border border-outline-variant/30 bg-surface-variant/50 px-8 text-xs font-bold uppercase tracking-wide text-on-surface shadow-none hover:bg-surface-variant" variant="outline">
-                  <PolicyIcon className="size-5" />
-                  View Proofs
-                </Button>
+                <Button
+                  className="h-12 rounded border border-outline-variant/30 bg-surface-variant/50 px-8 text-xs font-bold uppercase tracking-wide text-on-surface shadow-none hover:bg-surface-variant"
+                  variant="outline"
+                  nativeButton={false}
+                  render={(
+                    <Link
+                      href="/salary-proofs"
+                    >
+                      <PolicyIcon className="size-5" />
+                      View Proofs
+                    </Link>
+                  )}
+                />
               </div>
             </CardContent>
           </Card>

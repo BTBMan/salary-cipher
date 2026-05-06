@@ -381,19 +381,19 @@ export default function SalaryNegotiationPage() {
                 Negotiation Rules
               </h5>
               <div className="space-y-2">
-                <div className="flex items-start gap-3 rounded-lg bg-surface-container/40 p-3">
+                <div className="flex items-start gap-3 rounded-lg py-3">
                   <SecurityIcon className="mt-0.5 size-4 shrink-0 text-tertiary" />
                   <p className="text-xs font-medium leading-relaxed text-on-surface-variant">
                     Owner can view and manage all employee negotiations. Non-owner employees only see their own records.
                   </p>
                 </div>
-                <div className="flex items-start gap-3 rounded-lg bg-surface-container/40 p-3">
+                <div className="flex items-start gap-3 rounded-lg py-3">
                   <PendingIcon className="mt-0.5 size-4 shrink-0 text-amber-300" />
                   <p className="text-xs font-medium leading-relaxed text-on-surface-variant">
                     Owner submits the encrypted employer offer. Employee submits the encrypted ask.
                   </p>
                 </div>
-                <div className="flex items-start gap-3 rounded-lg bg-surface-container/40 p-3">
+                <div className="flex items-start gap-3 rounded-lg py-3">
                   <CheckCircleIcon className="mt-0.5 size-4 shrink-0 text-emerald-400" />
                   <p className="text-xs font-medium leading-relaxed text-on-surface-variant">
                     Owner can apply the new salary only after decrypting a matched result.
@@ -407,13 +407,13 @@ export default function SalaryNegotiationPage() {
             <CardContent className="space-y-5 p-6">
               <h5 className="text-[10px] font-black uppercase tracking-[0.2em] text-on-surface opacity-80">Private Matching Path</h5>
               <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3">
-                <div className="rounded-xl border border-tertiary/20 bg-tertiary/10 p-4">
+                <div className="rounded-xl border border-tertiary/20 bg-tertiary/10 px-3 py-4">
                   <LockIcon className="mb-3 size-4 text-tertiary" />
                   <p className="text-[10px] font-black uppercase tracking-[0.2em] text-tertiary">Employee Ask</p>
                   <p className="mt-2 font-mono text-sm font-black text-on-surface">Encrypted</p>
                 </div>
                 <MdSyncAlt className="size-5 text-outline" />
-                <div className="rounded-xl border border-primary/20 bg-primary/10 p-4">
+                <div className="rounded-xl border border-primary/20 bg-primary/10 px-3 py-4">
                   <LockIcon className="mb-3 size-4 text-primary" />
                   <p className="text-[10px] font-black uppercase tracking-[0.2em] text-primary">Employer Offer</p>
                   <p className="mt-2 font-mono text-sm font-black text-on-surface">Encrypted</p>

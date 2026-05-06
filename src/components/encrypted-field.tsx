@@ -74,7 +74,7 @@ export function EncryptedField({
         onClick={handleReveal}
       >
         <div className={cn(
-          'font-mono text-sm blur-sm select-none rounded bg-secondary/20 opacity-50 transition-all duration-300',
+          'font-mono text-sm blur-sm select-none rounded bg-secondary/20 opacity-50 transition-all duration-300 truncate',
           valueClassName,
         )}
         >
