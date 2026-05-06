@@ -36,8 +36,9 @@ export const sidebarSecondaryNavItems = [
 ]
 
 export const topNavItems = [
-  { title: 'Overview', href: '#overview' },
+  { title: 'Product', href: '#product' },
   { title: 'Features', href: '#features' },
-  { title: 'Security', href: '#security' },
+  { title: 'Workflow', href: '#workflow' },
+  { title: 'Privacy', href: '#privacy' },
   // { title: 'Docs', href: '#' },
 ]
