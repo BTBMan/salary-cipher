@@ -1,7 +1,6 @@
 'use client'
 
-import type { CompanySummary, CreateCompanyInput, SettlementAssetOption } from '@/contexts'
-import type { RolesEnum } from '@/enums'
+import type { CompanySummary, CreateCompanyInput, SettlementAssetOption, WorkspaceViewMode } from '@/contexts'
 import type { PropsWithChildren } from 'react'
 import type { Address, Hash } from 'viem'
 import { useAppKitAccount } from '@reown/appkit/react'
@@ -13,7 +12,7 @@ import { readContracts } from 'wagmi/actions'
 import { StoreContext } from '@/contexts'
 import { CompanyRegistry } from '@/contract-data/company-registry'
 import { SalaryCipherFactory } from '@/contract-data/salary-cipher-factory'
-import { SettlementAssetEnum } from '@/enums'
+import { RolesEnum, SettlementAssetEnum } from '@/enums'
 
 const STORAGE_KEY_PREFIX = 'salary-cipher'
 
@@ -75,6 +74,7 @@ export function StoreProvider({ children }: PropsWithChildren) {
     selectedCompanyId: null,
     isReady: false,
   })
+  const [hrWorkspaceViewMode, setHrWorkspaceViewMode] = useState<WorkspaceViewMode>('company')
   const [isCreatingCompany, setIsCreatingCompany] = useState(false)
 
   const receiptQuery = useWaitForTransactionReceipt({
@@ -396,6 +396,10 @@ export function StoreProvider({ children }: PropsWithChildren) {
   const selectedCompany = useMemo(() => {
     return sessionState.companies.find(company => company.id === sessionState.selectedCompanyId) ?? null
   }, [sessionState.companies, sessionState.selectedCompanyId])
+  const canSwitchWorkspaceView = selectedCompany?.role === RolesEnum.HR
+  const workspaceViewMode = canSwitchWorkspaceView
+    ? hrWorkspaceViewMode
+    : selectedCompany?.role === RolesEnum.Employee ? 'employee' : 'company'
 
   const contextValue = useMemo(() => {
     return {
@@ -404,8 +408,13 @@ export function StoreProvider({ children }: PropsWithChildren) {
       selectedCompany,
       selectedCompanyId: sessionState.selectedCompanyId,
       settlementAssets: sessionState.settlementAssets,
+      workspaceViewMode,
+      canSwitchWorkspaceView,
       isReady: sessionState.isReady,
       isCreatingCompany,
+      setWorkspaceViewMode: (mode: WorkspaceViewMode) => {
+        setHrWorkspaceViewMode(mode)
+      },
       createCompany: async (input: CreateCompanyInput) => {
         if (!registryAddress || !SalaryCipherFactory.address || !address) {
           toast.error('Wallet or contract is not ready.')
@@ -481,6 +490,7 @@ export function StoreProvider({ children }: PropsWithChildren) {
     }
   }, [
     address,
+    canSwitchWorkspaceView,
     isCreatingCompany,
     persistSelectedCompany,
     readCompanySummary,
@@ -491,6 +501,7 @@ export function StoreProvider({ children }: PropsWithChildren) {
     sessionState.isReady,
     sessionState.selectedCompanyId,
     sessionState.settlementAssets,
+    workspaceViewMode,
     refetchUserCompanyIds,
     waitForReceipt,
     mutateAsync,

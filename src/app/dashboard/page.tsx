@@ -25,7 +25,7 @@ import {
 } from '@/components/ui/table'
 import { canManagePayroll, canViewFinance } from '@/constants'
 import { useOverviewChainData, useStoreContext } from '@/hooks'
-import { formatAddress, formatUnixDate, getConfidentialTokenSymbol } from '@/utils'
+import { cn, formatAddress, formatUnixDate, getConfidentialTokenSymbol } from '@/utils'
 
 function formatTokenAmount(value: string | null, fallback = '••••••••') {
   if (!value) {
@@ -51,7 +51,7 @@ export default function DashboardPage() {
     <AppLayout>
       <div className="flex flex-col gap-8">
         {/* Stats Section: Bento Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className={cn('grid grid-cols-1 md:grid-cols-2 gap-4', canViewCompanyFinance ? 'lg:grid-cols-4' : 'lg:grid-cols-3')}>
           {/* Stat 1: Managing Employees */}
           <div className="bg-surface-container-low p-5 rounded-lg transition-all hover:bg-surface-container border-b-2 border-transparent hover:border-primary/20 group">
             <p className="text-on-surface-variant text-[10px] font-bold uppercase tracking-widest mb-3">Managing Employees</p>

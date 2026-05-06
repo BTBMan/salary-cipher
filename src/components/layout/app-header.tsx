@@ -9,9 +9,10 @@ import { RoleBadge } from '@/components/role-badge'
 import { SidebarTrigger } from '@/components/ui/sidebar'
 import { WalletNetworkStatus } from '@/components/wallet/wallet-network-status'
 import { useStoreContext } from '@/hooks'
+import { cn } from '@/utils'
 
 export function AppHeader() {
-  const { selectedCompany } = useStoreContext()
+  const { canSwitchWorkspaceView, selectedCompany, setWorkspaceViewMode, workspaceViewMode } = useStoreContext()
   const [isCompanyDialogOpen, setIsCompanyDialogOpen] = useState(false)
 
   return (
@@ -36,6 +37,31 @@ export function AppHeader() {
         </button>
 
         <div className="h-6 w-px bg-white/10 hidden md:block" />
+
+        {canSwitchWorkspaceView && (
+          <div className="flex items-center rounded-sm border border-outline-variant/15 bg-surface-container p-1">
+            {[
+              { label: 'Company', value: 'company' as const },
+              { label: 'Employee', value: 'employee' as const },
+            ].map(item => (
+              <button
+                key={item.value}
+                type="button"
+                className={cn(
+                  'rounded-sm px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.14em] transition-colors',
+                  workspaceViewMode === item.value
+                    ? 'bg-primary/15 text-primary'
+                    : 'text-outline hover:text-on-surface',
+                )}
+                onClick={() => setWorkspaceViewMode(item.value)}
+              >
+                {item.label}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {canSwitchWorkspaceView && <div className="h-6 w-px bg-white/10 hidden md:block" />}
 
         <WalletNetworkStatus />
       </div>

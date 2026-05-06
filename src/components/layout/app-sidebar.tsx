@@ -17,13 +17,28 @@ import {
 import { WalletConnection } from '@/components/wallet/wallet-connection'
 import { sidebarMainNavItems } from '@/configs'
 import { hasRoleAccess } from '@/constants'
+import { RolesEnum } from '@/enums'
 import { useStoreContext } from '@/hooks'
 import { cn } from '@/utils'
 
 export function AppSidebar() {
   const pathname = usePathname()
-  const { selectedCompany } = useStoreContext()
-  const visibleMainNavItems = sidebarMainNavItems.filter(item => hasRoleAccess(selectedCompany?.role, item.roles))
+  const { selectedCompany, workspaceViewMode } = useStoreContext()
+  const visibleMainNavItems = sidebarMainNavItems.filter((item) => {
+    if (!hasRoleAccess(selectedCompany?.role, item.roles)) {
+      return false
+    }
+
+    if (selectedCompany?.role !== RolesEnum.HR) {
+      return true
+    }
+
+    if (workspaceViewMode === 'company') {
+      return item.href !== '/salary-proofs'
+    }
+
+    return item.href !== '/compliance'
+  })
 
   return (
     <Sidebar className="bg-surface border-none shadow-[40px_0_80px_-20px_rgba(6,14,32,0.5)]">

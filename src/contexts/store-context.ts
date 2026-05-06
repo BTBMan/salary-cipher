@@ -33,14 +33,19 @@ export interface SettlementAssetOption {
   settlementToken: Address
 }
 
+export type WorkspaceViewMode = 'company' | 'employee'
+
 export interface StoreContextState {
   companies: CompanySummary[]
   hasCompanies: boolean
   selectedCompany: CompanySummary | null
   selectedCompanyId: string | null
   settlementAssets: SettlementAssetOption[]
+  workspaceViewMode: WorkspaceViewMode
+  canSwitchWorkspaceView: boolean
   isReady: boolean
   isCreatingCompany: boolean
+  setWorkspaceViewMode: (mode: WorkspaceViewMode) => void
   createCompany: (input: CreateCompanyInput) => Promise<CompanySummary | null>
   selectCompany: (companyId: string) => void
   clearSelectedCompany: () => void

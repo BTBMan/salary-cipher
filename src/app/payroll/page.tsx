@@ -8,12 +8,13 @@ import { RolesEnum } from '@/enums'
 import { useOverviewChainData, useStoreContext } from '@/hooks'
 
 export default function PayrollHistoryPage() {
-  const { selectedCompany } = useStoreContext()
+  const { selectedCompany, workspaceViewMode } = useStoreContext()
   const overview = useOverviewChainData(selectedCompany, { payrollHistoryLimit: null })
+  const shouldShowEmployeeView = selectedCompany?.role === RolesEnum.Employee || (selectedCompany?.role === RolesEnum.HR && workspaceViewMode === 'employee')
 
   return (
     <AppLayout>
-      {selectedCompany?.role === RolesEnum.Employee
+      {shouldShowEmployeeView
         ? <PayrollEmployeeView overview={overview} selectedCompany={selectedCompany} />
         : canManagePayroll(selectedCompany?.role) && selectedCompany
           ? <PayrollManagerView overview={overview} selectedCompany={selectedCompany} />

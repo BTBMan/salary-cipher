@@ -507,58 +507,59 @@ export function useOverviewChainData(
     : null
 
   const decryptRequests = useMemo(() => {
-    if (selectedCompany?.role === RolesEnum.Employee) {
-      const settlementTokenAddress = selectedSettlementAsset?.settlementToken as Address | undefined
-      const requests = [
-        employeeSalaryHandle
-          ? {
-              handle: employeeSalaryHandle,
-              contractAddress: SalaryCipherCore.address,
-            }
-          : null,
-        employeeBalanceHandle && settlementTokenAddress
-          ? {
-              handle: employeeBalanceHandle,
-              contractAddress: settlementTokenAddress,
-            }
-          : null,
-        ...employeePayrollHistory.map(item => item.amountHandle && settlementTokenAddress
-          ? {
-              handle: item.amountHandle,
-              contractAddress: settlementTokenAddress,
-            }
-          : null),
-      ].filter((request): request is { handle: Hex, contractAddress: Address } => Boolean(request))
-
-      return requests.length > 0 ? requests : undefined
-    }
-
-    const requests = salaryHandles
-      .map(item => item.handle
-        ? {
-            handle: item.handle,
-            contractAddress: SalaryCipherCore.address,
-          }
-        : null)
-      .concat(
-        companyPayrollHistory.map(item => item.amountHandle && selectedSettlementAsset?.settlementToken
-          ? {
-              handle: item.amountHandle,
-              contractAddress: selectedSettlementAsset.settlementToken as Address,
-            }
-          : null),
-      )
-      .filter((request): request is { handle: Hex, contractAddress: Address } => Boolean(request))
+    const settlementTokenAddress = selectedSettlementAsset?.settlementToken as Address | undefined
+    const canDecryptEmployeeValues = selectedCompany?.role === RolesEnum.HR || selectedCompany?.role === RolesEnum.Employee
+    const canDecryptCompanyValues = selectedCompany?.role === RolesEnum.Owner || selectedCompany?.role === RolesEnum.HR
+    const requests = [
+      ...(canDecryptEmployeeValues
+        ? [
+            employeeSalaryHandle
+              ? {
+                  handle: employeeSalaryHandle,
+                  contractAddress: SalaryCipherCore.address,
+                }
+              : null,
+            employeeBalanceHandle && settlementTokenAddress
+              ? {
+                  handle: employeeBalanceHandle,
+                  contractAddress: settlementTokenAddress,
+                }
+              : null,
+            ...employeePayrollHistory.map(item => item.amountHandle && settlementTokenAddress
+              ? {
+                  handle: item.amountHandle,
+                  contractAddress: settlementTokenAddress,
+                }
+              : null),
+          ]
+        : []),
+      ...(canDecryptCompanyValues
+        ? [
+            ...salaryHandles.map(item => item.handle
+              ? {
+                  handle: item.handle,
+                  contractAddress: SalaryCipherCore.address,
+                }
+              : null),
+            ...companyPayrollHistory.map(item => item.amountHandle && settlementTokenAddress
+              ? {
+                  handle: item.amountHandle,
+                  contractAddress: settlementTokenAddress,
+                }
+              : null),
+          ]
+        : []),
+    ].filter((request): request is { handle: Hex, contractAddress: Address } => Boolean(request))
 
     return requests.length > 0 ? requests : undefined
   }, [
+    companyPayrollHistory,
     employeeBalanceHandle,
     employeePayrollHistory,
     employeeSalaryHandle,
     salaryHandles,
     selectedCompany?.role,
     selectedSettlementAsset?.settlementToken,
-    companyPayrollHistory,
   ])
   const salaryDecrypt = useFHEDecrypt({
     requests: decryptRequests,
