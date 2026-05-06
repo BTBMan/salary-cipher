@@ -4,32 +4,23 @@ import type { SalaryProofRow } from '@/hooks'
 import type { SalaryProofType } from '@/utils'
 import { useState } from 'react'
 import {
-  MdCheckCircle as CheckCircleIcon,
   MdContentCopy as ContentCopyIcon,
   MdImage as ImageIcon,
   MdKey as KeyIcon,
   MdLock as LockIcon,
-  MdOpenInNew as OpenInNewIcon,
   MdRefresh as RefreshIcon,
-  MdShield as ShieldIcon,
   MdVerifiedUser as VerifiedUserIcon,
   MdWorkspacePremium as WorkspacePremiumIcon,
 } from 'react-icons/md'
 import { toast } from 'sonner'
 import { z } from 'zod'
+import { AuthorizeVerifierDialog } from '@/components/dialogs/authorize-verifier-dialog'
+import { SalaryProofNftDialog } from '@/components/dialogs/salary-proof-nft-dialog'
 import { EncryptedField } from '@/components/encrypted-field'
 import { AppLayout } from '@/components/layout/app-layout'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import {
   Select,
@@ -57,9 +48,6 @@ import {
 import { uploadSalaryProofNft } from './actions'
 
 type ProofStatus = 'valid' | 'expired' | 'revoked'
-
-type PreviewProof = SalaryProofRow & {
-}
 
 const amountRegex = /^\d+(\.\d+)?$/
 
@@ -161,7 +149,7 @@ export default function SalaryProofsPage() {
   const [months, setMonths] = useState('12')
   const [validityDays, setValidityDays] = useState<'7' | '30' | '90'>('30')
   const [formError, setFormError] = useState<string | null>(null)
-  const [selectedProof, setSelectedProof] = useState<PreviewProof | null>(null)
+  const [selectedProof, setSelectedProof] = useState<SalaryProofRow | null>(null)
   const [isPreviewOpen, setIsPreviewOpen] = useState(false)
   const [mintStep, setMintStep] = useState<string | null>(null)
   const [authorizingProof, setAuthorizingProof] = useState<SalaryProofRow | null>(null)
@@ -207,7 +195,7 @@ export default function SalaryProofsPage() {
     })
   }
 
-  const handleMintProof = async (proof: SalaryProofRow | PreviewProof) => {
+  const handleMintProof = async (proof: SalaryProofRow) => {
     if (proof.nftStatus === 'minted') {
       setSelectedProof(proof)
       setIsPreviewOpen(true)
@@ -246,7 +234,7 @@ export default function SalaryProofsPage() {
         return
       }
 
-      const updatedProof: PreviewProof = {
+      const updatedProof: SalaryProofRow = {
         ...proof,
         nftStatus: 'minted',
       }
@@ -554,142 +542,28 @@ export default function SalaryProofsPage() {
         </Card>
       </div>
 
-      <Dialog open={isPreviewOpen} onOpenChange={setIsPreviewOpen}>
-        <DialogContent className="max-w-4xl gap-0 overflow-hidden rounded-xl border-white/10 bg-surface-container p-0">
-          <DialogHeader className="border-b border-white/5 px-6 py-5">
-            <DialogTitle>RWA Salary Proof NFT</DialogTitle>
-            <DialogDescription className="text-on-surface-variant">
-              NFT image is loaded from on-chain tokenURI metadata only. Salary amount and decrypted proof result stay out of IPFS.
-            </DialogDescription>
-          </DialogHeader>
+      <SalaryProofNftDialog
+        mintStep={mintStep}
+        open={isPreviewOpen}
+        pendingAction={pendingAction}
+        proof={selectedProof}
+        onMint={proof => void handleMintProof(proof)}
+        onOpenChange={setIsPreviewOpen}
+      />
 
-          {selectedProof && (
-            <div className="grid grid-cols-1 gap-0 lg:grid-cols-2">
-              <div className="bg-surface-container-lowest p-6">
-                {selectedProof.nftImageGatewayUrl
-                  ? (
-                      <img
-                        alt={`${selectedProof.proofId} RWA salary proof NFT preview`}
-                        className="block h-auto w-full overflow-hidden rounded-xl border border-white/10 bg-black shadow-2xl"
-                        src={selectedProof.nftImageGatewayUrl}
-                      />
-                    )
-                  : (
-                      <div className="flex aspect-square w-full items-center justify-center rounded-xl border border-white/10 bg-black p-6 text-center text-xs font-bold uppercase tracking-widest text-outline shadow-2xl">
-                        NFT image is only shown after it is loaded from the on-chain tokenURI metadata.
-                      </div>
-                    )}
-              </div>
-
-              <div className="space-y-5 p-6">
-                <div>
-                  <p className="text-[10px] font-black uppercase tracking-[0.2em] text-outline">Proof ID</p>
-                  <p className="mt-1 font-mono text-lg font-black text-on-surface">{formatProofId(selectedProof.proofId)}</p>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="rounded-xl border border-white/5 bg-surface-container-lowest p-4">
-                    <p className="text-[10px] font-black uppercase tracking-widest text-outline">Type</p>
-                    <p className="mt-2 text-sm font-bold text-on-surface">{selectedProof.proofTypeLabel}</p>
-                  </div>
-                  <div className="rounded-xl border border-white/5 bg-surface-container-lowest p-4">
-                    <p className="text-[10px] font-black uppercase tracking-widest text-outline">Token</p>
-                    <p className="mt-2 text-sm font-bold text-on-surface">{selectedProof.settlementToken}</p>
-                  </div>
-                  <div className="rounded-xl border border-white/5 bg-surface-container-lowest p-4">
-                    <p className="text-[10px] font-black uppercase tracking-widest text-outline">Expires</p>
-                    <p className="mt-2 text-sm font-bold text-on-surface">{formatTimestamp(selectedProof.expiresAt)}</p>
-                  </div>
-                  <div className="rounded-xl border border-white/5 bg-surface-container-lowest p-4">
-                    <p className="text-[10px] font-black uppercase tracking-widest text-outline">NFT</p>
-                    <p className="mt-2 text-sm font-bold text-on-surface">{selectedProof.tokenId ? `#${selectedProof.tokenId.toString()}` : 'Not minted'}</p>
-                  </div>
-                </div>
-
-                <div className="space-y-3 rounded-xl border border-white/5 bg-surface-container-lowest p-4">
-                  <div className="flex items-center gap-2">
-                    <ShieldIcon className="size-4 text-primary" />
-                    <p className="text-xs font-black uppercase tracking-widest text-primary">Privacy boundary</p>
-                  </div>
-                  <p className="text-sm font-medium leading-6 text-on-surface-variant">
-                    The NFT image and metadata include proof summary only. Salary amount, employee name, and decrypted result stay out of IPFS.
-                  </p>
-                </div>
-
-                {selectedProof.nftMetadataGatewayUrl && (
-                  <a
-                    className="inline-flex items-center gap-2 text-xs font-black uppercase tracking-widest text-primary hover:underline"
-                    href={selectedProof.nftMetadataGatewayUrl}
-                    rel="noreferrer"
-                    target="_blank"
-                  >
-                    View IPFS metadata
-                    <OpenInNewIcon className="size-4" />
-                  </a>
-                )}
-
-                {mintStep && (
-                  <div className="flex items-center gap-3 rounded-xl border border-primary/20 bg-primary/10 px-4 py-3 text-sm font-bold text-primary">
-                    <RefreshIcon className="size-4 animate-spin" />
-                    {mintStep}
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-
-          <DialogFooter className="border-t border-white/5 px-6 py-5">
-            {selectedProof && (
-              <Button
-                className="rounded-sm"
-                disabled={pendingAction === `mint:${selectedProof.proofId.toString()}` || selectedProof.status !== 'valid'}
-                onClick={() => void handleMintProof(selectedProof)}
-              >
-                {selectedProof.nftStatus === 'minted' ? <CheckCircleIcon className="size-4" /> : <WorkspacePremiumIcon className="size-4" />}
-                {selectedProof.nftStatus === 'minted' ? 'NFT Ready' : 'Mint as NFT'}
-              </Button>
-            )}
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      <Dialog
-        open={Boolean(authorizingProof)}
+      <AuthorizeVerifierDialog
+        pendingAction={pendingAction}
+        proof={authorizingProof}
+        verifierAddress={verifierAddress}
+        onAuthorize={() => void handleAuthorizeVerifier()}
         onOpenChange={(open) => {
           if (!open) {
             setAuthorizingProof(null)
             setVerifierAddress('')
           }
         }}
-      >
-        <DialogContent className="max-w-md rounded-xl border-white/10 bg-surface-container">
-          <DialogHeader>
-            <DialogTitle>Authorize Verifier</DialogTitle>
-            <DialogDescription className="text-on-surface-variant">
-              The verifier will be able to decrypt this proof result, but not your salary amount.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-3">
-            <label className="text-[10px] font-black uppercase tracking-[0.2em] text-on-surface-variant">Verifier Address</label>
-            <Input
-              className="h-12 rounded-lg border-none bg-surface-container-lowest px-5 font-mono text-xs font-bold shadow-inner focus-visible:ring-tertiary/30"
-              onChange={event => setVerifierAddress(event.target.value)}
-              placeholder="0x..."
-              value={verifierAddress}
-            />
-          </div>
-          <DialogFooter>
-            <Button
-              className="rounded-sm"
-              disabled={!authorizingProof || pendingAction === `authorize:${authorizingProof.proofId.toString()}`}
-              onClick={() => void handleAuthorizeVerifier()}
-            >
-              {authorizingProof && pendingAction === `authorize:${authorizingProof.proofId.toString()}` && <RefreshIcon className="size-4 animate-spin" />}
-              Authorize
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+        onVerifierAddressChange={setVerifierAddress}
+      />
     </AppLayout>
   )
 }

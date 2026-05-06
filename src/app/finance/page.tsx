@@ -14,21 +14,14 @@ import {
   MdShield as ShieldLockIcon,
 } from 'react-icons/md'
 import { z } from 'zod'
+import { DepositTreasuryDialog } from '@/components/dialogs/deposit-treasury-dialog'
+import { WithdrawWrappedBalanceDialog } from '@/components/dialogs/withdraw-wrapped-balance-dialog'
 import { EncryptedField } from '@/components/encrypted-field'
 import { AppLayout } from '@/components/layout/app-layout'
 import { OnchainTransactionLink } from '@/components/onchain-transaction-link'
 import { StatusLabel } from '@/components/status-label'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog'
-import { Input } from '@/components/ui/input'
 import {
   Table,
   TableBody,
@@ -425,105 +418,37 @@ export default function FinancePage() {
         </Card>
       </div>
 
-      <Dialog open={isDepositDialogOpen} onOpenChange={setIsDepositDialogOpen}>
-        <DialogContent className="max-w-lg gap-0 overflow-hidden rounded-xl border-white/10 bg-surface-container p-0">
-          <DialogHeader className="border-b border-white/5 px-6 py-5">
-            <DialogTitle>Deposit treasury funds</DialogTitle>
-            <DialogDescription className="text-on-surface-variant">
-              This will approve {underlyingTokenSymbol}, deposit it into the company vault, then wrap it into the confidential settlement token.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 px-6 py-5">
-            <div className="space-y-2">
-              <label className="block text-xs font-bold uppercase tracking-widest text-on-surface-variant">Amount</label>
-              <Input
-                aria-invalid={Boolean(depositError)}
-                className="h-12 rounded border-outline-variant/20 bg-surface-container-lowest px-4 font-mono text-sm font-medium text-on-surface shadow-none focus-visible:ring-1 focus-visible:ring-primary/40"
-                inputMode="decimal"
-                placeholder={`0.00 ${underlyingTokenSymbol}`}
-                value={depositAmount}
-                onChange={(event) => {
-                  setDepositError(null)
-                  setDepositAmount(event.target.value)
-                }}
-              />
-              {depositError && <p className="text-xs font-bold text-destructive">{depositError}</p>}
-            </div>
-            <p className="text-[10px] font-bold uppercase tracking-widest text-outline">
-              Wallet balance: {formatTokenAmount(finance.ownerUnderlyingBalance, '-')} {underlyingTokenSymbol}
-            </p>
-          </div>
-          <DialogFooter className="border-t border-white/5 px-6 py-5">
-            <Button
-              disabled={finance.isDepositing}
-              variant="outline"
-              onClick={() => setIsDepositDialogOpen(false)}
-            >
-              Cancel
-            </Button>
-            <Button
-              className="primary-gradient border-none text-on-primary-container"
-              disabled={finance.isDepositing}
-              onClick={() => {
-                void handleDeposit()
-              }}
-            >
-              {finance.isDepositing && <AutorenewIcon className="size-4 animate-spin" />}
-              Deposit &amp; Wrap
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <DepositTreasuryDialog
+        amount={depositAmount}
+        error={depositError}
+        isDepositing={finance.isDepositing}
+        open={isDepositDialogOpen}
+        ownerUnderlyingBalance={formatTokenAmount(finance.ownerUnderlyingBalance, '-')}
+        tokenSymbol={underlyingTokenSymbol}
+        onAmountChange={(amount) => {
+          setDepositError(null)
+          setDepositAmount(amount)
+        }}
+        onConfirm={() => {
+          void handleDeposit()
+        }}
+        onOpenChange={setIsDepositDialogOpen}
+      />
 
-      <Dialog open={isWithdrawDialogOpen} onOpenChange={setIsWithdrawDialogOpen}>
-        <DialogContent className="max-w-lg gap-0 overflow-hidden rounded-xl border-white/10 bg-surface-container p-0">
-          <DialogHeader className="border-b border-white/5 px-6 py-5">
-            <DialogTitle>Withdraw wrapped treasury balance</DialogTitle>
-            <DialogDescription className="text-on-surface-variant">
-              This unwraps the vault&apos;s full confidential balance and returns the underlying token to the company owner.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 px-6 py-5">
-            <div className="rounded-lg border border-white/5 bg-surface-container-lowest p-4">
-              <p className="text-[10px] font-black uppercase tracking-[0.2em] text-outline">Wrapped balance</p>
-              <div className="mt-2 flex items-center gap-2">
-                <EncryptedField
-                  canDecrypt={finance.canDecryptVaultBalance}
-                  className="space-y-0"
-                  isDecrypting={finance.isDecryptingVaultBalance}
-                  isEncrypted={!finance.vaultConfidentialBalance}
-                  value={vaultBalanceLabel}
-                  valueClassName="font-mono text-lg font-black text-on-surface"
-                  onDecrypt={finance.decryptVaultBalance}
-                />
-                <span className="font-mono text-lg font-black text-on-surface">{confidentialTokenSymbol}</span>
-              </div>
-            </div>
-            <p className="text-xs font-medium leading-relaxed text-on-surface-variant">
-              This flow submits the unwrap request, decrypts the public unwrap amount, then finalizes the underlying token transfer.
-            </p>
-          </div>
-          <DialogFooter className="border-t border-white/5 px-6 py-5">
-            <Button
-              disabled={finance.isWithdrawingWrapped}
-              variant="outline"
-              onClick={() => setIsWithdrawDialogOpen(false)}
-            >
-              Cancel
-            </Button>
-            <Button
-              className="primary-gradient border-none text-on-primary-container"
-              disabled={finance.isWithdrawingWrapped}
-              onClick={() => {
-                void handleWithdraw()
-              }}
-            >
-              {finance.isWithdrawingWrapped && <AutorenewIcon className="size-4 animate-spin" />}
-              Confirm Withdraw
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <WithdrawWrappedBalanceDialog
+        canDecryptVaultBalance={finance.canDecryptVaultBalance}
+        confidentialTokenSymbol={confidentialTokenSymbol}
+        isDecryptingVaultBalance={finance.isDecryptingVaultBalance}
+        isWithdrawingWrapped={finance.isWithdrawingWrapped}
+        open={isWithdrawDialogOpen}
+        vaultBalanceLabel={vaultBalanceLabel}
+        vaultConfidentialBalance={finance.vaultConfidentialBalance}
+        onDecryptVaultBalance={finance.decryptVaultBalance}
+        onOpenChange={setIsWithdrawDialogOpen}
+        onWithdraw={() => {
+          void handleWithdraw()
+        }}
+      />
     </AppLayout>
   )
 }
