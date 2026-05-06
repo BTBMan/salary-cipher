@@ -4,15 +4,11 @@ import Link from 'next/link'
 import {
   MdAccountBalance as AccountBalanceIcon,
   MdAutorenew as AutorenewIcon,
-  MdDescription as DescriptionIcon,
-  MdDirectionsCar as DirectionsCarIcon,
-  MdHome as HomeIcon,
   MdLock as LockIcon,
   MdAccountBalanceWallet,
   MdArrowForward,
   MdSchedule as ScheduleIcon,
   MdVerifiedUser as VerifiedUserIcon,
-  MdVisibility as VisibilityIcon,
 } from 'react-icons/md'
 import { EncryptedField } from '@/components/encrypted-field'
 import { AppLayout } from '@/components/layout/app-layout'
@@ -27,7 +23,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import { useOverviewChainData, useStoreContext } from '@/hooks'
+import { useOverviewChainData, useSalaryProofs, useStoreContext } from '@/hooks'
 import { cn, formatAddress, formatUnixDate, getConfidentialTokenSymbol } from '@/utils'
 
 function formatTokenAmount(value: string | null, fallback = '••••••••') {
@@ -41,12 +37,44 @@ function formatTokenAmount(value: string | null, fallback = '••••••�
   }).format(Number(value))
 }
 
+function formatProofId(proofId: bigint) {
+  return `#${proofId.toString().padStart(4, '0')}`
+}
+
+function formatProofStatus(status: string) {
+  switch (status) {
+    case 'valid':
+      return 'Valid'
+    case 'expired':
+      return 'Expired'
+    case 'revoked':
+      return 'Revoked'
+    default:
+      return status
+  }
+}
+
+function getProofStatusClassName(status: string) {
+  switch (status) {
+    case 'valid':
+      return 'text-emerald-400'
+    case 'expired':
+      return 'text-outline'
+    case 'revoked':
+      return 'text-destructive'
+    default:
+      return 'text-outline'
+  }
+}
+
 export default function EmployeeDashboardPage() {
   const { selectedCompany } = useStoreContext()
   const overview = useOverviewChainData(selectedCompany)
+  const salaryProofs = useSalaryProofs(selectedCompany)
   const confidentialTokenSymbol = getConfidentialTokenSymbol(overview.selectedSettlementAsset)
   const daysLeft = overview.payrollSchedule?.daysLeft ?? 0
   const periodProgress = overview.payrollSchedule?.periodProgress ?? 0
+  const recentSalaryProofs = salaryProofs.rows.slice(0, 3)
 
   return (
     <AppLayout>
@@ -337,27 +365,34 @@ export default function EmployeeDashboardPage() {
 
             {/* Recent Proofs List */}
             <div className="space-y-4">
-              <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-on-surface-variant px-1">Active Proof Sessions</h4>
+              <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-on-surface-variant px-1">Recent Salary Proofs</h4>
               <div className="space-y-2.5">
-                {[
-                  { icon: HomeIcon, title: 'Mortgage Eligibility', sub: 'Needs SalaryProof workflow', color: 'text-primary' },
-                  { icon: DirectionsCarIcon, title: 'Auto Loan Check', sub: 'No proof session storage', color: 'text-tertiary' },
-                  { icon: DescriptionIcon, title: 'Generic Income Level', sub: 'No request history getter', color: 'text-emerald-400' },
-                ].map(p => (
-                  <Card key={p.title} className="rounded-xl border border-transparent bg-surface-container-low p-0 shadow-lg transition-all hover:border-white/5 hover:bg-surface-container-high">
+                {recentSalaryProofs.length === 0 && (
+                  <Card className="rounded-xl border border-transparent bg-surface-container-low p-0 shadow-lg">
+                    <CardContent className="p-4">
+                      <p className="text-sm font-bold text-on-surface">No salary proofs yet</p>
+                      <p className="mt-1.5 text-[10px] font-bold uppercase tracking-widest text-outline">Create your first proof from Salary Proofs</p>
+                    </CardContent>
+                  </Card>
+                )}
+                {recentSalaryProofs.map(proof => (
+                  <Card key={proof.proofId.toString()} className="rounded-xl border border-transparent bg-surface-container-low p-0 shadow-lg transition-all hover:border-white/5 hover:bg-surface-container-high">
                     <CardContent className="flex items-center justify-between p-4">
                       <div className="flex items-center gap-4">
                         <div className="w-10 h-10 rounded-lg bg-surface-container flex items-center justify-center border border-white/5 transition-colors">
-                          <p.icon className={cn('size-5', p.color)} />
+                          <VerifiedUserIcon className={cn('size-5', getProofStatusClassName(proof.status))} />
                         </div>
                         <div>
-                          <p className="text-sm font-bold text-on-surface leading-none">{p.title}</p>
-                          <p className="text-[10px] text-outline font-bold mt-1.5 uppercase tracking-widest">{p.sub}</p>
+                          <p className="text-sm font-bold text-on-surface leading-none">{proof.proofTypeLabel}</p>
+                          <p className="text-[10px] text-outline font-bold mt-1.5 uppercase tracking-widest">
+                            {formatProofId(proof.proofId)}
+                            {' / '}
+                            {formatProofStatus(proof.status)}
+                            {' / '}
+                            {proof.nftStatus === 'minted' ? 'NFT minted' : 'No NFT'}
+                          </p>
                         </div>
                       </div>
-                      <Button variant="ghost" size="icon-sm" className="text-outline hover:text-primary">
-                        <VisibilityIcon className="size-4" />
-                      </Button>
                     </CardContent>
                   </Card>
                 ))}

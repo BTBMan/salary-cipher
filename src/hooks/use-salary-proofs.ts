@@ -34,12 +34,20 @@ interface SalaryProofRecord {
   tokenId: bigint
 }
 
+interface SalaryProofNftMetadata {
+  image?: string
+  name?: string
+}
+
 export interface SalaryProofRow {
   companyName: string
   condition: string
   createdAt: number
   expiresAt: number
   nftStatus: 'not-minted' | 'minted'
+  nftImageGatewayUrl: string | null
+  nftImageUri: string | null
+  nftMetadataGatewayUrl: string | null
   proofId: bigint
   proofResult: boolean | null
   proofResultHandle: Hex | null
@@ -48,6 +56,7 @@ export interface SalaryProofRow {
   settlementToken: string
   status: SalaryProofStatus
   tokenId: bigint | null
+  tokenUri: string | null
 }
 
 const proofTypeToEnum = {
@@ -67,6 +76,29 @@ const proofTypeLabels = {
   MONTHLY_BETWEEN: 'Monthly Salary between X and Y',
   EMPLOYMENT_DURATION_GTE: 'Employment Duration >= N months',
 } as const satisfies Record<SalaryProofType, string>
+
+const trailingSlashRegex = /\/$/
+
+function toIpfsGatewayUrl(uri: string | null | undefined) {
+  if (!uri) {
+    return null
+  }
+  if (uri.startsWith('http://') || uri.startsWith('https://')) {
+    return uri
+  }
+  if (!uri.startsWith('ipfs://')) {
+    return null
+  }
+
+  const configuredGateway = process.env.NEXT_PUBLIC_GATEWAY_URL?.trim()
+  const gateway = configuredGateway
+    ? configuredGateway.startsWith('http')
+      ? configuredGateway
+      : `https://${configuredGateway}`
+    : 'https://gateway.pinata.cloud'
+
+  return `${gateway.replace(trailingSlashRegex, '')}/ipfs/${uri.replace('ipfs://', '')}`
+}
 
 function isActiveHandle(value: unknown): value is Hex {
   return typeof value === 'string' && value !== '0x' && value !== zeroAddress && value !== zeroHash
@@ -282,6 +314,114 @@ export function useSalaryProofs(selectedCompany: CompanySummary | null) {
     }).filter((item): item is { proofId: bigint, record: SalaryProofRecord } => Boolean(item))
   }, [proofIds, proofResults])
 
+  const {
+    data: configuredProofNFTAddress,
+    refetch: refetchConfiguredProofNFTAddress,
+  } = useReadContract({
+    abi: SalaryProof.abi,
+    address: salaryProofAddress,
+    functionName: 'proofNFT',
+    query: {
+      enabled: Boolean(salaryProofAddress),
+    },
+  })
+
+  const proofNFTAddress = useMemo(() => {
+    if (typeof configuredProofNFTAddress === 'string' && isAddress(configuredProofNFTAddress) && configuredProofNFTAddress !== zeroAddress) {
+      return configuredProofNFTAddress as Address
+    }
+
+    return ProofNFT.address
+  }, [configuredProofNFTAddress])
+
+  const mintedProofs = useMemo(() => {
+    return parsedProofs.filter(item => item.record.minted && item.record.tokenId > 0n)
+  }, [parsedProofs])
+
+  const tokenUriContracts = useMemo(() => {
+    if (!proofNFTAddress) {
+      return []
+    }
+
+    return mintedProofs.map(item => ({
+      abi: ProofNFT.abi,
+      address: proofNFTAddress,
+      functionName: 'tokenURI',
+      args: [item.record.tokenId],
+    }) as const)
+  }, [mintedProofs, proofNFTAddress])
+
+  const {
+    data: tokenUriResults,
+    refetch: refetchTokenUris,
+  } = useReadContracts({
+    contracts: tokenUriContracts,
+    query: {
+      enabled: tokenUriContracts.length > 0,
+    },
+  })
+
+  const tokenUriByTokenId = useMemo(() => {
+    const result = new Map<string, string>()
+
+    mintedProofs.forEach((proof, index) => {
+      const tokenUriResult = tokenUriResults?.[index]
+      if (tokenUriResult?.status === 'success' && typeof tokenUriResult.result === 'string') {
+        result.set(proof.record.tokenId.toString(), tokenUriResult.result)
+      }
+    })
+
+    return result
+  }, [mintedProofs, tokenUriResults])
+
+  const [metadataByTokenUri, setMetadataByTokenUri] = useState<Record<string, SalaryProofNftMetadata>>({})
+
+  useEffect(() => {
+    const tokenUris = Array.from(tokenUriByTokenId.values())
+    const missingTokenUris = tokenUris.filter(tokenUri => !metadataByTokenUri[tokenUri])
+    if (missingTokenUris.length === 0) {
+      return
+    }
+
+    let cancelled = false
+
+    const fetchMetadata = async () => {
+      const entries = await Promise.all(missingTokenUris.map(async (tokenUri) => {
+        const metadataUrl = toIpfsGatewayUrl(tokenUri)
+        if (!metadataUrl) {
+          return [tokenUri, {}] as const
+        }
+
+        try {
+          const response = await fetch(metadataUrl)
+          if (!response.ok) {
+            return [tokenUri, {}] as const
+          }
+
+          return [tokenUri, await response.json() as SalaryProofNftMetadata] as const
+        }
+        catch {
+          return [tokenUri, {}] as const
+        }
+      }))
+
+      if (cancelled) {
+        return
+      }
+
+      setMetadataByTokenUri(current => ({
+        ...current,
+        ...Object.fromEntries(entries),
+      }))
+    }
+
+    void fetchMetadata()
+
+    return () => {
+      cancelled = true
+    }
+  }, [metadataByTokenUri, tokenUriByTokenId])
+
   const decryptRequests = useMemo(() => {
     if (!salaryProofAddress) {
       return undefined
@@ -308,6 +448,9 @@ export function useSalaryProofs(selectedCompany: CompanySummary | null) {
         const proofType = (proofTypeFromEnum as Record<number, SalaryProofType | undefined>)[record.proofType] ?? 'MONTHLY_GTE'
         const resultHandle = isActiveHandle(record.result) ? record.result : null
         const decryptedResult = resultHandle ? getDecryptedValue(proofResultDecrypt.results, resultHandle) : undefined
+        const tokenUri = record.minted ? tokenUriByTokenId.get(record.tokenId.toString()) ?? null : null
+        const metadata = tokenUri ? metadataByTokenUri[tokenUri] : undefined
+        const imageUri = metadata?.image ?? null
 
         return {
           companyName: selectedCompany?.name ?? 'Selected Company',
@@ -315,6 +458,9 @@ export function useSalaryProofs(selectedCompany: CompanySummary | null) {
           createdAt: Number(record.createdAt),
           expiresAt: Number(record.expiresAt),
           nftStatus: record.minted ? 'minted' : 'not-minted',
+          nftImageGatewayUrl: toIpfsGatewayUrl(imageUri),
+          nftImageUri: imageUri,
+          nftMetadataGatewayUrl: toIpfsGatewayUrl(tokenUri),
           proofId,
           proofResult: typeof decryptedResult === 'boolean' ? decryptedResult : null,
           proofResultHandle: resultHandle,
@@ -323,10 +469,11 @@ export function useSalaryProofs(selectedCompany: CompanySummary | null) {
           settlementToken: settlementTokenSymbol,
           status: getProofStatus(record),
           tokenId: record.minted ? record.tokenId : null,
+          tokenUri,
         } satisfies SalaryProofRow
       })
       .sort((a, b) => Number(b.proofId - a.proofId))
-  }, [parsedProofs, proofResultDecrypt.results, selectedCompany?.name, settlementTokenSymbol])
+  }, [metadataByTokenUri, parsedProofs, proofResultDecrypt.results, selectedCompany?.name, settlementTokenSymbol, tokenUriByTokenId])
 
   const proofEventArgs = useMemo(() => {
     if (!companyId || !address) {
@@ -356,11 +503,20 @@ export function useSalaryProofs(selectedCompany: CompanySummary | null) {
   const refetchSalaryProofData = useCallback(async () => {
     await Promise.all([
       refetchConfiguredSalaryProofAddress(),
+      refetchConfiguredProofNFTAddress(),
       refetchProofIds(),
       refetchProofRecords(),
       refetchProofGeneratedLogs(),
+      refetchTokenUris(),
     ])
-  }, [refetchConfiguredSalaryProofAddress, refetchProofGeneratedLogs, refetchProofIds, refetchProofRecords])
+  }, [
+    refetchConfiguredProofNFTAddress,
+    refetchConfiguredSalaryProofAddress,
+    refetchProofGeneratedLogs,
+    refetchProofIds,
+    refetchProofRecords,
+    refetchTokenUris,
+  ])
 
   useWatchContractEvent({
     abi: SalaryProof.abi,
@@ -599,6 +755,7 @@ export function useSalaryProofs(selectedCompany: CompanySummary | null) {
     mintProofNFT,
     pendingAction,
     proofNFTAbi: ProofNFT.abi,
+    proofNFTAddress,
     refetchSalaryProofData,
     revokeProof,
     rows,

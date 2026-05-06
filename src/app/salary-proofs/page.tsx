@@ -59,10 +59,6 @@ import { uploadSalaryProofNft } from './actions'
 type ProofStatus = 'valid' | 'expired' | 'revoked'
 
 type PreviewProof = SalaryProofRow & {
-  imageGatewayUrl?: string
-  metadataGatewayUrl?: string
-  svg: string
-  tokenUri?: string
 }
 
 const amountRegex = /^\d+(\.\d+)?$/
@@ -175,18 +171,16 @@ export default function SalaryProofsPage() {
   const activeProofs = proofs.filter(proof => proof.status === 'valid').length
   const mintedProofs = proofs.filter(proof => proof.nftStatus === 'minted').length
 
-  const buildPreviewProof = (proof: SalaryProofRow): PreviewProof => {
+  const buildProofSvg = (proof: SalaryProofRow) => {
     const proofId = formatProofId(proof.proofId)
-    return {
-      ...proof,
-      svg: buildSalaryProofSvg({
-        companyName: proof.companyName,
-        expiresAt: formatTimestamp(proof.expiresAt),
-        proofId,
-        proofTypeLabel: proof.proofTypeLabel,
-        settlementToken: proof.settlementToken,
-      }),
-    }
+
+    return buildSalaryProofSvg({
+      companyName: proof.companyName,
+      expiresAt: formatTimestamp(proof.expiresAt),
+      proofId,
+      proofTypeLabel: proof.proofTypeLabel,
+      settlementToken: proof.settlementToken,
+    })
   }
 
   const handleGenerateProof = async () => {
@@ -214,13 +208,13 @@ export default function SalaryProofsPage() {
   }
 
   const handleMintProof = async (proof: SalaryProofRow | PreviewProof) => {
-    const previewProof = 'svg' in proof ? proof : buildPreviewProof(proof)
-
     if (proof.nftStatus === 'minted') {
-      setSelectedProof(previewProof)
+      setSelectedProof(proof)
       setIsPreviewOpen(true)
       return
     }
+
+    const svg = buildProofSvg(proof)
 
     try {
       setMintStep('Generating NFT image...')
@@ -243,7 +237,7 @@ export default function SalaryProofsPage() {
       const upload = await uploadSalaryProofNft({
         metadata,
         proofId: formatProofId(proof.proofId),
-        svg: previewProof.svg,
+        svg,
       })
 
       setMintStep('Minting NFT on-chain...')
@@ -253,11 +247,8 @@ export default function SalaryProofsPage() {
       }
 
       const updatedProof: PreviewProof = {
-        ...previewProof,
-        imageGatewayUrl: upload.imageGatewayUrl,
-        metadataGatewayUrl: upload.metadataGatewayUrl,
+        ...proof,
         nftStatus: 'minted',
-        tokenUri: upload.tokenUri,
       }
 
       setSelectedProof(updatedProof)
@@ -568,18 +559,26 @@ export default function SalaryProofsPage() {
           <DialogHeader className="border-b border-white/5 px-6 py-5">
             <DialogTitle>RWA Salary Proof NFT</DialogTitle>
             <DialogDescription className="text-on-surface-variant">
-              SVG preview does not reveal the salary amount or decrypted proof result.
+              NFT image is loaded from on-chain tokenURI metadata only. Salary amount and decrypted proof result stay out of IPFS.
             </DialogDescription>
           </DialogHeader>
 
           {selectedProof && (
             <div className="grid grid-cols-1 gap-0 lg:grid-cols-2">
               <div className="bg-surface-container-lowest p-6">
-                <img
-                  alt={`${selectedProof.proofId} RWA salary proof NFT preview`}
-                  className="block h-auto w-full overflow-hidden rounded-xl border border-white/10 bg-black shadow-2xl"
-                  src={`data:image/svg+xml;utf8,${encodeURIComponent(selectedProof.svg)}`}
-                />
+                {selectedProof.nftImageGatewayUrl
+                  ? (
+                      <img
+                        alt={`${selectedProof.proofId} RWA salary proof NFT preview`}
+                        className="block h-auto w-full overflow-hidden rounded-xl border border-white/10 bg-black shadow-2xl"
+                        src={selectedProof.nftImageGatewayUrl}
+                      />
+                    )
+                  : (
+                      <div className="flex aspect-square w-full items-center justify-center rounded-xl border border-white/10 bg-black p-6 text-center text-xs font-bold uppercase tracking-widest text-outline shadow-2xl">
+                        NFT image is only shown after it is loaded from the on-chain tokenURI metadata.
+                      </div>
+                    )}
               </div>
 
               <div className="space-y-5 p-6">
@@ -617,10 +616,10 @@ export default function SalaryProofsPage() {
                   </p>
                 </div>
 
-                {selectedProof.metadataGatewayUrl && (
+                {selectedProof.nftMetadataGatewayUrl && (
                   <a
                     className="inline-flex items-center gap-2 text-xs font-black uppercase tracking-widest text-primary hover:underline"
-                    href={selectedProof.metadataGatewayUrl}
+                    href={selectedProof.nftMetadataGatewayUrl}
                     rel="noreferrer"
                     target="_blank"
                   >
