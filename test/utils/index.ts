@@ -29,6 +29,25 @@ export async function encryptUint128(contractAddress: Address, userAddress: Addr
   return [toHex(encrypted.handles[0]), toHex(encrypted.inputProof)] as const
 }
 
+export async function encryptUint128Pair(
+  contractAddress: Address,
+  userAddress: Address,
+  firstValue: number,
+  secondValue: number,
+) {
+  const encrypted = await fhevm
+    .createEncryptedInput(contractAddress, userAddress)
+    .add128(firstValue)
+    .add128(secondValue)
+    .encrypt()
+
+  return [
+    toHex(encrypted.handles[0]),
+    toHex(encrypted.handles[1]),
+    toHex(encrypted.inputProof),
+  ] as const
+}
+
 export async function decryptUint128(
   handle: string,
   contractAddress: Address,

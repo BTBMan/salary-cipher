@@ -104,7 +104,7 @@ export function buildSalaryProofSvg({
     <path d="M-128 -4H-95M95 -4H128M-4 -128V-95M-4 95V128" stroke="#EBD47B" stroke-opacity="0.5" stroke-width="2" stroke-linecap="round"/>
   </g>
   <rect x="348" y="602" width="328" height="52" rx="26" fill="#0B151F" stroke="#76EBD7" stroke-opacity="0.28"/>
-  <text x="512" y="636" text-anchor="middle" fill="#9DF6E5" font-family="ui-sans-serif, Inter, Arial, sans-serif" font-size="19" font-weight="900" letter-spacing="5">VALID PROOF</text>
+  <text x="512" y="636" text-anchor="middle" fill="#9DF6E5" font-family="ui-sans-serif, Inter, Arial, sans-serif" font-size="19" font-weight="900" letter-spacing="5">SEALED PROOF</text>
   <rect x="236" y="700" width="552" height="1" fill="#FFFFFF" fill-opacity="0.09"/>
   <text x="236" y="738" fill="#8196A8" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="13" font-weight="700" letter-spacing="2">PROOF ID</text>
   <text x="788" y="738" text-anchor="end" fill="#EAF7F3" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="15" font-weight="800">${safeProofId}</text>
@@ -139,7 +139,7 @@ export function buildSalaryProofMetadata({
       { trait_type: 'Proof Type', value: proofTypeLabel },
       { trait_type: 'Company', value: companyName },
       { trait_type: 'Settlement Token', value: settlementToken },
-      { trait_type: 'Proof Status', value: 'Valid' },
+      { trait_type: 'Proof Privacy', value: 'FHE Sealed' },
       { trait_type: 'Expires At', value: expiresAt },
     ],
     external_url: `https://salarycipher.app/salary-proofs/${proofId.replace(leadingProofIdHashRegex, '')}`,
