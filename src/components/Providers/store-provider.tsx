@@ -254,7 +254,7 @@ export function StoreProvider({ children }: PropsWithChildren) {
       name: company.name,
       description: '',
       role,
-      employeeCount: Number(employeeCount),
+      employeeCount: Number(employeeCount) - 1, // Exclude the company owner
       wallet: company.owner,
       avatarSeed: company.name.charAt(0).toUpperCase() || 'C',
       payrollDayOfMonth: Number(payrollConfig.dayOfMonth),
