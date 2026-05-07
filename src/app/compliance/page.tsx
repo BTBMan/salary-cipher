@@ -22,7 +22,6 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import { SalaryCipherCore } from '@/contract-data/salary-cipher-core'
 import { useComplianceAudit, useStoreContext } from '@/hooks'
 
 function formatAuditDate(timestamp: number) {
@@ -48,6 +47,7 @@ export default function CompliancePage() {
     isGeneratingAudit,
     latestAudit,
     rows,
+    salaryCipherCoreAddress,
   } = useComplianceAudit(selectedCompany)
   const latestAuditResultLabel = !latestAudit
     ? 'No audit yet'
@@ -160,12 +160,12 @@ export default function CompliancePage() {
                       <EncryptedField
                         canDecrypt={latestAudit.canDecrypt}
                         isDecrypting={isDecryptingAuditResult({
-                          contractAddress: SalaryCipherCore.address,
+                          contractAddress: salaryCipherCoreAddress!,
                           handle: latestAudit.gapHandle,
                         })}
                         isEncrypted={latestAudit.gapResult === null}
                         onDecrypt={() => decryptAuditResult({
-                          contractAddress: SalaryCipherCore.address,
+                          contractAddress: salaryCipherCoreAddress!,
                           handle: latestAudit.gapHandle!,
                         })}
                         value={latestAudit.gapResult === null ? latestAudit.gapHandle : latestAudit.gapResult ? 'Within threshold' : 'Review needed'}

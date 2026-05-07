@@ -10,6 +10,7 @@ import { useConnection, useReadContract, useReadContracts, useWaitForTransaction
 import { CompanyRegistry } from '@/contract-data/company-registry'
 import { SalaryCipherCore } from '@/contract-data/salary-cipher-core'
 import { RolesEnum } from '@/enums'
+import { getContractAddress } from '@/utils'
 import { useFHEDecrypt } from './fhevm/use-fhe-decrypt'
 import { useFHEEncrypt } from './fhevm/use-fhe-encrypt'
 import { useStoreContext } from './use-store-context'
@@ -74,11 +75,13 @@ function toTokenAmount(value: bigint | string | boolean | undefined, decimals: n
  * Loads and mutates the selected company's people list from the on-chain registry.
  */
 export function useCompanyEmployees(selectedCompany: CompanySummary | null) {
-  const { address } = useConnection()
+  const { address, chainId } = useConnection()
   const { mutateAsync } = useWriteContract()
   const { settlementAssets, refreshCompanies } = useStoreContext()
+  const companyRegistryAddress = getContractAddress(CompanyRegistry, chainId)
+  const salaryCipherCoreAddress = getContractAddress(SalaryCipherCore, chainId)
   const { canEncrypt, encryptWith } = useFHEEncrypt({
-    contractAddress: SalaryCipherCore.address,
+    contractAddress: salaryCipherCoreAddress,
   })
 
   const receiptWaiterRef = useRef<ReceiptWaiter | null>(null)
@@ -157,11 +160,11 @@ export function useCompanyEmployees(selectedCompany: CompanySummary | null) {
     refetch: refetchEmployeeAccounts,
   } = useReadContract({
     abi: CompanyRegistry.abi,
-    address: CompanyRegistry.address,
+    address: companyRegistryAddress,
     functionName: 'getEmployees',
     args: companyId ? [companyId] : undefined,
     query: {
-      enabled: companyId !== null,
+      enabled: companyId !== null && Boolean(companyRegistryAddress),
     },
   })
 
@@ -174,11 +177,11 @@ export function useCompanyEmployees(selectedCompany: CompanySummary | null) {
 
     return employeeAccountList.map(employeeAccount => ({
       abi: CompanyRegistry.abi,
-      address: CompanyRegistry.address,
+      address: companyRegistryAddress,
       functionName: 'getEmployee',
       args: [companyId, employeeAccount],
     }) as const)
-  }, [companyId, employeeAccountList])
+  }, [companyId, companyRegistryAddress, employeeAccountList])
 
   const {
     data: employeeResults,
@@ -199,11 +202,11 @@ export function useCompanyEmployees(selectedCompany: CompanySummary | null) {
 
     return employeeAccountList.map(employeeAccount => ({
       abi: SalaryCipherCore.abi,
-      address: SalaryCipherCore.address,
+      address: salaryCipherCoreAddress,
       functionName: 'monthlySalary',
       args: [companyId, employeeAccount],
     }) as const)
-  }, [companyId, employeeAccountList])
+  }, [companyId, employeeAccountList, salaryCipherCoreAddress])
 
   const {
     data: salaryResults,
@@ -232,14 +235,14 @@ export function useCompanyEmployees(selectedCompany: CompanySummary | null) {
       .filter(({ account }) => canReadAllSalaries || account.toLowerCase() === address?.toLowerCase())
       .map(({ handle }) => handle
         ? {
-            contractAddress: SalaryCipherCore.address,
+            contractAddress: salaryCipherCoreAddress,
             handle,
           }
         : null)
       .filter((request): request is { contractAddress: Address, handle: Hex } => Boolean(request))
 
     return readableHandles.length > 0 ? readableHandles : undefined
-  }, [address, salaryHandles, selectedCompany?.role])
+  }, [address, salaryCipherCoreAddress, salaryHandles, selectedCompany?.role])
 
   const salaryDecrypt = useFHEDecrypt({
     requests: salaryDecryptRequests,
@@ -276,19 +279,19 @@ export function useCompanyEmployees(selectedCompany: CompanySummary | null) {
   }, [refetchEmployeeAccounts, refetchEmployeeRecords, refetchSalaryHandles])
 
   const refreshManagerSalaryAccess = useCallback(async (manager: Address) => {
-    if (!address || !companyId) {
+    if (!address || !companyId || !salaryCipherCoreAddress) {
       return
     }
 
     const hash = await mutateAsync({
       abi: SalaryCipherCore.abi,
-      address: SalaryCipherCore.address,
+      address: salaryCipherCoreAddress,
       functionName: 'refreshManagerSalaryAccess',
       args: [companyId, manager],
       account: address,
     })
     await waitForReceipt(hash)
-  }, [address, companyId, mutateAsync, waitForReceipt])
+  }, [address, companyId, mutateAsync, salaryCipherCoreAddress, waitForReceipt])
 
   useEffect(() => {
     if (employeeAccountsError || employeeRecordsError) {
@@ -298,7 +301,7 @@ export function useCompanyEmployees(selectedCompany: CompanySummary | null) {
   }, [employeeAccountsError, employeeRecordsError])
 
   const addEmployee = useCallback(async (input: AddCompanyEmployeeInput) => {
-    if (!address || !companyId || !selectedSettlementAsset) {
+    if (!address || !companyId || !selectedSettlementAsset || !salaryCipherCoreAddress) {
       toast.error('Wallet, company, or settlement asset is not ready.')
       return false
     }
@@ -316,7 +319,7 @@ export function useCompanyEmployees(selectedCompany: CompanySummary | null) {
 
       const addEmployeeHash = await mutateAsync({
         abi: SalaryCipherCore.abi,
-        address: SalaryCipherCore.address,
+        address: salaryCipherCoreAddress,
         functionName: 'addEmployeeWithSalary',
         args: [
           companyId,
@@ -350,12 +353,13 @@ export function useCompanyEmployees(selectedCompany: CompanySummary | null) {
     refetchEmployees,
     refreshCompanies,
     selectedSettlementAsset,
+    salaryCipherCoreAddress,
     mutateAsync,
     waitForReceipt,
   ])
 
   const deleteEmployee = useCallback(async (employeeAccount: Address) => {
-    if (!address || !companyId) {
+    if (!address || !companyId || !salaryCipherCoreAddress) {
       toast.error('Wallet or company is not ready.')
       return false
     }
@@ -365,7 +369,7 @@ export function useCompanyEmployees(selectedCompany: CompanySummary | null) {
     try {
       const hash = await mutateAsync({
         abi: SalaryCipherCore.abi,
-        address: SalaryCipherCore.address,
+        address: salaryCipherCoreAddress,
         functionName: 'terminateEmployee',
         args: [companyId, employeeAccount],
         account: address,
@@ -384,10 +388,10 @@ export function useCompanyEmployees(selectedCompany: CompanySummary | null) {
     finally {
       setDeletingEmployee(null)
     }
-  }, [address, companyId, refetchEmployees, refreshCompanies, mutateAsync, waitForReceipt])
+  }, [address, companyId, refetchEmployees, refreshCompanies, mutateAsync, salaryCipherCoreAddress, waitForReceipt])
 
   const updateEmployee = useCallback(async (input: UpdateCompanyEmployeeInput) => {
-    if (!address || !companyId) {
+    if (!address || !companyId || !companyRegistryAddress) {
       toast.error('Wallet or company is not ready.')
       return false
     }
@@ -397,7 +401,7 @@ export function useCompanyEmployees(selectedCompany: CompanySummary | null) {
     try {
       const updateEmployeeHash = await mutateAsync({
         abi: CompanyRegistry.abi,
-        address: CompanyRegistry.address,
+        address: companyRegistryAddress,
         functionName: 'updateEmployee',
         args: [companyId, input.account, input.role, input.displayName],
         account: address,
@@ -424,6 +428,7 @@ export function useCompanyEmployees(selectedCompany: CompanySummary | null) {
   }, [
     address,
     companyId,
+    companyRegistryAddress,
     refetchEmployees,
     refreshManagerSalaryAccess,
     refreshCompanies,
@@ -431,17 +436,25 @@ export function useCompanyEmployees(selectedCompany: CompanySummary | null) {
     waitForReceipt,
   ])
   const decryptSalaryHandle = useCallback((handle: Hex) => {
+    if (!salaryCipherCoreAddress) {
+      return
+    }
+
     salaryDecrypt.decryptRequest({
-      contractAddress: SalaryCipherCore.address,
+      contractAddress: salaryCipherCoreAddress,
       handle,
     })
-  }, [salaryDecrypt])
+  }, [salaryCipherCoreAddress, salaryDecrypt])
   const isDecryptingSalaryHandle = useCallback((handle: Hex) => {
+    if (!salaryCipherCoreAddress) {
+      return false
+    }
+
     return salaryDecrypt.isDecryptingRequest({
-      contractAddress: SalaryCipherCore.address,
+      contractAddress: salaryCipherCoreAddress,
       handle,
     })
-  }, [salaryDecrypt])
+  }, [salaryCipherCoreAddress, salaryDecrypt])
 
   return {
     canEncryptSalary: canEncrypt,

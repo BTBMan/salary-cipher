@@ -7,6 +7,7 @@ import { toast } from 'sonner'
 import { decodeEventLog, zeroAddress, zeroHash } from 'viem'
 import { useConnection, useContractEvents, useReadContract, useReadContracts, useWaitForTransactionReceipt, useWatchContractEvent, useWriteContract } from 'wagmi'
 import { SalaryCipherCore } from '@/contract-data/salary-cipher-core'
+import { getContractAddress } from '@/utils'
 import { useFHEDecrypt } from './fhevm/use-fhe-decrypt'
 
 interface ReceiptWaiter {
@@ -84,9 +85,9 @@ function getDecryptedValue(results: Record<string, string | bigint | boolean>, h
   return results[handle] ?? results[handle.toLowerCase()] ?? results[handle.toUpperCase()]
 }
 
-function getAuditIdFromReceipt(receipt: TransactionReceipt) {
+function getAuditIdFromReceipt(receipt: TransactionReceipt, salaryCipherCoreAddress: string) {
   for (const log of receipt.logs) {
-    if (log.address.toLowerCase() !== SalaryCipherCore.address.toLowerCase()) {
+    if (log.address.toLowerCase() !== salaryCipherCoreAddress.toLowerCase()) {
       continue
     }
 
@@ -111,8 +112,9 @@ function getAuditIdFromReceipt(receipt: TransactionReceipt) {
 }
 
 export function useComplianceAudit(selectedCompany: CompanySummary | null) {
-  const { address } = useConnection()
+  const { address, chainId } = useConnection()
   const { mutateAsync } = useWriteContract()
+  const salaryCipherCoreAddress = getContractAddress(SalaryCipherCore, chainId)
   const receiptWaiterRef = useRef<ReceiptWaiter | null>(null)
   const [receiptHash, setReceiptHash] = useState<Hash>()
   const [isGeneratingAudit, setIsGeneratingAudit] = useState(false)
@@ -176,11 +178,11 @@ export function useComplianceAudit(selectedCompany: CompanySummary | null) {
     refetch: refetchLatestAuditId,
   } = useReadContract({
     abi: SalaryCipherCore.abi,
-    address: SalaryCipherCore.address,
+    address: salaryCipherCoreAddress,
     functionName: 'nextAuditId',
     args: companyId ? [companyId] : undefined,
     query: {
-      enabled: Boolean(companyId),
+      enabled: Boolean(companyId && salaryCipherCoreAddress),
     },
   })
 
@@ -196,11 +198,11 @@ export function useComplianceAudit(selectedCompany: CompanySummary | null) {
 
     return auditIds.map(auditId => ({
       abi: SalaryCipherCore.abi,
-      address: SalaryCipherCore.address,
+      address: salaryCipherCoreAddress,
       functionName: 'auditReports',
       args: [companyId, auditId],
     }) as const)
-  }, [auditIds, companyId])
+  }, [auditIds, companyId, salaryCipherCoreAddress])
 
   const {
     data: auditReportResults,
@@ -221,13 +223,13 @@ export function useComplianceAudit(selectedCompany: CompanySummary | null) {
     refetch: refetchAuditGeneratedLogs,
   } = useContractEvents({
     abi: SalaryCipherCore.abi,
-    address: SalaryCipherCore.address,
+    address: salaryCipherCoreAddress,
     eventName: 'AuditGenerated',
     args: auditEventArgs,
     fromBlock: 0n,
     toBlock: 'latest',
     query: {
-      enabled: Boolean(companyId),
+      enabled: Boolean(companyId && salaryCipherCoreAddress),
     },
   })
 
@@ -236,13 +238,13 @@ export function useComplianceAudit(selectedCompany: CompanySummary | null) {
     refetch: refetchAuditFinalizedLogs,
   } = useContractEvents({
     abi: SalaryCipherCore.abi,
-    address: SalaryCipherCore.address,
+    address: salaryCipherCoreAddress,
     eventName: 'AuditFinalized',
     args: auditEventArgs,
     fromBlock: 0n,
     toBlock: 'latest',
     query: {
-      enabled: Boolean(companyId),
+      enabled: Boolean(companyId && salaryCipherCoreAddress),
     },
   })
 
@@ -257,10 +259,10 @@ export function useComplianceAudit(selectedCompany: CompanySummary | null) {
 
   useWatchContractEvent({
     abi: SalaryCipherCore.abi,
-    address: SalaryCipherCore.address,
+    address: salaryCipherCoreAddress,
     eventName: 'AuditGenerated',
     args: auditEventArgs,
-    enabled: Boolean(companyId),
+    enabled: Boolean(companyId && salaryCipherCoreAddress),
     onLogs: () => {
       void refetchAuditData()
     },
@@ -268,10 +270,10 @@ export function useComplianceAudit(selectedCompany: CompanySummary | null) {
 
   useWatchContractEvent({
     abi: SalaryCipherCore.abi,
-    address: SalaryCipherCore.address,
+    address: salaryCipherCoreAddress,
     eventName: 'AuditFinalized',
     args: auditEventArgs,
-    enabled: Boolean(companyId),
+    enabled: Boolean(companyId && salaryCipherCoreAddress),
     onLogs: () => {
       void refetchAuditData()
     },
@@ -312,16 +314,20 @@ export function useComplianceAudit(selectedCompany: CompanySummary | null) {
   }, [auditIds, auditReportResults])
 
   const decryptRequests = useMemo(() => {
+    if (!salaryCipherCoreAddress) {
+      return undefined
+    }
+
     const requests = parsedReports
       .map(item => item.report.gapWithinThreshold)
       .filter(isActiveHandle)
       .map(handle => ({
-        contractAddress: SalaryCipherCore.address,
+        contractAddress: salaryCipherCoreAddress,
         handle,
       }))
 
     return requests.length > 0 ? requests : undefined
-  }, [parsedReports])
+  }, [parsedReports, salaryCipherCoreAddress])
 
   const gapDecrypt = useFHEDecrypt({
     requests: decryptRequests,
@@ -352,7 +358,7 @@ export function useComplianceAudit(selectedCompany: CompanySummary | null) {
   const latestAudit = rows[0] ?? null
 
   const generateAndFinalizeAudit = useCallback(async () => {
-    if (!address || !companyId) {
+    if (!address || !companyId || !salaryCipherCoreAddress) {
       toast.error('Wallet or company is not ready.')
       return false
     }
@@ -362,13 +368,13 @@ export function useComplianceAudit(selectedCompany: CompanySummary | null) {
     try {
       const generateHash = await mutateAsync({
         abi: SalaryCipherCore.abi,
-        address: SalaryCipherCore.address,
+        address: salaryCipherCoreAddress,
         functionName: 'generateAudit',
         args: [companyId],
         account: address,
       })
       const generateReceipt = await waitForReceipt(generateHash)
-      const auditId = getAuditIdFromReceipt(generateReceipt)
+      const auditId = getAuditIdFromReceipt(generateReceipt, salaryCipherCoreAddress)
 
       if (!auditId) {
         throw new Error('AuditGenerated event was not found.')
@@ -376,7 +382,7 @@ export function useComplianceAudit(selectedCompany: CompanySummary | null) {
 
       const finalizeHash = await mutateAsync({
         abi: SalaryCipherCore.abi,
-        address: SalaryCipherCore.address,
+        address: salaryCipherCoreAddress,
         functionName: 'finalizeAudit',
         args: [companyId, auditId],
         account: address,
@@ -394,7 +400,7 @@ export function useComplianceAudit(selectedCompany: CompanySummary | null) {
     finally {
       setIsGeneratingAudit(false)
     }
-  }, [address, companyId, mutateAsync, refetchAuditData, waitForReceipt])
+  }, [address, companyId, mutateAsync, refetchAuditData, salaryCipherCoreAddress, waitForReceipt])
 
   return {
     decryptAuditResult: gapDecrypt.decryptRequest,
@@ -404,5 +410,6 @@ export function useComplianceAudit(selectedCompany: CompanySummary | null) {
     latestAudit,
     refetchAuditData,
     rows,
+    salaryCipherCoreAddress,
   }
 }

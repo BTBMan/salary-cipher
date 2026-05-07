@@ -7,6 +7,7 @@ import { toast } from 'sonner'
 import { useConnection, useWaitForTransactionReceipt, useWriteContract } from 'wagmi'
 import { CompanyRegistry } from '@/contract-data/company-registry'
 import { SalaryCipherCore } from '@/contract-data/salary-cipher-core'
+import { getContractAddress } from '@/utils'
 import { useStoreContext } from './use-store-context'
 
 interface ReceiptWaiter {
@@ -16,9 +17,11 @@ interface ReceiptWaiter {
 }
 
 export function usePayrollActions(selectedCompany: CompanySummary | null) {
-  const { address } = useConnection()
+  const { address, chainId } = useConnection()
   const { refreshCompanies } = useStoreContext()
   const { mutateAsync } = useWriteContract()
+  const companyRegistryAddress = getContractAddress(CompanyRegistry, chainId)
+  const salaryCipherCoreAddress = getContractAddress(SalaryCipherCore, chainId)
   const receiptWaiterRef = useRef<ReceiptWaiter | null>(null)
   const [receiptHash, setReceiptHash] = useState<Hash>()
   const [isExecutingPayroll, setIsExecutingPayroll] = useState(false)
@@ -79,7 +82,7 @@ export function usePayrollActions(selectedCompany: CompanySummary | null) {
   }, [])
 
   const executePayrollNow = useCallback(async () => {
-    if (!address || !companyId) {
+    if (!address || !companyId || !salaryCipherCoreAddress) {
       toast.error('Wallet or company is not ready.')
       return false
     }
@@ -89,7 +92,7 @@ export function usePayrollActions(selectedCompany: CompanySummary | null) {
     try {
       const hash = await mutateAsync({
         abi: SalaryCipherCore.abi,
-        address: SalaryCipherCore.address,
+        address: salaryCipherCoreAddress,
         functionName: 'executePayrollNow',
         args: [companyId],
         account: address,
@@ -108,10 +111,10 @@ export function usePayrollActions(selectedCompany: CompanySummary | null) {
     finally {
       setIsExecutingPayroll(false)
     }
-  }, [address, companyId, mutateAsync, refreshCompanies, waitForReceipt])
+  }, [address, companyId, mutateAsync, refreshCompanies, salaryCipherCoreAddress, waitForReceipt])
 
   const updatePayrollDay = useCallback(async (dayOfMonth: number) => {
-    if (!address || !companyId) {
+    if (!address || !companyId || !companyRegistryAddress) {
       toast.error('Wallet or company is not ready.')
       return false
     }
@@ -121,7 +124,7 @@ export function usePayrollActions(selectedCompany: CompanySummary | null) {
     try {
       const hash = await mutateAsync({
         abi: CompanyRegistry.abi,
-        address: CompanyRegistry.address,
+        address: companyRegistryAddress,
         functionName: 'setPayrollConfig',
         args: [companyId, dayOfMonth],
         account: address,
@@ -140,7 +143,7 @@ export function usePayrollActions(selectedCompany: CompanySummary | null) {
     finally {
       setIsUpdatingPayrollConfig(false)
     }
-  }, [address, companyId, mutateAsync, refreshCompanies, waitForReceipt])
+  }, [address, companyId, companyRegistryAddress, mutateAsync, refreshCompanies, waitForReceipt])
 
   return {
     executePayrollNow,

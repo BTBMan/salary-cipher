@@ -9,7 +9,8 @@ import { useConnection, useContractEvents, useReadContract, useReadContracts, us
 import { CompanyRegistry } from '@/contract-data/company-registry'
 import { CompanyTreasuryVault } from '@/contract-data/company-treasury-vault'
 import { ERC20 } from '@/contract-data/erc20'
-import { ERC7984Wrapper } from '@/contract-data/erc7984-wrapper'
+import { IERC7984ERC20WrapperInternal as ERC7984Wrapper } from '@/contract-data/ierc7984-erc20-wrapper-internal'
+import { getContractAddress } from '@/utils'
 import { useFHEContext } from './fhevm'
 import { useFHEDecrypt } from './fhevm/use-fhe-decrypt'
 import { useStoreContext } from './use-store-context'
@@ -155,10 +156,11 @@ function getRefundUnwrapData(receipt: TransactionReceipt, treasuryVault: Address
 }
 
 export function useFinanceVault(selectedCompany: CompanySummary | null) {
-  const { address } = useConnection()
+  const { address, chainId } = useConnection()
   const { instance } = useFHEContext()
   const { settlementAssets } = useStoreContext()
   const { mutateAsync } = useWriteContract()
+  const companyRegistryAddress = getContractAddress(CompanyRegistry, chainId)
   const receiptWaiterRef = useRef<ReceiptWaiter | null>(null)
   const [receiptHash, setReceiptHash] = useState<Hash>()
   const [isDepositing, setIsDepositing] = useState(false)
@@ -231,11 +233,11 @@ export function useFinanceVault(selectedCompany: CompanySummary | null) {
     refetch: refetchTreasuryVault,
   } = useReadContract({
     abi: CompanyRegistry.abi,
-    address: CompanyRegistry.address,
+    address: companyRegistryAddress,
     functionName: 'getTreasuryVault',
     args: companyId ? [companyId] : undefined,
     query: {
-      enabled: Boolean(companyId),
+      enabled: Boolean(companyId && companyRegistryAddress),
     },
   })
 

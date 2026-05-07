@@ -7,7 +7,7 @@ import { toast } from 'sonner'
 import { decodeEventLog, formatUnits } from 'viem'
 import { useConnection, useReadContract, useWaitForTransactionReceipt, useWriteContract } from 'wagmi'
 import { ERC20 } from '@/contract-data/erc20'
-import { ERC7984Wrapper } from '@/contract-data/erc7984-wrapper'
+import { IERC7984ERC20WrapperInternal as ERC7984Wrapper } from '@/contract-data/ierc7984-erc20-wrapper-internal'
 import { useFHEContext } from './fhevm'
 
 interface ReceiptWaiter {

@@ -7,10 +7,10 @@ import { formatUnits, isAddress, zeroAddress, zeroHash } from 'viem'
 import { useConnection, useContractEvents, useReadContracts, useWatchContractEvent } from 'wagmi'
 import { CompanyRegistry } from '@/contract-data/company-registry'
 import { CompanyTreasuryVault } from '@/contract-data/company-treasury-vault'
-import { ERC7984Wrapper } from '@/contract-data/erc7984-wrapper'
+import { IERC7984ERC20WrapperInternal as ERC7984Wrapper } from '@/contract-data/ierc7984-erc20-wrapper-internal'
 import { SalaryCipherCore } from '@/contract-data/salary-cipher-core'
 import { RolesEnum } from '@/enums'
-import { getPayrollSchedule } from '@/utils'
+import { getContractAddress, getPayrollSchedule } from '@/utils'
 import { useFHEDecrypt } from './fhevm/use-fhe-decrypt'
 import { useCompanyEmployees } from './use-company-employees'
 
@@ -97,7 +97,9 @@ export function useOverviewChainData(
   selectedCompany: CompanySummary | null,
   options: UseOverviewChainDataOptions = {},
 ) {
-  const { address } = useConnection()
+  const { address, chainId } = useConnection()
+  const companyRegistryAddress = getContractAddress(CompanyRegistry, chainId)
+  const salaryCipherCoreAddress = getContractAddress(SalaryCipherCore, chainId)
   const payrollHistoryLimit = options.payrollHistoryLimit === undefined
     ? DEFAULT_PAYROLL_HISTORY_LIMIT
     : options.payrollHistoryLimit
@@ -115,55 +117,55 @@ export function useOverviewChainData(
     return employees.find(employee => employee.account.toLowerCase() === address.toLowerCase()) ?? null
   }, [address, employees])
   const salaryContracts = useMemo((): any[] => {
-    if (!companyId) {
+    if (!companyId || !salaryCipherCoreAddress) {
       return []
     }
 
     return employees.map(employee => ({
       abi: SalaryCipherCore.abi,
-      address: SalaryCipherCore.address,
+      address: salaryCipherCoreAddress,
       functionName: 'monthlySalary',
       args: [companyId, employee.account],
     }) as const)
-  }, [companyId, employees])
+  }, [companyId, employees, salaryCipherCoreAddress])
   const overviewContracts = useMemo((): any[] => {
-    if (!companyId || !address) {
+    if (!companyId || !address || !companyRegistryAddress || !salaryCipherCoreAddress) {
       return []
     }
 
     return [
       {
         abi: CompanyRegistry.abi,
-        address: CompanyRegistry.address,
+        address: companyRegistryAddress,
         functionName: 'getPayrollConfig',
         args: [companyId],
       },
       {
         abi: CompanyRegistry.abi,
-        address: CompanyRegistry.address,
+        address: companyRegistryAddress,
         functionName: 'getTreasuryVault',
         args: [companyId],
       },
       {
         abi: SalaryCipherCore.abi,
-        address: SalaryCipherCore.address,
+        address: salaryCipherCoreAddress,
         functionName: 'lastPayrollTime',
         args: [companyId],
       },
       {
         abi: SalaryCipherCore.abi,
-        address: SalaryCipherCore.address,
+        address: salaryCipherCoreAddress,
         functionName: 'startDate',
         args: [companyId, address],
       },
       {
         abi: SalaryCipherCore.abi,
-        address: SalaryCipherCore.address,
+        address: salaryCipherCoreAddress,
         functionName: 'monthlySalary',
         args: [companyId, address],
       },
     ]
-  }, [address, companyId])
+  }, [address, companyId, companyRegistryAddress, salaryCipherCoreAddress])
   const {
     data: overviewResults,
     isLoading: isLoadingOverview,
@@ -413,10 +415,10 @@ export function useOverviewChainData(
   })
   useWatchContractEvent({
     abi: SalaryCipherCore.abi,
-    address: SalaryCipherCore.address,
+    address: salaryCipherCoreAddress,
     eventName: 'PayrollExecuted',
     args: companyPayrollHistoryEventArgs,
-    enabled: Boolean(companyId),
+    enabled: Boolean(companyId && salaryCipherCoreAddress),
     onLogs: () => {
       void refetchOverviewData()
       void refetchCompanyPayrollHistory()
@@ -516,7 +518,7 @@ export function useOverviewChainData(
             employeeSalaryHandle
               ? {
                   handle: employeeSalaryHandle,
-                  contractAddress: SalaryCipherCore.address,
+                  contractAddress: salaryCipherCoreAddress,
                 }
               : null,
             employeeBalanceHandle && settlementTokenAddress
@@ -538,7 +540,7 @@ export function useOverviewChainData(
             ...salaryHandles.map(item => item.handle
               ? {
                   handle: item.handle,
-                  contractAddress: SalaryCipherCore.address,
+                  contractAddress: salaryCipherCoreAddress,
                 }
               : null),
             ...companyPayrollHistory.map(item => item.amountHandle && settlementTokenAddress
@@ -558,6 +560,7 @@ export function useOverviewChainData(
     employeePayrollHistory,
     employeeSalaryHandle,
     salaryHandles,
+    salaryCipherCoreAddress,
     selectedCompany?.role,
     selectedSettlementAsset?.settlementToken,
   ])
@@ -644,12 +647,20 @@ export function useOverviewChainData(
     const result = overviewResults?.[3]
     return result?.status === 'success' ? Number(result.result) : 0
   }, [overviewResults])
-  const decryptSalaryHandle = useCallback((handle: Hex, contractAddress: Address = SalaryCipherCore.address) => {
+  const decryptSalaryHandle = useCallback((handle: Hex, contractAddress: Address | undefined = salaryCipherCoreAddress) => {
+    if (!contractAddress) {
+      return
+    }
+
     salaryDecrypt.decryptRequest({ contractAddress, handle })
-  }, [salaryDecrypt])
-  const isDecryptingSalaryHandle = useCallback((handle: Hex, contractAddress: Address = SalaryCipherCore.address) => {
+  }, [salaryCipherCoreAddress, salaryDecrypt])
+  const isDecryptingSalaryHandle = useCallback((handle: Hex, contractAddress: Address | undefined = salaryCipherCoreAddress) => {
+    if (!contractAddress) {
+      return false
+    }
+
     return salaryDecrypt.isDecryptingRequest({ contractAddress, handle })
-  }, [salaryDecrypt])
+  }, [salaryCipherCoreAddress, salaryDecrypt])
 
   return {
     canDecryptSalary: salaryDecrypt.canDecrypt,

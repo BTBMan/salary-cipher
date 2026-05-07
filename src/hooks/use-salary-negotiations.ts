@@ -11,6 +11,7 @@ import { z } from 'zod'
 import { SalaryCipherCore } from '@/contract-data/salary-cipher-core'
 import { SalaryNegotiation } from '@/contract-data/salary-negotiation'
 import { RolesEnum } from '@/enums'
+import { getContractAddress } from '@/utils'
 import { useFHEDecrypt } from './fhevm/use-fhe-decrypt'
 import { useFHEEncrypt } from './fhevm/use-fhe-encrypt'
 import { useStoreContext } from './use-store-context'
@@ -152,9 +153,11 @@ export function useSalaryNegotiations({
   refreshEmployees,
   selectedCompany,
 }: UseSalaryNegotiationsParams) {
-  const { address } = useConnection()
+  const { address, chainId } = useConnection()
   const { settlementAssets } = useStoreContext()
   const { mutateAsync } = useWriteContract()
+  const salaryCipherCoreAddress = getContractAddress(SalaryCipherCore, chainId)
+  const salaryNegotiationFallbackAddress = getContractAddress(SalaryNegotiation, chainId)
   const receiptWaiterRef = useRef<ReceiptWaiter | null>(null)
   const [receiptHash, setReceiptHash] = useState<Hash>()
   const [pendingAction, setPendingAction] = useState<string | null>(null)
@@ -169,10 +172,10 @@ export function useSalaryNegotiations({
 
   const { data: configuredNegotiationAddress } = useReadContract({
     abi: SalaryCipherCore.abi,
-    address: SalaryCipherCore.address,
+    address: salaryCipherCoreAddress,
     functionName: 'salaryNegotiationAddress',
     query: {
-      enabled: Boolean(SalaryCipherCore.address),
+      enabled: Boolean(salaryCipherCoreAddress),
     },
   })
 
@@ -181,8 +184,8 @@ export function useSalaryNegotiations({
       return configuredNegotiationAddress as Address
     }
 
-    return SalaryNegotiation.address
-  }, [configuredNegotiationAddress])
+    return salaryNegotiationFallbackAddress
+  }, [configuredNegotiationAddress, salaryNegotiationFallbackAddress])
 
   const { canEncrypt, encryptWith } = useFHEEncrypt({
     contractAddress: salaryNegotiationAddress,
@@ -516,11 +519,12 @@ export function useSalaryNegotiations({
     setPendingAction(actionKey)
 
     try {
+      const functionName = request.functionName as 'applyMatchedSalary' | 'cancelNegotiation' | 'computeMatch' | 'createNegotiation' | 'newRound' | 'submitEmployeeAsk' | 'submitEmployerOffer'
       const hash = await mutateAsync({
         abi: SalaryNegotiation.abi,
         address: salaryNegotiationAddress,
-        functionName: request.functionName,
-        args: request.args,
+        functionName,
+        args: request.args as any,
         account: address,
       })
       await waitForReceipt(hash)

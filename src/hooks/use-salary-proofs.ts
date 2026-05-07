@@ -10,6 +10,7 @@ import { useConnection, useContractEvents, useReadContract, useReadContracts, us
 import { ProofNFT } from '@/contract-data/proof-nft'
 import { SalaryCipherCore } from '@/contract-data/salary-cipher-core'
 import { SalaryProof } from '@/contract-data/salary-proof'
+import { getContractAddress } from '@/utils'
 import { useFHEDecrypt } from './fhevm/use-fhe-decrypt'
 import { useFHEEncrypt } from './fhevm/use-fhe-encrypt'
 import { useStoreContext } from './use-store-context'
@@ -163,9 +164,12 @@ function getGenericCondition(proofType: SalaryProofType, tokenSymbol: string) {
 }
 
 export function useSalaryProofs(selectedCompany: CompanySummary | null) {
-  const { address } = useConnection()
+  const { address, chainId } = useConnection()
   const { settlementAssets } = useStoreContext()
   const { mutateAsync } = useWriteContract()
+  const proofNFTFallbackAddress = getContractAddress(ProofNFT, chainId)
+  const salaryCipherCoreAddress = getContractAddress(SalaryCipherCore, chainId)
+  const salaryProofFallbackAddress = getContractAddress(SalaryProof, chainId)
   const receiptWaiterRef = useRef<ReceiptWaiter | null>(null)
   const [receiptHash, setReceiptHash] = useState<Hash>()
   const [pendingAction, setPendingAction] = useState<string | null>(null)
@@ -186,10 +190,10 @@ export function useSalaryProofs(selectedCompany: CompanySummary | null) {
     refetch: refetchConfiguredSalaryProofAddress,
   } = useReadContract({
     abi: SalaryCipherCore.abi,
-    address: SalaryCipherCore.address,
+    address: salaryCipherCoreAddress,
     functionName: 'salaryProofAddress',
     query: {
-      enabled: Boolean(SalaryCipherCore.address),
+      enabled: Boolean(salaryCipherCoreAddress),
     },
   })
 
@@ -198,8 +202,8 @@ export function useSalaryProofs(selectedCompany: CompanySummary | null) {
       return configuredSalaryProofAddress as Address
     }
 
-    return SalaryProof.address
-  }, [configuredSalaryProofAddress])
+    return salaryProofFallbackAddress
+  }, [configuredSalaryProofAddress, salaryProofFallbackAddress])
 
   const { canEncrypt, encryptWith } = useFHEEncrypt({
     contractAddress: salaryProofAddress,
@@ -331,8 +335,8 @@ export function useSalaryProofs(selectedCompany: CompanySummary | null) {
       return configuredProofNFTAddress as Address
     }
 
-    return ProofNFT.address
-  }, [configuredProofNFTAddress])
+    return proofNFTFallbackAddress
+  }, [configuredProofNFTAddress, proofNFTFallbackAddress])
 
   const mintedProofs = useMemo(() => {
     return parsedProofs.filter(item => item.record.minted && item.record.tokenId > 0n)

@@ -5,24 +5,25 @@ import { MdAutorenew, MdBolt } from 'react-icons/md'
 import { toHex, zeroAddress } from 'viem'
 import { useConnection, useReadContract, useWriteContractSync } from 'wagmi'
 import { Button } from '@/components/ui/button'
-import { FheCounter as FheCounterData } from '@/contract-data/fhe-counter'
+import { FHECounter as FheCounterData } from '@/contract-data/fhe-counter'
 import { useFHEContext, useFHEDecrypt, useFHEEncrypt } from '@/hooks'
-import { cn } from '@/utils'
+import { cn, getContractAddress } from '@/utils'
 
 export function FheCounter() {
   const [loading, setLoading] = useState(false)
 
-  const { address } = useConnection()
+  const { address, chainId } = useConnection()
+  const fheCounterAddress = getContractAddress(FheCounterData, chainId)
 
   const { status, error } = useFHEContext()
 
   const { canEncrypt, encryptWith } = useFHEEncrypt({
-    contractAddress: FheCounterData.address,
+    contractAddress: fheCounterAddress,
   })
 
   const { data, refetch } = useReadContract({
     abi: FheCounterData.abi,
-    address: FheCounterData.address,
+    address: fheCounterAddress,
     functionName: 'getCount',
     account: address,
   })
@@ -39,13 +40,13 @@ export function FheCounter() {
     setLoading(true)
     try {
       const payload = await encryptWith(builder => builder.add32(1))
-      if (!payload || !address) {
+      if (!payload || !address || !fheCounterAddress) {
         return
       }
 
       await writeCounter({
         abi: FheCounterData.abi,
-        address: FheCounterData.address,
+        address: fheCounterAddress,
         functionName: 'increment',
         account: address,
         args: [toHex(payload.handles[0]), toHex(payload.inputProof)],
@@ -60,13 +61,13 @@ export function FheCounter() {
     setLoading(true)
     try {
       const payload = await encryptWith(builder => builder.add32(1))
-      if (!payload || !address) {
+      if (!payload || !address || !fheCounterAddress) {
         return
       }
 
       await writeCounter({
         abi: FheCounterData.abi,
-        address: FheCounterData.address,
+        address: fheCounterAddress,
         functionName: 'decrement',
         account: address,
         args: [toHex(payload.handles[0]), toHex(payload.inputProof)],
@@ -78,11 +79,11 @@ export function FheCounter() {
   }
 
   const requests = useMemo(() => {
-    if (!data || data === zeroAddress) {
+    if (!data || data === zeroAddress || !fheCounterAddress) {
       return undefined
     }
-    return [{ handle: data as string, contractAddress: FheCounterData.address }] as const
-  }, [data])
+    return [{ handle: data as string, contractAddress: fheCounterAddress }] as const
+  }, [data, fheCounterAddress])
 
   const {
     canDecrypt,

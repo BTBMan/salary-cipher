@@ -13,6 +13,7 @@ import { StoreContext } from '@/contexts'
 import { CompanyRegistry } from '@/contract-data/company-registry'
 import { SalaryCipherFactory } from '@/contract-data/salary-cipher-factory'
 import { RolesEnum, SettlementAssetEnum } from '@/enums'
+import { getContractAddress } from '@/utils'
 
 const STORAGE_KEY_PREFIX = 'salary-cipher'
 
@@ -61,7 +62,7 @@ interface ReceiptWaiter {
  * Centralizes wallet-scoped company state loaded directly from CompanyRegistry.
  */
 export function StoreProvider({ children }: PropsWithChildren) {
-  const { address, isConnecting } = useConnection()
+  const { address, chainId, isConnecting } = useConnection()
   const { status, isConnected } = useAppKitAccount()
   const config = useConfig()
   const { mutateAsync } = useWriteContract()
@@ -130,7 +131,8 @@ export function StoreProvider({ children }: PropsWithChildren) {
     })
   }, [])
 
-  const registryAddress = CompanyRegistry.address
+  const registryAddress = getContractAddress(CompanyRegistry, chainId)
+  const salaryCipherFactoryAddress = getContractAddress(SalaryCipherFactory, chainId)
   const companyRegistryAbi = CompanyRegistry.abi
   const assetConfigContracts = useMemo(() => {
     return SETTLEMENT_ASSET_PRESETS.map(asset => ({
@@ -416,7 +418,7 @@ export function StoreProvider({ children }: PropsWithChildren) {
         setHrWorkspaceViewMode(mode)
       },
       createCompany: async (input: CreateCompanyInput) => {
-        if (!registryAddress || !SalaryCipherFactory.address || !address) {
+        if (!registryAddress || !salaryCipherFactoryAddress || !address) {
           toast.error('Wallet or contract is not ready.')
           return null
         }
@@ -426,7 +428,7 @@ export function StoreProvider({ children }: PropsWithChildren) {
         try {
           const hash = await mutateAsync({
             abi: SalaryCipherFactory.abi,
-            address: SalaryCipherFactory.address,
+            address: salaryCipherFactoryAddress,
             functionName: 'createCompany',
             args: [input.name, input.payrollDayOfMonth, input.settlementAsset],
             account: address,
@@ -496,6 +498,7 @@ export function StoreProvider({ children }: PropsWithChildren) {
     readCompanySummary,
     refreshCompanies,
     registryAddress,
+    salaryCipherFactoryAddress,
     selectedCompany,
     sessionState.companies,
     sessionState.isReady,
