@@ -9,17 +9,18 @@ const MOCK_CUSDT_ID = 'MockCUSDT'
 const LOCAL_TEST_TOKEN_BALANCE = 1_000_000_000_000n // 1,000,000 tokens with 6 decimals.
 const LOCAL_TEST_ACCOUNT_COUNT = 3
 
+// @ts-expect-error TS2345
 const CompanyRegistryModule = buildModule('CompanyRegistryModule', (m) => {
   const companyRegistry = m.contract('CompanyRegistry', [], {})
 
-  let usdc = m.contract('MockERC20', ['Mock USD Coin', 'mUSDC', 6], { id: MOCK_USDC_ID })
-  let usdt = m.contract('MockERC20', ['Mock Tether USD', 'mUSDT', 6], { id: MOCK_USDT_ID })
-  let cUsdc = m.contract('MockConfidentialERC20Wrapper', [usdc], { id: MOCK_CUSDC_ID })
-  let cUsdt = m.contract('MockConfidentialERC20Wrapper', [usdt], { id: MOCK_CUSDT_ID })
-
   const networkConfig = network.config
   const isForkOrSepolia = (networkConfig.chainId === 31337 && (networkConfig as any).forking?.enabled) || networkConfig.chainId === 11155111
-  const isLocalMockNetwork = !isForkOrSepolia && (network.name === 'localhost' || networkConfig.chainId === 31337)
+  const isLocalMockNetwork = !isForkOrSepolia && networkConfig.chainId === 31337
+
+  let usdc
+  let usdt
+  let cUsdc
+  let cUsdt
 
   if (isForkOrSepolia) {
     ;(usdc as any) = m.contractAt('MockERC20', '0x9b5Cd13b8eFbB58Dc25A05CF411D8056058aDFfF', { id: MOCK_USDC_ID })
@@ -29,6 +30,11 @@ const CompanyRegistryModule = buildModule('CompanyRegistryModule', (m) => {
   }
 
   if (isLocalMockNetwork) {
+    usdc = m.contract('MockERC20', ['Mock USD Coin', 'mUSDC', 6], { id: MOCK_USDC_ID })
+    usdt = m.contract('MockERC20', ['Mock Tether USD', 'mUSDT', 6], { id: MOCK_USDT_ID })
+    cUsdc = m.contract('MockConfidentialERC20Wrapper', [usdc], { id: MOCK_CUSDC_ID })
+    cUsdt = m.contract('MockConfidentialERC20Wrapper', [usdt], { id: MOCK_CUSDT_ID })
+
     for (let index = 0; index < LOCAL_TEST_ACCOUNT_COUNT; index++) {
       const account = m.getAccount(index)
       m.call(usdc, 'mint', [account, LOCAL_TEST_TOKEN_BALANCE], { id: `MintLocalUSDC${index}` })
@@ -36,8 +42,8 @@ const CompanyRegistryModule = buildModule('CompanyRegistryModule', (m) => {
     }
   }
 
-  m.call(companyRegistry, 'setSupportedAsset', [SettlementAssetEnum.USDC, usdc, cUsdc, true, 6], { id: 'ConfigureUSDC' })
-  m.call(companyRegistry, 'setSupportedAsset', [SettlementAssetEnum.USDT, usdt, cUsdt, true, 6], { id: 'ConfigureUSDT' })
+  m.call(companyRegistry, 'setSupportedAsset', [SettlementAssetEnum.USDC, usdc!, cUsdc!, true, 6], { id: 'ConfigureUSDC' })
+  m.call(companyRegistry, 'setSupportedAsset', [SettlementAssetEnum.USDT, usdt!, cUsdt!, true, 6], { id: 'ConfigureUSDT' })
 
   return { companyRegistry, usdc, usdt, cUsdc, cUsdt }
 })
