@@ -7,6 +7,7 @@ import {
   computeNextMonthlyPayrollTimestamp,
   customErrorPattern,
   decryptUint64,
+  decryptUint128,
   encryptUint128,
   fundVault,
   getUtcDaysInMonth,
@@ -322,6 +323,46 @@ for (const assetCase of assetCases) {
       expect(auditReport[2]).to.equal(2n)
     })
 
+    it('refreshes existing salary decrypt access for a newly promoted HR', async () => {
+      const { companyRegistry, salaryCipherCore, owner, hr, employee, publicClient, companyId }
+        = await loadFixture(companyFixture)
+
+      const addEmployeeHash = await companyRegistry.write.addEmployee(
+        [companyId, employee.account.address, RolesEnum.Employee, 'Alice'],
+        { account: owner.account },
+      )
+      await publicClient.waitForTransactionReceipt({ hash: addEmployeeHash })
+
+      const [salaryHandle, salaryProof] = await encryptUint128(
+        salaryCipherCore.address,
+        owner.account.address,
+        500_000,
+      )
+      const setSalaryHash = await salaryCipherCore.write.setSalary(
+        [companyId, employee.account.address, salaryHandle, salaryProof],
+        { account: owner.account },
+      )
+      await publicClient.waitForTransactionReceipt({ hash: setSalaryHash })
+
+      const addHrHash = await companyRegistry.write.addEmployee(
+        [companyId, hr.account.address, RolesEnum.HR, 'Helen'],
+        { account: owner.account },
+      )
+      await publicClient.waitForTransactionReceipt({ hash: addHrHash })
+
+      await expect(
+        decryptUint128(salaryHandle, salaryCipherCore.address, hr),
+      ).to.be.rejectedWith(/not authorized/i)
+
+      const refreshAccessHash = await salaryCipherCore.write.refreshManagerSalaryAccess(
+        [companyId, hr.account.address],
+        { account: hr.account },
+      )
+      await publicClient.waitForTransactionReceipt({ hash: refreshAccessHash })
+
+      expect(await decryptUint128(salaryHandle, salaryCipherCore.address, hr)).to.equal(500_000n)
+    })
+
     it('terminates employee after settling leftover salary and removes them from the registry', async () => {
       const companyStartTime = computeNextMonthlyPayrollTimestamp(BigInt(await time.latest()), 1)
       await time.increaseTo(companyStartTime)
@@ -378,7 +419,6 @@ for (const assetCase of assetCases) {
       expect(await salaryCipherCore.read.startDate([companyId, employee.account.address])).to.equal(0n)
       expect(await salaryCipherCore.read.lastPayrollTime([companyId])).to.equal(0n)
     })
-
   })
 }
 

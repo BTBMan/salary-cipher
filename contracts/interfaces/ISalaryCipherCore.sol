@@ -55,6 +55,11 @@ interface ISalaryCipherCore {
     event AuditGenerated(uint256 indexed companyId, uint256 indexed auditId);
     /// @notice Emitted when an audit conclusion is finalized.
     event AuditFinalized(uint256 indexed companyId, uint256 indexed auditId);
+    /// @notice Emitted when one manager receives decrypt access to existing salary handles.
+    event ManagerSalaryAccessRefreshed(
+        uint256 indexed companyId,
+        address indexed manager
+    );
     /// @notice Emitted when the authorized SalaryProof contract is configured.
     event SalaryProofAddressSet(address indexed salaryProof);
     /// @notice Emitted when the authorized SalaryNegotiation contract is configured.
@@ -121,6 +126,12 @@ interface ISalaryCipherCore {
         uint256 companyId,
         uint256 auditId
     ) external returns (ebool);
+
+    /// @notice Grants a current owner or HR access to existing encrypted salary handles.
+    function refreshManagerSalaryAccess(
+        uint256 companyId,
+        address manager
+    ) external;
 
     /// @notice Compares an employee salary against an encrypted threshold for SalaryProof.
     function verifySalaryCondition(

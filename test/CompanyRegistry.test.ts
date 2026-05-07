@@ -121,6 +121,27 @@ describe('companyRegistry', () => {
       ).to.deep.equal([companyId])
     })
 
+    it('allows HR to update payroll config', async () => {
+      const { companyRegistry, owner, hr, companyId, publicClient }
+        = await loadFixture(createDefaultCompanyFixture)
+
+      const addHrHash = await companyRegistry.write.addEmployee(
+        [companyId, hr.account.address, RolesEnum.HR, 'Helen'],
+        { account: owner.account },
+      )
+      await publicClient.waitForTransactionReceipt({ hash: addHrHash })
+
+      const updatePayrollHash = await companyRegistry.write.setPayrollConfig(
+        [companyId, 20],
+        { account: hr.account },
+      )
+      await publicClient.waitForTransactionReceipt({ hash: updatePayrollHash })
+
+      const payrollConfig = await companyRegistry.read.getPayrollConfig([companyId])
+      expect(payrollConfig.dayOfMonth).to.equal(20)
+      expect(payrollConfig.initialized).to.equal(true)
+    })
+
     it('updates role and removes employees while preserving owner constraints', async () => {
       const { companyRegistry, owner, hr, employee, companyId, publicClient }
         = await loadFixture(createDefaultCompanyFixture)

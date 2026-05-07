@@ -468,6 +468,24 @@ contract SalaryCipherCore is ISalaryCipherCore, ZamaEthereumConfig {
     }
 
     /// @inheritdoc ISalaryCipherCore
+    function refreshManagerSalaryAccess(
+        uint256 companyId,
+        address manager
+    ) external onlyOwnerOrHR(companyId) {
+        _requireManager(companyId, manager);
+
+        address[] memory employees = companyRegistry.getEmployees(companyId);
+        for (uint256 i = 0; i < employees.length; i++) {
+            euint128 salary = monthlySalary[companyId][employees[i]];
+            if (FHE.isInitialized(salary)) {
+                FHE.allow(salary, manager);
+            }
+        }
+
+        emit ManagerSalaryAccessRefreshed(companyId, manager);
+    }
+
+    /// @inheritdoc ISalaryCipherCore
     function verifySalaryCondition(
         uint256 companyId,
         address employee,
@@ -539,6 +557,21 @@ contract SalaryCipherCore is ISalaryCipherCore, ZamaEthereumConfig {
         uint256 companyId,
         address account
     ) private view {
+        _requireCompanyExists(companyId);
+        ICompanyRegistry.Role role = companyRegistry.getRole(
+            companyId,
+            account
+        );
+        if (
+            role != ICompanyRegistry.Role.Owner &&
+            role != ICompanyRegistry.Role.HR
+        ) {
+            revert SalaryCipherCore__Unauthorized();
+        }
+    }
+
+    /// @dev Reverts unless the target account is currently the owner or an HR member.
+    function _requireManager(uint256 companyId, address account) private view {
         _requireCompanyExists(companyId);
         ICompanyRegistry.Role role = companyRegistry.getRole(
             companyId,

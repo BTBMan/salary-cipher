@@ -275,6 +275,21 @@ export function useCompanyEmployees(selectedCompany: CompanySummary | null) {
     await refetchSalaryHandles()
   }, [refetchEmployeeAccounts, refetchEmployeeRecords, refetchSalaryHandles])
 
+  const refreshManagerSalaryAccess = useCallback(async (manager: Address) => {
+    if (!address || !companyId) {
+      return
+    }
+
+    const hash = await mutateAsync({
+      abi: SalaryCipherCore.abi,
+      address: SalaryCipherCore.address,
+      functionName: 'refreshManagerSalaryAccess',
+      args: [companyId, manager],
+      account: address,
+    })
+    await waitForReceipt(hash)
+  }, [address, companyId, mutateAsync, waitForReceipt])
+
   useEffect(() => {
     if (employeeAccountsError || employeeRecordsError) {
       console.error(employeeAccountsError ?? employeeRecordsError)
@@ -330,6 +345,10 @@ export function useCompanyEmployees(selectedCompany: CompanySummary | null) {
         return true
       }
 
+      if (input.role === RolesEnum.HR) {
+        await refreshManagerSalaryAccess(input.account)
+      }
+
       await Promise.all([refetchEmployees(), refreshCompanies()])
       toast.success('Employee added.')
       return true
@@ -348,6 +367,7 @@ export function useCompanyEmployees(selectedCompany: CompanySummary | null) {
     companyId,
     encryptWith,
     refetchEmployees,
+    refreshManagerSalaryAccess,
     refreshCompanies,
     selectedSettlementAsset,
     mutateAsync,
@@ -404,6 +424,10 @@ export function useCompanyEmployees(selectedCompany: CompanySummary | null) {
       })
       await waitForReceipt(updateEmployeeHash)
 
+      if (input.role === RolesEnum.HR) {
+        await refreshManagerSalaryAccess(input.account)
+      }
+
       await Promise.all([refetchEmployees(), refreshCompanies()])
       toast.success('Employee updated.')
       return true
@@ -421,6 +445,7 @@ export function useCompanyEmployees(selectedCompany: CompanySummary | null) {
     address,
     companyId,
     refetchEmployees,
+    refreshManagerSalaryAccess,
     refreshCompanies,
     mutateAsync,
     waitForReceipt,

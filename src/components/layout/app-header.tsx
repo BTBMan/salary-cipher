@@ -7,6 +7,7 @@ import {
 import { CompanySelectorDialog } from '@/components/dialogs/company-selector-dialog'
 import { RoleBadge } from '@/components/role-badge'
 import { SidebarTrigger } from '@/components/ui/sidebar'
+import { FhevmStatus } from '@/components/wallet/fhevm-status'
 import { WalletNetworkStatus } from '@/components/wallet/wallet-network-status'
 import { useStoreContext } from '@/hooks'
 import { cn } from '@/utils'
@@ -63,7 +64,10 @@ export function AppHeader() {
 
         {canSwitchWorkspaceView && <div className="h-6 w-px bg-white/10 hidden md:block" />}
 
-        <WalletNetworkStatus />
+        <div className="hidden flex-col gap-1 md:flex">
+          <WalletNetworkStatus />
+          <FhevmStatus />
+        </div>
       </div>
 
       <CompanySelectorDialog open={isCompanyDialogOpen} onOpenChange={setIsCompanyDialogOpen} />

@@ -233,6 +233,7 @@ interface ICompanyRegistry {
     ) external;
 
     /// @notice Sets the fixed monthly payroll day for one company.
+    /// @dev Owner and HR can update this operational payroll setting.
     function setPayrollConfig(uint256 companyId, uint8 dayOfMonth) external;
 
     /// @notice Updates the payout wallet used for the caller's payroll receipts.

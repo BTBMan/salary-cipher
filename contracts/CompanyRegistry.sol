@@ -327,7 +327,7 @@ contract CompanyRegistry is ICompanyRegistry {
     function setPayrollConfig(
         uint256 companyId,
         uint8 dayOfMonth
-    ) external onlyOwner(companyId) {
+    ) external onlyOwnerOrHR(companyId) {
         _validatePayrollDay(dayOfMonth);
 
         payrollConfigs[companyId] = PayrollConfig({
