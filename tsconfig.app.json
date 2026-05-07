@@ -22,5 +22,5 @@
     ".next/dev/types/**/*.ts",
     "**/*.mts"
   ],
-  "exclude": ["node_modules", "ignition", "test", "hardhat.config.ts"]
+  "exclude": ["node_modules", "ignition", "test", "hardhat.config.ts", "hardhat-plugins"]
 }

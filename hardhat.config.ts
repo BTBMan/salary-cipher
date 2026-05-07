@@ -5,6 +5,7 @@ import '@nomicfoundation/hardhat-verify'
 import '@fhevm/hardhat-plugin'
 import 'hardhat-gas-reporter'
 import 'solidity-coverage'
+import './hardhat-plugins/generate-abi'
 
 const SEPOLIA_RPC_URL = vars.get('SEPOLIA_RPC_URL')
 const TEST_PRIVATE_KEY = vars.get('TEST_PRIVATE_KEY')
