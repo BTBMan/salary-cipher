@@ -1,6 +1,8 @@
-export const FheCounter = {
-  address: '0xe7f1725e7734ce288f8367e1bb143e90bb3f0512',
-abi: [
+import type { Address } from 'viem'
+
+export const FHECounter = {
+  addresses: {} as Record<number, Address>,
+  abi: [
     {
       "inputs": [
         {
@@ -97,5 +99,5 @@ abi: [
       "stateMutability": "nonpayable",
       "type": "function"
     }
-  ]
-} as const;
+  ],
+} as const

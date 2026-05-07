@@ -1,29 +1,8 @@
 import type { Address } from 'viem'
 
-export const CompanyTreasuryVault = {
+export const ICompanyTreasuryVault = {
   addresses: {} as Record<number, Address>,
   abi: [
-    {
-      "inputs": [
-        {
-          "internalType": "uint256",
-          "name": "companyId_",
-          "type": "uint256"
-        },
-        {
-          "internalType": "address",
-          "name": "companyRegistryAddress",
-          "type": "address"
-        },
-        {
-          "internalType": "address",
-          "name": "salaryCipherCoreAddress",
-          "type": "address"
-        }
-      ],
-      "stateMutability": "nonpayable",
-      "type": "constructor"
-    },
     {
       "inputs": [],
       "name": "CompanyTreasuryVault__InvalidAddress",
@@ -42,22 +21,6 @@ export const CompanyTreasuryVault = {
     {
       "inputs": [],
       "name": "CompanyTreasuryVault__Unauthorized",
-      "type": "error"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "address",
-          "name": "token",
-          "type": "address"
-        }
-      ],
-      "name": "SafeERC20FailedOperation",
-      "type": "error"
-    },
-    {
-      "inputs": [],
-      "name": "ZamaProtocolUnsupported",
       "type": "error"
     },
     {
@@ -161,45 +124,6 @@ export const CompanyTreasuryVault = {
       "type": "event"
     },
     {
-      "inputs": [],
-      "name": "companyId",
-      "outputs": [
-        {
-          "internalType": "uint256",
-          "name": "",
-          "type": "uint256"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
-      "inputs": [],
-      "name": "companyRegistry",
-      "outputs": [
-        {
-          "internalType": "contract ICompanyRegistry",
-          "name": "",
-          "type": "address"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
-      "inputs": [],
-      "name": "confidentialProtocolId",
-      "outputs": [
-        {
-          "internalType": "uint256",
-          "name": "",
-          "type": "uint256"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
       "inputs": [
         {
           "internalType": "uint256",
@@ -269,50 +193,11 @@ export const CompanyTreasuryVault = {
       "outputs": [
         {
           "internalType": "bytes32",
-          "name": "unwrapRequestId",
+          "name": "",
           "type": "bytes32"
         }
       ],
       "stateMutability": "nonpayable",
-      "type": "function"
-    },
-    {
-      "inputs": [],
-      "name": "salaryCipherCore",
-      "outputs": [
-        {
-          "internalType": "address",
-          "name": "",
-          "type": "address"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
-      "inputs": [],
-      "name": "settlementToken",
-      "outputs": [
-        {
-          "internalType": "contract IERC7984ERC20WrapperInternal",
-          "name": "",
-          "type": "address"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
-      "inputs": [],
-      "name": "underlyingToken",
-      "outputs": [
-        {
-          "internalType": "contract IERC20",
-          "name": "",
-          "type": "address"
-        }
-      ],
-      "stateMutability": "view",
       "type": "function"
     },
     {

@@ -2,7 +2,7 @@
   "extends": "./tsconfig.base.json",
   "compilerOptions": {
     // "composite": true,
-    "lib": ["esnext"],
+    "lib": ["esnext", "DOM"],
     "module": "commonjs",
     "moduleResolution": "node10",
     "types": ["node", "mocha", "chai", "chai-as-promised"],
@@ -13,7 +13,8 @@
     "ignition/**/*.ts",
     "test/**/*.ts",
     "artifacts/**/*",
-    "hardhat-plugins/**/*.ts"
+    "hardhat-plugins/**/*.ts",
+    "src/types"
   ],
   "exclude": ["node_modules"]
 }

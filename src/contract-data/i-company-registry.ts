@@ -1,15 +1,8 @@
 import type { Address } from 'viem'
 
-export const CompanyRegistry = {
-  addresses: {
-    31337: '0xF62eEc897fa5ef36a957702AA4a45B58fE8Fe312',
-  } as Record<number, Address>,
+export const ICompanyRegistry = {
+  addresses: {} as Record<number, Address>,
   abi: [
-    {
-      "inputs": [],
-      "stateMutability": "nonpayable",
-      "type": "constructor"
-    },
     {
       "inputs": [],
       "name": "CompanyRegistry__AssetNotEnabled",
@@ -399,43 +392,6 @@ export const CompanyRegistry = {
       "type": "function"
     },
     {
-      "inputs": [],
-      "name": "admin",
-      "outputs": [
-        {
-          "internalType": "address",
-          "name": "",
-          "type": "address"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "uint256",
-          "name": "companyId",
-          "type": "uint256"
-        },
-        {
-          "internalType": "address",
-          "name": "caller",
-          "type": "address"
-        }
-      ],
-      "name": "authorizedCallers",
-      "outputs": [
-        {
-          "internalType": "bool",
-          "name": "isAuthorized",
-          "type": "bool"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
       "inputs": [
         {
           "internalType": "uint256",
@@ -468,87 +424,6 @@ export const CompanyRegistry = {
       "name": "batchAddEmployees",
       "outputs": [],
       "stateMutability": "nonpayable",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "uint256",
-          "name": "companyId",
-          "type": "uint256"
-        }
-      ],
-      "name": "companies",
-      "outputs": [
-        {
-          "internalType": "string",
-          "name": "name",
-          "type": "string"
-        },
-        {
-          "internalType": "address",
-          "name": "owner",
-          "type": "address"
-        },
-        {
-          "internalType": "uint64",
-          "name": "createdAt",
-          "type": "uint64"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "uint256",
-          "name": "companyId",
-          "type": "uint256"
-        },
-        {
-          "internalType": "address",
-          "name": "account",
-          "type": "address"
-        }
-      ],
-      "name": "companyEmployees",
-      "outputs": [
-        {
-          "internalType": "string",
-          "name": "displayName",
-          "type": "string"
-        },
-        {
-          "internalType": "enum ICompanyRegistry.Role",
-          "name": "role",
-          "type": "uint8"
-        },
-        {
-          "internalType": "address",
-          "name": "payoutWallet",
-          "type": "address"
-        },
-        {
-          "internalType": "uint64",
-          "name": "addedAt",
-          "type": "uint64"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
-      "inputs": [],
-      "name": "companyFactory",
-      "outputs": [
-        {
-          "internalType": "address",
-          "name": "",
-          "type": "address"
-        }
-      ],
-      "stateMutability": "view",
       "type": "function"
     },
     {
@@ -950,19 +825,6 @@ export const CompanyRegistry = {
       "type": "function"
     },
     {
-      "inputs": [],
-      "name": "nextCompanyId",
-      "outputs": [
-        {
-          "internalType": "uint256",
-          "name": "",
-          "type": "uint256"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
       "inputs": [
         {
           "internalType": "uint256",
@@ -1152,30 +1014,6 @@ export const CompanyRegistry = {
       "name": "updateRole",
       "outputs": [],
       "stateMutability": "nonpayable",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "address",
-          "name": "employee",
-          "type": "address"
-        },
-        {
-          "internalType": "uint256",
-          "name": "",
-          "type": "uint256"
-        }
-      ],
-      "name": "userCompanies",
-      "outputs": [
-        {
-          "internalType": "uint256",
-          "name": "companyIds",
-          "type": "uint256"
-        }
-      ],
-      "stateMutability": "view",
       "type": "function"
     }
   ],

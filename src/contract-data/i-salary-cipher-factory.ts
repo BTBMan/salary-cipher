@@ -1,26 +1,8 @@
 import type { Address } from 'viem'
 
-export const SalaryCipherFactory = {
-  addresses: {
-    31337: '0x1E2e9190Cea3A97b5Aa85d9757117F499D31C47d',
-  } as Record<number, Address>,
+export const ISalaryCipherFactory = {
+  addresses: {} as Record<number, Address>,
   abi: [
-    {
-      "inputs": [
-        {
-          "internalType": "address",
-          "name": "companyRegistryAddress",
-          "type": "address"
-        },
-        {
-          "internalType": "address",
-          "name": "salaryCipherCoreAddress",
-          "type": "address"
-        }
-      ],
-      "stateMutability": "nonpayable",
-      "type": "constructor"
-    },
     {
       "inputs": [],
       "name": "SalaryCipherFactory__InvalidAddress",
@@ -50,19 +32,6 @@ export const SalaryCipherFactory = {
       ],
       "name": "CompanyCreatedWithVault",
       "type": "event"
-    },
-    {
-      "inputs": [],
-      "name": "companyRegistry",
-      "outputs": [
-        {
-          "internalType": "contract ICompanyRegistry",
-          "name": "",
-          "type": "address"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function"
     },
     {
       "inputs": [
@@ -96,19 +65,6 @@ export const SalaryCipherFactory = {
         }
       ],
       "stateMutability": "nonpayable",
-      "type": "function"
-    },
-    {
-      "inputs": [],
-      "name": "salaryCipherCore",
-      "outputs": [
-        {
-          "internalType": "address",
-          "name": "",
-          "type": "address"
-        }
-      ],
-      "stateMutability": "view",
       "type": "function"
     }
   ],

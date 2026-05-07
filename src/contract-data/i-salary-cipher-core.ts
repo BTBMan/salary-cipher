@@ -1,21 +1,8 @@
 import type { Address } from 'viem'
 
-export const SalaryCipherCore = {
-  addresses: {
-    31337: '0x53E4DAFF2073f848DC3F7a8D7CC95b3607212A73',
-  } as Record<number, Address>,
+export const ISalaryCipherCore = {
+  addresses: {} as Record<number, Address>,
   abi: [
-    {
-      "inputs": [
-        {
-          "internalType": "address",
-          "name": "companyRegistryAddress",
-          "type": "address"
-        }
-      ],
-      "stateMutability": "nonpayable",
-      "type": "constructor"
-    },
     {
       "inputs": [],
       "name": "SalaryCipherCore__AuditDoesNotExist",
@@ -69,27 +56,6 @@ export const SalaryCipherCore = {
     {
       "inputs": [],
       "name": "SalaryCipherCore__Unauthorized",
-      "type": "error"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "bytes32",
-          "name": "handle",
-          "type": "bytes32"
-        },
-        {
-          "internalType": "address",
-          "name": "sender",
-          "type": "address"
-        }
-      ],
-      "name": "SenderNotAllowedToUseHandle",
-      "type": "error"
-    },
-    {
-      "inputs": [],
-      "name": "ZamaProtocolUnsupported",
       "type": "error"
     },
     {
@@ -271,84 +237,6 @@ export const SalaryCipherCore = {
       "type": "function"
     },
     {
-      "inputs": [],
-      "name": "admin",
-      "outputs": [
-        {
-          "internalType": "address",
-          "name": "",
-          "type": "address"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "uint256",
-          "name": "companyId",
-          "type": "uint256"
-        },
-        {
-          "internalType": "uint256",
-          "name": "auditId",
-          "type": "uint256"
-        }
-      ],
-      "name": "auditReports",
-      "outputs": [
-        {
-          "internalType": "uint64",
-          "name": "timestamp",
-          "type": "uint64"
-        },
-        {
-          "internalType": "euint128",
-          "name": "totalSalarySum",
-          "type": "bytes32"
-        },
-        {
-          "internalType": "uint256",
-          "name": "headcount",
-          "type": "uint256"
-        },
-        {
-          "internalType": "ebool",
-          "name": "gapWithinThreshold",
-          "type": "bytes32"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
-      "inputs": [],
-      "name": "companyRegistry",
-      "outputs": [
-        {
-          "internalType": "contract ICompanyRegistry",
-          "name": "",
-          "type": "address"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
-      "inputs": [],
-      "name": "confidentialProtocolId",
-      "outputs": [
-        {
-          "internalType": "uint256",
-          "name": "",
-          "type": "uint256"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
       "inputs": [
         {
           "internalType": "uint256",
@@ -423,68 +311,6 @@ export const SalaryCipherCore = {
           "internalType": "uint256",
           "name": "companyId",
           "type": "uint256"
-        }
-      ],
-      "name": "lastPayrollTime",
-      "outputs": [
-        {
-          "internalType": "uint64",
-          "name": "paidAt",
-          "type": "uint64"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "uint256",
-          "name": "companyId",
-          "type": "uint256"
-        },
-        {
-          "internalType": "address",
-          "name": "account",
-          "type": "address"
-        }
-      ],
-      "name": "monthlySalary",
-      "outputs": [
-        {
-          "internalType": "euint128",
-          "name": "salary",
-          "type": "bytes32"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "uint256",
-          "name": "companyId",
-          "type": "uint256"
-        }
-      ],
-      "name": "nextAuditId",
-      "outputs": [
-        {
-          "internalType": "uint256",
-          "name": "auditId",
-          "type": "uint256"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "uint256",
-          "name": "companyId",
-          "type": "uint256"
         },
         {
           "internalType": "address",
@@ -495,32 +321,6 @@ export const SalaryCipherCore = {
       "name": "refreshManagerSalaryAccess",
       "outputs": [],
       "stateMutability": "nonpayable",
-      "type": "function"
-    },
-    {
-      "inputs": [],
-      "name": "salaryNegotiationAddress",
-      "outputs": [
-        {
-          "internalType": "address",
-          "name": "",
-          "type": "address"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
-      "inputs": [],
-      "name": "salaryProofAddress",
-      "outputs": [
-        {
-          "internalType": "address",
-          "name": "",
-          "type": "address"
-        }
-      ],
-      "stateMutability": "view",
       "type": "function"
     },
     {
@@ -598,30 +398,6 @@ export const SalaryCipherCore = {
       "name": "setSalaryProofAddress",
       "outputs": [],
       "stateMutability": "nonpayable",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "uint256",
-          "name": "companyId",
-          "type": "uint256"
-        },
-        {
-          "internalType": "address",
-          "name": "account",
-          "type": "address"
-        }
-      ],
-      "name": "startDate",
-      "outputs": [
-        {
-          "internalType": "uint64",
-          "name": "date",
-          "type": "uint64"
-        }
-      ],
-      "stateMutability": "view",
       "type": "function"
     },
     {

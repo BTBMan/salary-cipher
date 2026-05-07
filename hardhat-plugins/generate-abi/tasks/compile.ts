@@ -4,5 +4,5 @@ import { task } from 'hardhat/config'
 task(TASK_COMPILE).setAction(async (_, hre, runSuper) => {
   await runSuper()
 
-  hre.run('generate')
+  await hre.run('generate')
 })

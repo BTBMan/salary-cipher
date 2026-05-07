@@ -1,15 +1,8 @@
 import type { Address } from 'viem'
 
-export const ProofNFT = {
-  addresses: {
-    31337: '0xF2cb3cfA36Bfb95E0FD855C1b41Ab19c517FcDB9',
-  } as Record<number, Address>,
+export const ERC721URIStorage = {
+  addresses: {} as Record<number, Address>,
   abi: [
-    {
-      "inputs": [],
-      "stateMutability": "nonpayable",
-      "type": "constructor"
-    },
     {
       "inputs": [
         {
@@ -114,48 +107,6 @@ export const ProofNFT = {
       "type": "error"
     },
     {
-      "inputs": [
-        {
-          "internalType": "address",
-          "name": "owner",
-          "type": "address"
-        }
-      ],
-      "name": "OwnableInvalidOwner",
-      "type": "error"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "address",
-          "name": "account",
-          "type": "address"
-        }
-      ],
-      "name": "OwnableUnauthorizedAccount",
-      "type": "error"
-    },
-    {
-      "inputs": [],
-      "name": "ProofNFT__InvalidAddress",
-      "type": "error"
-    },
-    {
-      "inputs": [],
-      "name": "ProofNFT__InvalidTokenURI",
-      "type": "error"
-    },
-    {
-      "inputs": [],
-      "name": "ProofNFT__OnlySalaryProof",
-      "type": "error"
-    },
-    {
-      "inputs": [],
-      "name": "ProofNFT__ProofAlreadyMinted",
-      "type": "error"
-    },
-    {
       "anonymous": false,
       "inputs": [
         {
@@ -235,69 +186,6 @@ export const ProofNFT = {
         }
       ],
       "name": "MetadataUpdate",
-      "type": "event"
-    },
-    {
-      "anonymous": false,
-      "inputs": [
-        {
-          "indexed": true,
-          "internalType": "address",
-          "name": "previousOwner",
-          "type": "address"
-        },
-        {
-          "indexed": true,
-          "internalType": "address",
-          "name": "newOwner",
-          "type": "address"
-        }
-      ],
-      "name": "OwnershipTransferred",
-      "type": "event"
-    },
-    {
-      "anonymous": false,
-      "inputs": [
-        {
-          "indexed": true,
-          "internalType": "uint256",
-          "name": "proofId",
-          "type": "uint256"
-        },
-        {
-          "indexed": true,
-          "internalType": "uint256",
-          "name": "tokenId",
-          "type": "uint256"
-        },
-        {
-          "indexed": true,
-          "internalType": "address",
-          "name": "to",
-          "type": "address"
-        },
-        {
-          "indexed": false,
-          "internalType": "string",
-          "name": "tokenURI",
-          "type": "string"
-        }
-      ],
-      "name": "ProofNFTMinted",
-      "type": "event"
-    },
-    {
-      "anonymous": false,
-      "inputs": [
-        {
-          "indexed": true,
-          "internalType": "address",
-          "name": "salaryProofContract",
-          "type": "address"
-        }
-      ],
-      "name": "SalaryProofContractUpdated",
       "type": "event"
     },
     {
@@ -406,35 +294,6 @@ export const ProofNFT = {
       "type": "function"
     },
     {
-      "inputs": [
-        {
-          "internalType": "address",
-          "name": "to",
-          "type": "address"
-        },
-        {
-          "internalType": "uint256",
-          "name": "proofId",
-          "type": "uint256"
-        },
-        {
-          "internalType": "string",
-          "name": "metadataURI",
-          "type": "string"
-        }
-      ],
-      "name": "mint",
-      "outputs": [
-        {
-          "internalType": "uint256",
-          "name": "tokenId",
-          "type": "uint256"
-        }
-      ],
-      "stateMutability": "nonpayable",
-      "type": "function"
-    },
-    {
       "inputs": [],
       "name": "name",
       "outputs": [
@@ -442,32 +301,6 @@ export const ProofNFT = {
           "internalType": "string",
           "name": "",
           "type": "string"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
-      "inputs": [],
-      "name": "nextTokenId",
-      "outputs": [
-        {
-          "internalType": "uint256",
-          "name": "",
-          "type": "uint256"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
-      "inputs": [],
-      "name": "owner",
-      "outputs": [
-        {
-          "internalType": "address",
-          "name": "",
-          "type": "address"
         }
       ],
       "stateMutability": "view",
@@ -490,32 +323,6 @@ export const ProofNFT = {
         }
       ],
       "stateMutability": "view",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "uint256",
-          "name": "proofId",
-          "type": "uint256"
-        }
-      ],
-      "name": "proofTokenIds",
-      "outputs": [
-        {
-          "internalType": "uint256",
-          "name": "tokenId",
-          "type": "uint256"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
-      "inputs": [],
-      "name": "renounceOwnership",
-      "outputs": [],
-      "stateMutability": "nonpayable",
       "type": "function"
     },
     {
@@ -570,19 +377,6 @@ export const ProofNFT = {
       "type": "function"
     },
     {
-      "inputs": [],
-      "name": "salaryProofContract",
-      "outputs": [
-        {
-          "internalType": "address",
-          "name": "",
-          "type": "address"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
       "inputs": [
         {
           "internalType": "address",
@@ -596,19 +390,6 @@ export const ProofNFT = {
         }
       ],
       "name": "setApprovalForAll",
-      "outputs": [],
-      "stateMutability": "nonpayable",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "address",
-          "name": "salaryProofContract_",
-          "type": "address"
-        }
-      ],
-      "name": "setSalaryProofContract",
       "outputs": [],
       "stateMutability": "nonpayable",
       "type": "function"
@@ -653,25 +434,6 @@ export const ProofNFT = {
           "type": "uint256"
         }
       ],
-      "name": "tokenProofIds",
-      "outputs": [
-        {
-          "internalType": "uint256",
-          "name": "proofId",
-          "type": "uint256"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "uint256",
-          "name": "tokenId",
-          "type": "uint256"
-        }
-      ],
       "name": "tokenURI",
       "outputs": [
         {
@@ -702,19 +464,6 @@ export const ProofNFT = {
         }
       ],
       "name": "transferFrom",
-      "outputs": [],
-      "stateMutability": "nonpayable",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "address",
-          "name": "newOwner",
-          "type": "address"
-        }
-      ],
-      "name": "transferOwnership",
       "outputs": [],
       "stateMutability": "nonpayable",
       "type": "function"
