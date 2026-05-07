@@ -3,6 +3,7 @@ import type { Address } from 'viem'
 export const SalaryProof = {
   addresses: {
     31337: '0x53DaB165b879542E9aDFC41c6474A9d797B9b042',
+    11155111: '0xf45c028bC25dca79A6729dba7aBc6743190D8777',
   } as Record<number, Address>,
   abi: [
     {
