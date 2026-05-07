@@ -9,6 +9,7 @@ import {ebool, euint128, externalEuint128} from "@fhevm/solidity/lib/FHE.sol";
 /* Errors ********/
 
 /* Interfaces ****/
+import {ICompanyRegistry} from "./ICompanyRegistry.sol";
 
 /* Libraries *****/
 
@@ -96,6 +97,17 @@ interface ISalaryCipherCore {
     function setSalary(
         uint256 companyId,
         address employee,
+        externalEuint128 encryptedSalary,
+        bytes calldata inputProof
+    ) external;
+
+    /// @notice Adds an employee to the registry and stores the initial encrypted monthly salary in one transaction.
+    /// @dev Existing salaries can only be changed through SalaryNegotiation.
+    function addEmployeeWithSalary(
+        uint256 companyId,
+        address employee,
+        ICompanyRegistry.Role role,
+        string calldata displayName,
         externalEuint128 encryptedSalary,
         bytes calldata inputProof
     ) external;

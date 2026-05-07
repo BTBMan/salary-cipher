@@ -315,39 +315,20 @@ export function useCompanyEmployees(selectedCompany: CompanySummary | null) {
       }
 
       const addEmployeeHash = await mutateAsync({
-        abi: CompanyRegistry.abi,
-        address: CompanyRegistry.address,
-        functionName: 'addEmployee',
-        args: [companyId, input.account, input.role, input.displayName],
+        abi: SalaryCipherCore.abi,
+        address: SalaryCipherCore.address,
+        functionName: 'addEmployeeWithSalary',
+        args: [
+          companyId,
+          input.account,
+          input.role,
+          input.displayName,
+          toHex(encryptedSalary.handles[0]),
+          toHex(encryptedSalary.inputProof),
+        ],
         account: address,
       })
       await waitForReceipt(addEmployeeHash)
-
-      try {
-        const setSalaryHash = await mutateAsync({
-          abi: SalaryCipherCore.abi,
-          address: SalaryCipherCore.address,
-          functionName: 'setSalary',
-          args: [
-            companyId,
-            input.account,
-            toHex(encryptedSalary.handles[0]),
-            toHex(encryptedSalary.inputProof),
-          ],
-          account: address,
-        })
-        await waitForReceipt(setSalaryHash)
-      }
-      catch (error) {
-        console.error(error)
-        await Promise.all([refetchEmployees(), refreshCompanies()])
-        toast.error('Employee added, but encrypted salary was not set.')
-        return true
-      }
-
-      if (input.role === RolesEnum.HR) {
-        await refreshManagerSalaryAccess(input.account)
-      }
 
       await Promise.all([refetchEmployees(), refreshCompanies()])
       toast.success('Employee added.')
@@ -367,7 +348,6 @@ export function useCompanyEmployees(selectedCompany: CompanySummary | null) {
     companyId,
     encryptWith,
     refetchEmployees,
-    refreshManagerSalaryAccess,
     refreshCompanies,
     selectedSettlementAsset,
     mutateAsync,

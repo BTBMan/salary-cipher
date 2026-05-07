@@ -120,26 +120,26 @@ contract SalaryCipherCore is ISalaryCipherCore, ZamaEthereumConfig {
         bytes calldata inputProof
     ) external onlyOwnerOrHR(companyId) {
         _requireActiveEmployee(companyId, employee);
-        if (FHE.isInitialized(monthlySalary[companyId][employee])) {
-            revert SalaryCipherCore__SalaryAlreadySet();
+        _setInitialSalary(companyId, employee, encryptedSalary, inputProof);
+    }
+
+    /// @inheritdoc ISalaryCipherCore
+    function addEmployeeWithSalary(
+        uint256 companyId,
+        address employee,
+        ICompanyRegistry.Role role,
+        string calldata displayName,
+        externalEuint128 encryptedSalary,
+        bytes calldata inputProof
+    ) external onlyOwnerOrHR(companyId) {
+        // The core is the single payroll onboarding entrypoint. CompanyRegistry
+        // still owns the employee directory; the core owns encrypted salary state.
+        companyRegistry.addEmployee(companyId, employee, role, displayName);
+        _setInitialSalary(companyId, employee, encryptedSalary, inputProof);
+
+        if (role == ICompanyRegistry.Role.HR) {
+            _grantManagerSalaryAccess(companyId, employee);
         }
-
-        // Direct salary writes are limited to onboarding. Later salary changes
-        // must pass through SalaryNegotiation so both sides agree on-chain.
-        euint128 salary = FHE.fromExternal(encryptedSalary, inputProof);
-        monthlySalary[companyId][employee] = salary;
-
-        if (startDate[companyId][employee] == 0) {
-            // Payroll eligibility starts from the employee's registry join time,
-            // not from the moment their encrypted salary is configured.
-            startDate[companyId][employee] = companyRegistry
-                .getEmployee(companyId, employee)
-                .addedAt;
-        }
-
-        _grantSalaryAccess(companyId, employee);
-
-        emit SalarySet(companyId, employee);
     }
 
     /// @inheritdoc ISalaryCipherCore
@@ -473,14 +473,7 @@ contract SalaryCipherCore is ISalaryCipherCore, ZamaEthereumConfig {
         address manager
     ) external onlyOwnerOrHR(companyId) {
         _requireManager(companyId, manager);
-
-        address[] memory employees = companyRegistry.getEmployees(companyId);
-        for (uint256 i = 0; i < employees.length; i++) {
-            euint128 salary = monthlySalary[companyId][employees[i]];
-            if (FHE.isInitialized(salary)) {
-                FHE.allow(salary, manager);
-            }
-        }
+        _grantManagerSalaryAccess(companyId, manager);
 
         emit ManagerSalaryAccessRefreshed(companyId, manager);
     }
@@ -789,6 +782,35 @@ contract SalaryCipherCore is ISalaryCipherCore, ZamaEthereumConfig {
         }
     }
 
+    /// @dev Stores the first encrypted salary handle for an already-registered employee.
+    function _setInitialSalary(
+        uint256 companyId,
+        address employee,
+        externalEuint128 encryptedSalary,
+        bytes calldata inputProof
+    ) private {
+        if (FHE.isInitialized(monthlySalary[companyId][employee])) {
+            revert SalaryCipherCore__SalaryAlreadySet();
+        }
+
+        // Direct salary writes are limited to onboarding. Later salary changes
+        // must pass through SalaryNegotiation so both sides agree on-chain.
+        euint128 salary = FHE.fromExternal(encryptedSalary, inputProof);
+        monthlySalary[companyId][employee] = salary;
+
+        if (startDate[companyId][employee] == 0) {
+            // Payroll eligibility starts from the employee's registry join time,
+            // not from the moment their encrypted salary is configured.
+            startDate[companyId][employee] = companyRegistry
+                .getEmployee(companyId, employee)
+                .addedAt;
+        }
+
+        _grantSalaryAccess(companyId, employee);
+
+        emit SalarySet(companyId, employee);
+    }
+
     /// @dev Grants one encrypted handle to all current managers in the company.
     function _grantManagerAccess(uint256 companyId, euint128 value) private {
         address[] memory employees = companyRegistry.getEmployees(companyId);
@@ -803,6 +825,20 @@ contract SalaryCipherCore is ISalaryCipherCore, ZamaEthereumConfig {
                 role == ICompanyRegistry.Role.HR
             ) {
                 FHE.allow(value, employee);
+            }
+        }
+    }
+
+    /// @dev Grants all initialized company salary handles to one current manager.
+    function _grantManagerSalaryAccess(
+        uint256 companyId,
+        address manager
+    ) private {
+        address[] memory employees = companyRegistry.getEmployees(companyId);
+        for (uint256 i = 0; i < employees.length; i++) {
+            euint128 salary = monthlySalary[companyId][employees[i]];
+            if (FHE.isInitialized(salary)) {
+                FHE.allow(salary, manager);
             }
         }
     }

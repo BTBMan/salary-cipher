@@ -363,6 +363,63 @@ for (const assetCase of assetCases) {
       expect(await decryptUint128(salaryHandle, salaryCipherCore.address, hr)).to.equal(500_000n)
     })
 
+    it('adds an employee and encrypted salary in one transaction', async () => {
+      const { companyRegistry, salaryCipherCore, owner, hr, employee, publicClient, companyId }
+        = await loadFixture(companyFixture)
+
+      const [employeeSalaryHandle, employeeSalaryProof] = await encryptUint128(
+        salaryCipherCore.address,
+        owner.account.address,
+        500_000,
+      )
+      const addEmployeeHash = await salaryCipherCore.write.addEmployeeWithSalary(
+        [
+          companyId,
+          employee.account.address,
+          RolesEnum.Employee,
+          'Alice',
+          employeeSalaryHandle,
+          employeeSalaryProof,
+        ],
+        { account: owner.account },
+      )
+      await publicClient.waitForTransactionReceipt({ hash: addEmployeeHash })
+
+      const storedEmployeeSalaryHandle = await salaryCipherCore.read.monthlySalary([
+        companyId,
+        employee.account.address,
+      ]) as string
+      await time.increase(1)
+      expect(await companyRegistry.read.getRole([companyId, employee.account.address])).to.equal(RolesEnum.Employee)
+      expect(await decryptUint128(storedEmployeeSalaryHandle, salaryCipherCore.address, employee)).to.equal(500_000n)
+      expect(await decryptUint128(storedEmployeeSalaryHandle, salaryCipherCore.address, owner)).to.equal(500_000n)
+
+      const [hrSalaryHandle, hrSalaryProof] = await encryptUint128(
+        salaryCipherCore.address,
+        owner.account.address,
+        300_000,
+      )
+      const addHrHash = await salaryCipherCore.write.addEmployeeWithSalary(
+        [
+          companyId,
+          hr.account.address,
+          RolesEnum.HR,
+          'Helen',
+          hrSalaryHandle,
+          hrSalaryProof,
+        ],
+        { account: owner.account },
+      )
+      await publicClient.waitForTransactionReceipt({ hash: addHrHash })
+
+      const storedHrSalaryHandle = await salaryCipherCore.read.monthlySalary([
+        companyId,
+        hr.account.address,
+      ]) as string
+      expect(await decryptUint128(storedEmployeeSalaryHandle, salaryCipherCore.address, hr)).to.equal(500_000n)
+      expect(await decryptUint128(storedHrSalaryHandle, salaryCipherCore.address, hr)).to.equal(300_000n)
+    })
+
     it('terminates employee after settling leftover salary and removes them from the registry', async () => {
       const companyStartTime = computeNextMonthlyPayrollTimestamp(BigInt(await time.latest()), 1)
       await time.increaseTo(companyStartTime)
