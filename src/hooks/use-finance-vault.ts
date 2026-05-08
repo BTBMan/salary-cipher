@@ -161,6 +161,7 @@ export function useFinanceVault(selectedCompany: CompanySummary | null) {
   const { settlementAssets } = useStoreContext()
   const { mutateAsync } = useWriteContract()
   const companyRegistryAddress = getContractAddress(CompanyRegistry, chainId)
+  const companyCreatedBlockNumber = selectedCompany?.createdBlockNumber ?? 0n
   const receiptWaiterRef = useRef<ReceiptWaiter | null>(null)
   const [receiptHash, setReceiptHash] = useState<Hash>()
   const [isDepositing, setIsDepositing] = useState(false)
@@ -342,7 +343,7 @@ export function useFinanceVault(selectedCompany: CompanySummary | null) {
     address: treasuryVaultConfigured ? treasuryVault : undefined,
     eventName: 'UnderlyingDepositedAndWrapped',
     args: eventArgs,
-    fromBlock: 0n,
+    fromBlock: companyCreatedBlockNumber,
     toBlock: 'latest',
     query: {
       enabled: treasuryVaultConfigured,
@@ -357,7 +358,7 @@ export function useFinanceVault(selectedCompany: CompanySummary | null) {
     address: treasuryVaultConfigured ? treasuryVault : undefined,
     eventName: 'PayrollTransferred',
     args: eventArgs,
-    fromBlock: 0n,
+    fromBlock: companyCreatedBlockNumber,
     toBlock: 'latest',
     query: {
       enabled: treasuryVaultConfigured,
@@ -376,7 +377,7 @@ export function useFinanceVault(selectedCompany: CompanySummary | null) {
     address: selectedSettlementAsset?.settlementToken as Address | undefined,
     eventName: 'ConfidentialTransfer',
     args: transferEventArgs,
-    fromBlock: 0n,
+    fromBlock: companyCreatedBlockNumber,
     toBlock: 'latest',
     query: {
       enabled: Boolean(selectedSettlementAsset?.settlementToken && treasuryVaultConfigured),
@@ -391,7 +392,7 @@ export function useFinanceVault(selectedCompany: CompanySummary | null) {
     address: treasuryVaultConfigured ? treasuryVault : undefined,
     eventName: 'UnderlyingUnwrapRequested',
     args: eventArgs,
-    fromBlock: 0n,
+    fromBlock: companyCreatedBlockNumber,
     toBlock: 'latest',
     query: {
       enabled: treasuryVaultConfigured,

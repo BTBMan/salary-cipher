@@ -14,8 +14,10 @@ const CompanyRegistryModule = buildModule('CompanyRegistryModule', (m) => {
   const companyRegistry = m.contract('CompanyRegistry', [], {})
 
   const networkConfig = network.config
-  const isForkOrSepolia = (networkConfig.chainId === 31337 && (networkConfig as any).forking?.enabled) || networkConfig.chainId === 11155111
-  const isLocalMockNetwork = !isForkOrSepolia && networkConfig.chainId === 31337
+  const isForkNetwork = network.name === 'hardhat' && Boolean((networkConfig as any).forking?.enabled)
+  const isSepoliaNetwork = network.name === 'sepolia'
+  const isLocalMockNetwork = network.name === 'localhost' || (network.name === 'hardhat' && !isForkNetwork)
+  const isForkOrSepolia = isForkNetwork || isSepoliaNetwork
 
   let usdc!: NamedArtifactContractDeploymentFuture<'MockERC20'>
   let usdt!: NamedArtifactContractDeploymentFuture<'MockERC20'>

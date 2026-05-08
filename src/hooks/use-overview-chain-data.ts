@@ -100,6 +100,7 @@ export function useOverviewChainData(
   const { address, chainId } = useConnection()
   const companyRegistryAddress = getContractAddress(CompanyRegistry, chainId)
   const salaryCipherCoreAddress = getContractAddress(SalaryCipherCore, chainId)
+  const companyCreatedBlockNumber = selectedCompany?.createdBlockNumber ?? 0n
   const payrollHistoryLimit = options.payrollHistoryLimit === undefined
     ? DEFAULT_PAYROLL_HISTORY_LIMIT
     : options.payrollHistoryLimit
@@ -291,7 +292,7 @@ export function useOverviewChainData(
     address: treasuryVaultConfigured ? treasuryVault as Address : undefined,
     eventName: 'PayrollTransferred',
     args: payrollHistoryEventArgs,
-    fromBlock: 0n,
+    fromBlock: companyCreatedBlockNumber,
     toBlock: 'latest',
     query: {
       enabled: canReadEmployeePayrollHistory,
@@ -307,7 +308,7 @@ export function useOverviewChainData(
     address: selectedSettlementAsset?.settlementToken as Address | undefined,
     eventName: 'ConfidentialTransfer',
     args: transferHistoryEventArgs,
-    fromBlock: 0n,
+    fromBlock: companyCreatedBlockNumber,
     toBlock: 'latest',
     query: {
       enabled: canReadEmployeePayrollHistory,
@@ -323,7 +324,7 @@ export function useOverviewChainData(
     address: treasuryVaultConfigured ? treasuryVault as Address : undefined,
     eventName: 'PayrollTransferred',
     args: companyPayrollHistoryEventArgs,
-    fromBlock: 0n,
+    fromBlock: companyCreatedBlockNumber,
     toBlock: 'latest',
     query: {
       enabled: canReadCompanyPayrollHistory,
@@ -339,7 +340,7 @@ export function useOverviewChainData(
     address: selectedSettlementAsset?.settlementToken as Address | undefined,
     eventName: 'ConfidentialTransfer',
     args: companyTransferHistoryEventArgs,
-    fromBlock: 0n,
+    fromBlock: companyCreatedBlockNumber,
     toBlock: 'latest',
     query: {
       enabled: canReadCompanyPayrollHistory,
