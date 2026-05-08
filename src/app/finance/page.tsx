@@ -30,7 +30,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import { useFinanceVault, useStoreContext } from '@/hooks'
+import { useFinanceVault, useOverviewChainData, useStoreContext } from '@/hooks'
 import { cn, formatAddress, formatUnixDate, getConfidentialTokenSymbol, getUnderlyingTokenSymbol } from '@/utils'
 
 const TOKEN_AMOUNT_REGEX = /^\d+(\.\d+)?$/
@@ -55,6 +55,15 @@ function formatTokenAmount(value: string | null, fallback = '••••••�
     maximumFractionDigits: 2,
     minimumFractionDigits: 2,
   }).format(Number(value))
+}
+
+function parseTokenAmount(value: string | null) {
+  if (!value) {
+    return null
+  }
+
+  const amount = Number(value)
+  return Number.isFinite(amount) ? amount : null
 }
 
 function getTransactionMeta(type: FinanceTransactionRow['type']) {
@@ -105,6 +114,7 @@ function getRowDate(row: FinanceTransactionRow) {
 export default function FinancePage() {
   const { selectedCompany } = useStoreContext()
   const finance = useFinanceVault(selectedCompany)
+  const overview = useOverviewChainData(selectedCompany)
   const [isDepositDialogOpen, setIsDepositDialogOpen] = useState(false)
   const [isWithdrawDialogOpen, setIsWithdrawDialogOpen] = useState(false)
   const [depositAmount, setDepositAmount] = useState('')
@@ -112,23 +122,39 @@ export default function FinancePage() {
   const underlyingTokenSymbol = getUnderlyingTokenSymbol(finance.selectedSettlementAsset)
   const confidentialTokenSymbol = getConfidentialTokenSymbol(finance.selectedSettlementAsset)
   const vaultBalanceLabel = finance.vaultConfidentialBalance ? formatTokenAmount(finance.vaultConfidentialBalance) : '••••••••'
-  const hasWrappedBalance = Boolean(finance.vaultConfidentialBalanceHandle)
-  const healthStatus = finance.treasuryVaultConfigured
-    ? hasWrappedBalance
-      ? 'Ready'
-      : 'Needs Funding'
-    : 'Missing'
-  const healthClassName = hasWrappedBalance
+  const totalPayrollLabel = overview.totalMonthlyPayroll ? formatTokenAmount(overview.totalMonthlyPayroll) : '••••••••'
+  const vaultBalanceAmount = parseTokenAmount(finance.vaultConfidentialBalance)
+  const totalPayrollAmount = parseTokenAmount(overview.totalMonthlyPayroll)
+  const hasWrappedBalance = Boolean(vaultBalanceAmount && vaultBalanceAmount > 0)
+  const canEvaluateFunding = vaultBalanceAmount !== null && totalPayrollAmount !== null
+  const fundingRatio = canEvaluateFunding && totalPayrollAmount > 0
+    ? vaultBalanceAmount / totalPayrollAmount
+    : null
+  const utilizationPercent = fundingRatio === null ? 0 : Math.min(Math.round(fundingRatio * 100), 100)
+  const utilizationLabel = fundingRatio === null ? 'Encrypted' : `${Math.round(fundingRatio * 100)}%`
+  const healthStatus = !finance.treasuryVaultConfigured
+    ? 'Missing'
+    : !canEvaluateFunding
+        ? 'Pending Decrypt'
+        : totalPayrollAmount === 0
+          ? 'No Payroll'
+          : fundingRatio !== null && fundingRatio >= 1
+            ? 'Ready'
+            : hasWrappedBalance
+              ? 'Underfunded'
+              : 'Needs Funding'
+  const isReadyHealth = healthStatus === 'Ready'
+  const isPendingHealth = healthStatus === 'Pending Decrypt' || healthStatus === 'No Payroll' || healthStatus === 'Underfunded'
+  const healthClassName = isReadyHealth
     ? 'text-emerald-400'
-    : finance.treasuryVaultConfigured
+    : isPendingHealth
       ? 'text-amber-300'
       : 'text-destructive'
-  const healthDotClassName = hasWrappedBalance
+  const healthDotClassName = isReadyHealth
     ? 'bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.6)]'
-    : finance.treasuryVaultConfigured
+    : isPendingHealth
       ? 'bg-amber-300 shadow-[0_0_10px_rgba(252,211,77,0.5)]'
       : 'bg-destructive shadow-[0_0_10px_rgba(239,68,68,0.5)]'
-  const utilizationPercent = hasWrappedBalance ? 100 : 0
   const latestTransactions = useMemo(() => finance.transactionRows.slice(0, 10), [finance.transactionRows])
 
   const handleDeposit = async () => {
@@ -163,68 +189,67 @@ export default function FinancePage() {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-          <div className="lg:col-span-5 flex flex-col gap-6">
-            <Card className="group min-h-70 rounded-xl border-y-0 border-r-0 border-l-4 border-primary bg-surface-container-low p-0 shadow-2xl">
-              <CardContent className="relative flex h-full flex-col justify-between p-8">
-                <div className="relative z-10">
-                  <span className="text-[10px] font-black text-on-surface-variant tracking-[0.2em] uppercase mb-4 block">Vault Wrapped Balance</span>
-                  <div className="flex items-baseline gap-3 mb-8">
-                    <div className="relative inline-flex flex-col">
-                      <EncryptedField
-                        canDecrypt={finance.canDecryptVaultBalance}
-                        className="space-y-0"
-                        isDecrypting={finance.isDecryptingVaultBalance}
-                        isEncrypted={!finance.vaultConfidentialBalance}
-                        value={vaultBalanceLabel}
-                        valueClassName="text-primary font-heading text-5xl font-black tracking-tighter"
-                        onDecrypt={finance.decryptVaultBalance}
-                      />
-                    </div>
-                    <span className="text-outline text-xl font-black tracking-tighter">{confidentialTokenSymbol}</span>
+          <Card className="group min-h-70 lg:col-span-5 rounded-xl border-y-0 border-r-0 border-l-4 border-primary bg-surface-container-low p-0 shadow-2xl">
+            <CardContent className="relative flex h-full flex-col justify-between p-8">
+              <div className="relative z-10">
+                <span className="text-[10px] font-black text-on-surface-variant tracking-[0.2em] uppercase mb-4 block">Vault Wrapped Balance</span>
+                <div className="flex items-baseline gap-3 mb-8">
+                  <div className="relative inline-flex flex-col">
+                    <EncryptedField
+                      canDecrypt={finance.canDecryptVaultBalance}
+                      className="space-y-0"
+                      isDecrypting={finance.isDecryptingVaultBalance}
+                      isEncrypted={!finance.vaultConfidentialBalance}
+                      value={vaultBalanceLabel}
+                      valueClassName="text-primary font-heading text-5xl font-black tracking-tighter"
+                      onDecrypt={finance.decryptVaultBalance}
+                    />
                   </div>
-                  <div className="mb-6 grid grid-cols-2 gap-3">
-                    <div className="rounded-lg border border-white/5 bg-surface-container-lowest p-3">
-                      <span className="mb-1 block text-[10px] font-black uppercase tracking-widest text-outline">Wallet Balance</span>
-                      <span className="font-mono text-sm font-bold text-on-surface">
-                        {formatTokenAmount(finance.ownerUnderlyingBalance, '-')} {underlyingTokenSymbol}
-                      </span>
-                    </div>
-                    <div className="rounded-lg border border-white/5 bg-surface-container-lowest p-3">
-                      <span className="mb-1 block text-[10px] font-black uppercase tracking-widest text-outline">Unwrapped In Vault</span>
-                      <span className="font-mono text-sm font-bold text-on-surface">
-                        {formatTokenAmount(finance.vaultUnusedUnderlyingBalance, '-')} {underlyingTokenSymbol}
-                      </span>
-                    </div>
-                  </div>
-                  <div className="flex gap-4">
-                    <Button
-                      className="primary-gradient flex-1 text-on-primary-container h-12 rounded-sm text-sm flex items-center justify-center gap-2 hover:brightness-110 active:scale-95 transition-all border-none shadow-lg shadow-primary/20"
-                      disabled={!finance.treasuryVaultConfigured || finance.isDepositing}
-                      onClick={() => setIsDepositDialogOpen(true)}
-                    >
-                      {finance.isDepositing ? <AutorenewIcon className="size-5 animate-spin" /> : <AddCircleIcon className="size-5" />}
-                      Deposit
-                    </Button>
-                    <Button
-                      variant="outline"
-                      className="flex-1 border-white/10 hover:bg-surface-container h-12 rounded-sm text-sm flex items-center justify-center gap-2 active:scale-95 transition-all"
-                      disabled={!finance.treasuryVaultConfigured || !hasWrappedBalance || finance.isWithdrawingWrapped}
-                      onClick={() => setIsWithdrawDialogOpen(true)}
-                    >
-                      {finance.isWithdrawingWrapped ? <AutorenewIcon className="size-5 animate-spin" /> : <ArrowUpwardIcon className="size-5" />}
-                      Withdraw
-                    </Button>
-                  </div>
-                  {finance.vaultConfidentialBalanceError && (
-                    <p className="mt-3 text-[10px] font-bold uppercase tracking-widest text-destructive">{finance.vaultConfidentialBalanceError}</p>
-                  )}
+                  <span className="text-outline text-xl font-black tracking-tighter">{confidentialTokenSymbol}</span>
                 </div>
-                <div className="absolute -right-16 -top-16 w-64 h-64 bg-primary/5 rounded-full blur-[100px] pointer-events-none" />
-              </CardContent>
-            </Card>
+                <div className="mb-6 grid grid-cols-2 gap-3">
+                  <div className="rounded-lg border border-white/5 bg-surface-container-lowest p-3">
+                    <span className="mb-1 block text-[10px] font-black uppercase tracking-widest text-outline">Wallet Balance</span>
+                    <span className="font-mono text-sm font-bold text-on-surface">
+                      {formatTokenAmount(finance.ownerUnderlyingBalance, '-')} {underlyingTokenSymbol}
+                    </span>
+                  </div>
+                  <div className="rounded-lg border border-white/5 bg-surface-container-lowest p-3">
+                    <span className="mb-1 block text-[10px] font-black uppercase tracking-widest text-outline">Unwrapped In Vault</span>
+                    <span className="font-mono text-sm font-bold text-on-surface">
+                      {formatTokenAmount(finance.vaultUnusedUnderlyingBalance, '-')} {underlyingTokenSymbol}
+                    </span>
+                  </div>
+                </div>
+                <div className="flex gap-4">
+                  <Button
+                    className="primary-gradient flex-1 text-on-primary-container h-12 rounded-sm text-sm flex items-center justify-center gap-2 hover:brightness-110 active:scale-95 transition-all border-none shadow-lg shadow-primary/20"
+                    disabled={!finance.treasuryVaultConfigured || finance.isDepositing}
+                    onClick={() => setIsDepositDialogOpen(true)}
+                  >
+                    {finance.isDepositing ? <AutorenewIcon className="size-5 animate-spin" /> : <AddCircleIcon className="size-5" />}
+                    Deposit
+                  </Button>
+                  <Button
+                    variant="outline"
+                    className="flex-1 border-white/10 hover:bg-surface-container h-12 rounded-sm text-sm flex items-center justify-center gap-2 active:scale-95 transition-all"
+                    disabled={!finance.treasuryVaultConfigured || !hasWrappedBalance || finance.isWithdrawingWrapped}
+                    onClick={() => setIsWithdrawDialogOpen(true)}
+                  >
+                    {finance.isWithdrawingWrapped ? <AutorenewIcon className="size-5 animate-spin" /> : <ArrowUpwardIcon className="size-5" />}
+                    Withdraw
+                  </Button>
+                </div>
+                {finance.vaultConfidentialBalanceError && (
+                  <p className="mt-3 text-[10px] font-bold uppercase tracking-widest text-destructive">{finance.vaultConfidentialBalanceError}</p>
+                )}
+              </div>
+              <div className="absolute -right-16 -top-16 w-64 h-64 bg-primary/5 rounded-full blur-[100px] pointer-events-none" />
+            </CardContent>
+          </Card>
 
-            {/* Yield Metric */}
-            {/* <Card className="rounded-xl border border-white/5 bg-surface-container p-0 shadow-xl">
+          {/* Yield Metric */}
+          {/* <Card className="rounded-xl border border-white/5 bg-surface-container p-0 shadow-xl">
               <CardContent className="flex items-center justify-between p-6">
                 <div>
                   <span className="text-on-surface-variant text-[10px] font-black uppercase tracking-widest mb-1.5 block">Yield Generated (30d)</span>
@@ -238,12 +263,11 @@ export default function FinancePage() {
                 </div>
               </CardContent>
             </Card> */}
-          </div>
 
           {/* Right Column: Vault Health (7/12) */}
           <Card className="lg:col-span-7 rounded-xl border border-white/5 bg-surface-container p-0 shadow-2xl">
             <CardContent className="flex h-full flex-col justify-between p-8">
-              <div className="flex justify-between items-start mb-10">
+              <div className="flex justify-between items-start">
                 <div>
                   <div className="flex items-center gap-3 mb-2">
                     <ShieldLockIcon className="text-tertiary size-6 fill-current" />
@@ -262,11 +286,29 @@ export default function FinancePage() {
                 </div>
               </div>
 
+              <div className="grid grid-cols-2 gap-6">
+                <div className="bg-surface-container-low p-4 rounded-xl border border-white/5 shadow-inner">
+                  <span className="text-on-surface-variant text-[10px] font-black uppercase tracking-widest mb-2 block">Total Monthly Payroll</span>
+                  <div className="flex items-center">
+                    <EncryptedField
+                      canDecrypt={overview.canDecryptSalary}
+                      className="space-y-0"
+                      isDecrypting={overview.isDecryptingSalary}
+                      isEncrypted={!overview.totalMonthlyPayroll}
+                      value={totalPayrollLabel}
+                      valueClassName="text-white text-3xl font-heading font-black tracking-tighter"
+                      onDecrypt={overview.decryptSalary}
+                    />
+                    <span className="mt-2 block text-outline text-xs font-black tracking-widest">{confidentialTokenSymbol}</span>
+                  </div>
+                </div>
+              </div>
+
               <div className="space-y-10">
                 <div className="space-y-4">
                   <div className="flex justify-between items-center text-[10px] font-black uppercase tracking-[0.2em]">
-                    <span className="text-on-surface opacity-80">Vault Funding State</span>
-                    <span className="text-primary font-mono">{utilizationPercent}%</span>
+                    <span className="text-on-surface opacity-80">Payroll Coverage</span>
+                    <span className="text-primary font-mono">{utilizationLabel}</span>
                   </div>
                   <div className="h-3 w-full bg-surface-container-highest rounded-full overflow-hidden shadow-inner border border-white/5">
                     <div
@@ -275,36 +317,6 @@ export default function FinancePage() {
                     />
                   </div>
                 </div>
-
-                {/* <div className="grid grid-cols-2 gap-6">
-                  <div className="bg-surface-container-low p-6 rounded-xl border border-white/5 shadow-inner">
-                    <span className="text-on-surface-variant text-[10px] font-black uppercase tracking-widest mb-2 block">Months Remaining</span>
-                    <div className="flex items-baseline gap-2">
-                      <span className="text-white text-4xl font-heading font-black tracking-tighter">N/A</span>
-                      <span className="text-outline text-xs font-black uppercase tracking-widest">Cycles</span>
-                    </div>
-                  </div>
-                  <div className="bg-surface-container-low p-6 rounded-xl border border-white/5 flex flex-col justify-center shadow-inner">
-                    <span className="text-on-surface-variant text-[10px] font-black uppercase tracking-widest mb-4 block">Quick Top Up</span>
-                    <div className="flex gap-2">
-                      <Button disabled variant="outline" size="sm" className="h-10 flex-1 rounded-lg text-[10px] font-black uppercase tracking-widest text-white hover:bg-surface-bright">
-                        +1m
-                      </Button>
-                      <Button disabled variant="outline" size="sm" className="h-10 flex-1 rounded-lg text-[10px] font-black uppercase tracking-widest text-white hover:bg-surface-bright">
-                        +3m
-                      </Button>
-                      <Button
-                        variant="tertiary"
-                        size="sm"
-                        className="h-10 flex-1 rounded-lg text-[10px] font-black uppercase tracking-widest"
-                        disabled={!finance.treasuryVaultConfigured || finance.isDepositing}
-                        onClick={() => setIsDepositDialogOpen(true)}
-                      >
-                        Custom
-                      </Button>
-                    </div>
-                  </div>
-                </div> */}
               </div>
             </CardContent>
           </Card>

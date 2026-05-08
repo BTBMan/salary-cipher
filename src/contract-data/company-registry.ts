@@ -2,7 +2,7 @@ import type { Address } from 'viem'
 
 export const CompanyRegistry = {
   addresses: {
-    31337: '0xF62eEc897fa5ef36a957702AA4a45B58fE8Fe312',
+    31337: '0x427EE58a6c574032085AEB90Dd05dEea6F054930',
     11155111: '0xB8A15Dc8417a42Ee297eAf602C32dEc8cC4Ba6b9',
   } as Record<number, Address>,
   abi: [
@@ -495,6 +495,11 @@ export const CompanyRegistry = {
           "internalType": "uint64",
           "name": "createdAt",
           "type": "uint64"
+        },
+        {
+          "internalType": "uint256",
+          "name": "createdBlockNumber",
+          "type": "uint256"
         }
       ],
       "stateMutability": "view",
@@ -682,6 +687,11 @@ export const CompanyRegistry = {
               "internalType": "uint64",
               "name": "createdAt",
               "type": "uint64"
+            },
+            {
+              "internalType": "uint256",
+              "name": "createdBlockNumber",
+              "type": "uint256"
             }
           ],
           "internalType": "struct ICompanyRegistry.Company",

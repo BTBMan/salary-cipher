@@ -114,18 +114,62 @@ for (const assetCase of assetCases) {
         { account: owner.account },
       )
       await publicClient.waitForTransactionReceipt({ hash: unwrapHash })
+      expect(await companyTreasuryVault.read.pendingRefundUnwrapRequestId()).to.equal(unwrapRequestId)
 
       const encryptedAmount = await settlementToken.read.unwrapAmount([unwrapRequestId]) as Address
       const decryptionProof = await createUnwrapDecryptionProof(encryptedAmount, 1_000_000n)
 
-      const finalizeHash = await settlementToken.write.finalizeUnwrap(
+      const finalizeHash = await companyTreasuryVault.write.finalizeRefundUnwrap(
         [unwrapRequestId, 1_000_000n, decryptionProof],
         { account: owner.account },
       )
       await publicClient.waitForTransactionReceipt({ hash: finalizeHash })
 
+      expect(await companyTreasuryVault.read.pendingRefundUnwrapRequestId()).to.equal(
+        '0x0000000000000000000000000000000000000000000000000000000000000000',
+      )
       expect(await underlyingToken.read.balanceOf([owner.account.address])).to.equal(ownerBalanceBeforeRefund + 1_000_000n)
       expect(await underlyingToken.read.balanceOf([settlementToken.address])).to.equal(0n)
+    })
+
+    it('prevents duplicate refund requests while an unwrap is pending', async () => {
+      const { companyTreasuryVault, underlyingToken, settlementToken, owner, publicClient }
+        = await createSalaryCipherCompanyFixture({ asset: assetCase.asset })
+
+      const approveHash = await underlyingToken.write.approve(
+        [companyTreasuryVault.address, 1_000_000n],
+        { account: owner.account },
+      )
+      await publicClient.waitForTransactionReceipt({ hash: approveHash })
+
+      const depositHash = await companyTreasuryVault.write.depositAndWrapUnderlying([1_000_000n], {
+        account: owner.account,
+      })
+      await publicClient.waitForTransactionReceipt({ hash: depositHash })
+
+      const { result: unwrapRequestId } = await companyTreasuryVault.simulate.refundAllWrappedUnderlying(
+        { account: owner.account.address },
+      )
+      const unwrapHash = await companyTreasuryVault.write.refundAllWrappedUnderlying(
+        { account: owner.account },
+      )
+      await publicClient.waitForTransactionReceipt({ hash: unwrapHash })
+
+      await expect(
+        companyTreasuryVault.write.refundAllWrappedUnderlying({ account: owner.account }),
+      ).to.be.rejectedWith(customErrorPattern('CompanyTreasuryVault__PendingRefundExists'))
+
+      const encryptedAmount = await settlementToken.read.unwrapAmount([unwrapRequestId]) as Address
+      const decryptionProof = await createUnwrapDecryptionProof(encryptedAmount, 1_000_000n)
+      const finalizeHash = await companyTreasuryVault.write.finalizeRefundUnwrap(
+        [unwrapRequestId, 1_000_000n, decryptionProof],
+        { account: owner.account },
+      )
+      await publicClient.waitForTransactionReceipt({ hash: finalizeHash })
+
+      expect(await companyTreasuryVault.read.pendingRefundUnwrapRequestId()).to.equal(
+        '0x0000000000000000000000000000000000000000000000000000000000000000',
+      )
     })
 
     it('withdraws unused underlying tokens without touching wrapped funds', async () => {

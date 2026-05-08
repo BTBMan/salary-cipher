@@ -244,7 +244,7 @@ export function StoreProvider({ children }: PropsWithChildren) {
       return null
     }
 
-    const company = results[0].result as { name: string, owner: Address, createdAt: bigint }
+    const company = results[0].result as { name: string, owner: Address, createdAt: bigint, createdBlockNumber: bigint }
     const role = results[1].result as RolesEnum
     const employeeCount = results[2].result as bigint
     const payrollConfig = results[3].result as { dayOfMonth: number, initialized: boolean }
@@ -252,6 +252,7 @@ export function StoreProvider({ children }: PropsWithChildren) {
 
     return {
       createdAt: Number(company.createdAt),
+      createdBlockNumber: company.createdBlockNumber,
       id: companyId.toString(),
       name: company.name,
       description: '',

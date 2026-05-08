@@ -32,6 +32,13 @@ interface ICompanyTreasuryVault {
         address indexed to,
         bytes32 indexed unwrapRequestId
     );
+    /// @notice Emitted when a pending unwrap request is finalized and public underlying tokens are sent.
+    event UnderlyingUnwrapFinalized(
+        uint256 indexed companyId,
+        address indexed to,
+        bytes32 indexed unwrapRequestId,
+        uint64 amount
+    );
 
     ////////////////////////////////////
     // Errors                         //
@@ -40,6 +47,8 @@ interface ICompanyTreasuryVault {
     error CompanyTreasuryVault__InvalidAddress();
     error CompanyTreasuryVault__InvalidAmount();
     error CompanyTreasuryVault__TransferFailed();
+    error CompanyTreasuryVault__PendingRefundExists();
+    error CompanyTreasuryVault__InvalidUnwrapRequest();
 
     ////////////////////////////////////
     // Functions                      //
@@ -55,6 +64,13 @@ interface ICompanyTreasuryVault {
 
     /// @notice Creates an unwrap request that converts the vault's full wrapped balance back into public underlying tokens.
     function refundAllWrappedUnderlying() external returns (bytes32);
+
+    /// @notice Finalizes the vault's pending unwrap request and releases public underlying tokens to the owner.
+    function finalizeRefundUnwrap(
+        bytes32 unwrapRequestId,
+        uint64 amount,
+        bytes calldata decryptionProof
+    ) external;
 
     /// @notice Returns the encrypted balance handle representing wrapped payroll funds held by the vault.
     function getConfidentialBalance() external returns (euint64);

@@ -556,6 +556,11 @@ export const ICompanyRegistry = {
               "internalType": "uint64",
               "name": "createdAt",
               "type": "uint64"
+            },
+            {
+              "internalType": "uint256",
+              "name": "createdBlockNumber",
+              "type": "uint256"
             }
           ],
           "internalType": "struct ICompanyRegistry.Company",

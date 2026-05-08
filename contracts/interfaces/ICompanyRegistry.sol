@@ -23,6 +23,8 @@ interface ICompanyRegistry {
         address owner;
         // The timestamp when the company was created
         uint64 createdAt;
+        // The block number when the company was created.
+        uint256 createdBlockNumber;
     }
 
     /// @notice Persistent employee metadata stored per company.

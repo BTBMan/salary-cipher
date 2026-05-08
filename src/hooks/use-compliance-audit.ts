@@ -115,6 +115,7 @@ export function useComplianceAudit(selectedCompany: CompanySummary | null) {
   const { address, chainId } = useConnection()
   const { mutateAsync } = useWriteContract()
   const salaryCipherCoreAddress = getContractAddress(SalaryCipherCore, chainId)
+  const companyCreatedBlockNumber = selectedCompany?.createdBlockNumber ?? 0n
   const receiptWaiterRef = useRef<ReceiptWaiter | null>(null)
   const [receiptHash, setReceiptHash] = useState<Hash>()
   const [isGeneratingAudit, setIsGeneratingAudit] = useState(false)
@@ -226,7 +227,7 @@ export function useComplianceAudit(selectedCompany: CompanySummary | null) {
     address: salaryCipherCoreAddress,
     eventName: 'AuditGenerated',
     args: auditEventArgs,
-    fromBlock: 0n,
+    fromBlock: companyCreatedBlockNumber,
     toBlock: 'latest',
     query: {
       enabled: Boolean(companyId && salaryCipherCoreAddress),
@@ -241,7 +242,7 @@ export function useComplianceAudit(selectedCompany: CompanySummary | null) {
     address: salaryCipherCoreAddress,
     eventName: 'AuditFinalized',
     args: auditEventArgs,
-    fromBlock: 0n,
+    fromBlock: companyCreatedBlockNumber,
     toBlock: 'latest',
     query: {
       enabled: Boolean(companyId && salaryCipherCoreAddress),

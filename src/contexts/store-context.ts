@@ -13,6 +13,7 @@ export interface CreateCompanyInput {
 
 export interface CompanySummary {
   createdAt: number
+  createdBlockNumber: bigint
   id: string
   name: string
   description: string

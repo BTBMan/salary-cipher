@@ -36,6 +36,16 @@ export const CompanyTreasuryVault = {
     },
     {
       "inputs": [],
+      "name": "CompanyTreasuryVault__InvalidUnwrapRequest",
+      "type": "error"
+    },
+    {
+      "inputs": [],
+      "name": "CompanyTreasuryVault__PendingRefundExists",
+      "type": "error"
+    },
+    {
+      "inputs": [],
       "name": "CompanyTreasuryVault__TransferFailed",
       "type": "error"
     },
@@ -108,6 +118,37 @@ export const CompanyTreasuryVault = {
         }
       ],
       "name": "UnderlyingDepositedAndWrapped",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "uint256",
+          "name": "companyId",
+          "type": "uint256"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "to",
+          "type": "address"
+        },
+        {
+          "indexed": true,
+          "internalType": "bytes32",
+          "name": "unwrapRequestId",
+          "type": "bytes32"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint64",
+          "name": "amount",
+          "type": "uint64"
+        }
+      ],
+      "name": "UnderlyingUnwrapFinalized",
       "type": "event"
     },
     {
@@ -213,6 +254,29 @@ export const CompanyTreasuryVault = {
       "type": "function"
     },
     {
+      "inputs": [
+        {
+          "internalType": "bytes32",
+          "name": "unwrapRequestId",
+          "type": "bytes32"
+        },
+        {
+          "internalType": "uint64",
+          "name": "amount",
+          "type": "uint64"
+        },
+        {
+          "internalType": "bytes",
+          "name": "decryptionProof",
+          "type": "bytes"
+        }
+      ],
+      "name": "finalizeRefundUnwrap",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
       "inputs": [],
       "name": "getConfidentialBalance",
       "outputs": [
@@ -254,6 +318,19 @@ export const CompanyTreasuryVault = {
       "name": "payrollTransfer",
       "outputs": [],
       "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "pendingRefundUnwrapRequestId",
+      "outputs": [
+        {
+          "internalType": "bytes32",
+          "name": "",
+          "type": "bytes32"
+        }
+      ],
+      "stateMutability": "view",
       "type": "function"
     },
     {

@@ -170,6 +170,7 @@ export function useSalaryProofs(selectedCompany: CompanySummary | null) {
   const proofNFTFallbackAddress = getContractAddress(ProofNFT, chainId)
   const salaryCipherCoreAddress = getContractAddress(SalaryCipherCore, chainId)
   const salaryProofFallbackAddress = getContractAddress(SalaryProof, chainId)
+  const companyCreatedBlockNumber = selectedCompany?.createdBlockNumber ?? 0n
   const receiptWaiterRef = useRef<ReceiptWaiter | null>(null)
   const [receiptHash, setReceiptHash] = useState<Hash>()
   const [pendingAction, setPendingAction] = useState<string | null>(null)
@@ -497,7 +498,7 @@ export function useSalaryProofs(selectedCompany: CompanySummary | null) {
     address: salaryProofAddress,
     eventName: 'ProofGenerated',
     args: proofEventArgs,
-    fromBlock: 0n,
+    fromBlock: companyCreatedBlockNumber,
     toBlock: 'latest',
     query: {
       enabled: Boolean(salaryProofAddress && companyId && address),

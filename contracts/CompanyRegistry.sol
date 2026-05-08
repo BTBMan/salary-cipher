@@ -170,7 +170,8 @@ contract CompanyRegistry is ICompanyRegistry {
         companies[companyId] = Company({
             name: name,
             owner: owner,
-            createdAt: _blockTimestamp()
+            createdAt: _blockTimestamp(),
+            createdBlockNumber: block.number
         });
         payrollConfigs[companyId] = PayrollConfig({
             dayOfMonth: payrollDayOfMonth,
