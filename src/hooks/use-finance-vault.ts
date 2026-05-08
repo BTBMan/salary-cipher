@@ -247,6 +247,41 @@ export function useFinanceVault(selectedCompany: CompanySummary | null) {
   }, [treasuryVaultResult])
   const treasuryVaultConfigured = treasuryVault !== zeroAddress
 
+  const {
+    data: pendingRefundUnwrapRequestIdResult,
+    refetch: refetchPendingRefundUnwrapRequestId,
+  } = useReadContract({
+    abi: CompanyTreasuryVault.abi,
+    address: treasuryVaultConfigured ? treasuryVault : undefined,
+    functionName: 'pendingRefundUnwrapRequestId',
+    query: {
+      enabled: treasuryVaultConfigured,
+    },
+  })
+
+  const pendingRefundUnwrapRequestId = useMemo(() => {
+    return typeof pendingRefundUnwrapRequestIdResult === 'string' && pendingRefundUnwrapRequestIdResult !== zeroHash
+      ? pendingRefundUnwrapRequestIdResult as Hex
+      : null
+  }, [pendingRefundUnwrapRequestIdResult])
+
+  const {
+    data: pendingRefundAmountHandleResult,
+    refetch: refetchPendingRefundAmountHandle,
+  } = useReadContract({
+    abi: ERC7984Wrapper.abi,
+    address: selectedSettlementAsset?.settlementToken as Address | undefined,
+    functionName: 'unwrapAmount',
+    args: pendingRefundUnwrapRequestId ? [pendingRefundUnwrapRequestId] : undefined,
+    query: {
+      enabled: Boolean(selectedSettlementAsset?.settlementToken && pendingRefundUnwrapRequestId),
+    },
+  })
+
+  const pendingRefundAmountHandle = useMemo(() => {
+    return normalizeHandle(pendingRefundAmountHandleResult)
+  }, [pendingRefundAmountHandleResult])
+
   const balanceContracts = useMemo((): any[] => {
     if (!selectedSettlementAsset || !address || !treasuryVaultConfigured) {
       return []
@@ -407,6 +442,8 @@ export function useFinanceVault(selectedCompany: CompanySummary | null) {
       refetchDepositAndWrapLogs(),
       refetchPayrollLogs(),
       refetchPayrollTransferLogs(),
+      refetchPendingRefundAmountHandle(),
+      refetchPendingRefundUnwrapRequestId(),
       refetchRefundRequestLogs(),
     ])
   }, [
@@ -414,6 +451,8 @@ export function useFinanceVault(selectedCompany: CompanySummary | null) {
     refetchDepositAndWrapLogs,
     refetchPayrollLogs,
     refetchPayrollTransferLogs,
+    refetchPendingRefundAmountHandle,
+    refetchPendingRefundUnwrapRequestId,
     refetchPublicBalances,
     refetchRefundRequestLogs,
     refetchTreasuryVault,
@@ -639,19 +678,27 @@ export function useFinanceVault(selectedCompany: CompanySummary | null) {
     setIsWithdrawingWrapped(true)
 
     try {
-      const hash = await mutateAsync({
-        abi: CompanyTreasuryVault.abi,
-        address: treasuryVault,
-        functionName: 'refundAllWrappedUnderlying',
-        args: [],
-        account: address,
-      })
-      const refundReceipt = await waitForReceipt(hash)
-      const { unwrapRequestId, unwrapAmountHandle } = getRefundUnwrapData(
-        refundReceipt,
-        treasuryVault,
-        selectedSettlementAsset.settlementToken as Address,
-      )
+      let unwrapRequestId = pendingRefundUnwrapRequestId
+      let unwrapAmountHandle = pendingRefundAmountHandle
+
+      if (!unwrapRequestId || !unwrapAmountHandle) {
+        const hash = await mutateAsync({
+          abi: CompanyTreasuryVault.abi,
+          address: treasuryVault,
+          functionName: 'refundAllWrappedUnderlying',
+          args: [],
+          account: address,
+        })
+        const refundReceipt = await waitForReceipt(hash)
+        const requestData = getRefundUnwrapData(
+          refundReceipt,
+          treasuryVault,
+          selectedSettlementAsset.settlementToken as Address,
+        )
+        unwrapRequestId = requestData.unwrapRequestId
+        unwrapAmountHandle = requestData.unwrapAmountHandle
+      }
+
       if (!unwrapRequestId || !unwrapAmountHandle) {
         throw new Error('Unable to locate unwrap request data.')
       }
@@ -663,9 +710,9 @@ export function useFinanceVault(selectedCompany: CompanySummary | null) {
       }
 
       const finalizeHash = await mutateAsync({
-        abi: ERC7984Wrapper.abi,
-        address: selectedSettlementAsset.settlementToken as Address,
-        functionName: 'finalizeUnwrap',
+        abi: CompanyTreasuryVault.abi,
+        address: treasuryVault,
+        functionName: 'finalizeRefundUnwrap',
         args: [unwrapRequestId, clearAmount, decrypted.decryptionProof],
         account: address,
       })
@@ -687,6 +734,8 @@ export function useFinanceVault(selectedCompany: CompanySummary | null) {
     address,
     instance,
     mutateAsync,
+    pendingRefundAmountHandle,
+    pendingRefundUnwrapRequestId,
     refetchFinanceData,
     selectedSettlementAsset,
     treasuryVault,

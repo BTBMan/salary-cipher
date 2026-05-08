@@ -32,6 +32,8 @@ contract CompanyTreasuryVault is ICompanyTreasuryVault, ZamaEthereumConfig {
     IERC7984ERC20WrapperInternal public immutable settlementToken;
     // The singleton payroll core allowed to move confidential funds out of the vault.
     address public immutable salaryCipherCore;
+    // Active unwrap request created from the vault's encrypted balance.
+    bytes32 public pendingRefundUnwrapRequestId;
 
     /// @notice Restricts execution to the company owner.
     modifier onlyOwner() {
@@ -152,6 +154,10 @@ contract CompanyTreasuryVault is ICompanyTreasuryVault, ZamaEthereumConfig {
         onlyOwner
         returns (bytes32 unwrapRequestId)
     {
+        if (pendingRefundUnwrapRequestId != bytes32(0)) {
+            revert CompanyTreasuryVault__PendingRefundExists();
+        }
+
         euint64 wrappedBalance = settlementToken.confidentialBalanceOf(
             address(this)
         );
@@ -164,9 +170,39 @@ contract CompanyTreasuryVault is ICompanyTreasuryVault, ZamaEthereumConfig {
             msg.sender,
             wrappedBalance
         );
+        pendingRefundUnwrapRequestId = unwrapRequestId;
         _grantCurrentVaultBalanceAccess();
 
         emit UnderlyingUnwrapRequested(companyId, msg.sender, unwrapRequestId);
+    }
+
+    /// @inheritdoc ICompanyTreasuryVault
+    function finalizeRefundUnwrap(
+        bytes32 unwrapRequestId,
+        uint64 amount,
+        bytes calldata decryptionProof
+    ) external onlyOwner {
+        if (
+            unwrapRequestId == bytes32(0) ||
+            unwrapRequestId != pendingRefundUnwrapRequestId
+        ) {
+            revert CompanyTreasuryVault__InvalidUnwrapRequest();
+        }
+
+        pendingRefundUnwrapRequestId = bytes32(0);
+        settlementToken.finalizeUnwrap(
+            unwrapRequestId,
+            amount,
+            decryptionProof
+        );
+        _grantCurrentVaultBalanceAccess();
+
+        emit UnderlyingUnwrapFinalized(
+            companyId,
+            msg.sender,
+            unwrapRequestId,
+            amount
+        );
     }
 
     /// @inheritdoc ICompanyTreasuryVault

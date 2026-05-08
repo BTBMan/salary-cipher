@@ -15,6 +15,16 @@ export const ICompanyTreasuryVault = {
     },
     {
       "inputs": [],
+      "name": "CompanyTreasuryVault__InvalidUnwrapRequest",
+      "type": "error"
+    },
+    {
+      "inputs": [],
+      "name": "CompanyTreasuryVault__PendingRefundExists",
+      "type": "error"
+    },
+    {
+      "inputs": [],
       "name": "CompanyTreasuryVault__TransferFailed",
       "type": "error"
     },
@@ -93,6 +103,37 @@ export const ICompanyTreasuryVault = {
           "internalType": "bytes32",
           "name": "unwrapRequestId",
           "type": "bytes32"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint64",
+          "name": "amount",
+          "type": "uint64"
+        }
+      ],
+      "name": "UnderlyingUnwrapFinalized",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "uint256",
+          "name": "companyId",
+          "type": "uint256"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "to",
+          "type": "address"
+        },
+        {
+          "indexed": true,
+          "internalType": "bytes32",
+          "name": "unwrapRequestId",
+          "type": "bytes32"
         }
       ],
       "name": "UnderlyingUnwrapRequested",
@@ -132,6 +173,29 @@ export const ICompanyTreasuryVault = {
         }
       ],
       "name": "depositAndWrapUnderlying",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "bytes32",
+          "name": "unwrapRequestId",
+          "type": "bytes32"
+        },
+        {
+          "internalType": "uint64",
+          "name": "amount",
+          "type": "uint64"
+        },
+        {
+          "internalType": "bytes",
+          "name": "decryptionProof",
+          "type": "bytes"
+        }
+      ],
+      "name": "finalizeRefundUnwrap",
       "outputs": [],
       "stateMutability": "nonpayable",
       "type": "function"
