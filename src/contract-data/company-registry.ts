@@ -3,7 +3,7 @@ import type { Address } from 'viem'
 export const CompanyRegistry = {
   addresses: {
     31337: '0x427EE58a6c574032085AEB90Dd05dEea6F054930',
-    11155111: '0xB8A15Dc8417a42Ee297eAf602C32dEc8cC4Ba6b9',
+    11155111: '0xc6392cE8248484045dBE9804887cf603EB54e83E',
   } as Record<number, Address>,
   abi: [
     {

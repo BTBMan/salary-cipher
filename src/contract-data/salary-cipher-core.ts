@@ -3,7 +3,7 @@ import type { Address } from 'viem'
 export const SalaryCipherCore = {
   addresses: {
     31337: '0xAaC7D4A36DAb95955ef3c641c23F1fA46416CF71',
-    11155111: '0xe1d981F6df0202820E192eFe85b036ff6D292fda',
+    11155111: '0xA80846B0D2875B8a96928bD62Ca935abf9C85c01',
   } as Record<number, Address>,
   abi: [
     {

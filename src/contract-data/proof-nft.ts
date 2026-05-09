@@ -3,7 +3,7 @@ import type { Address } from 'viem'
 export const ProofNFT = {
   addresses: {
     31337: '0x594f79e85F6f041eb56cF6822FF4125ee316409E',
-    11155111: '0x569e3cE1593fa401673c693B4D9e1369Ed474c70',
+    11155111: '0x32D0f4c52B47b1baf7b7987F531eDb0CcCF13845',
   } as Record<number, Address>,
   abi: [
     {
