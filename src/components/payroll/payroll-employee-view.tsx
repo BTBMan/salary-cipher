@@ -28,6 +28,7 @@ export function PayrollEmployeeView({ overview, selectedCompany }: PayrollEmploy
   const underlyingTokenSymbol = getUnderlyingTokenSymbol(overview.selectedSettlementAsset)
   const balanceShare = getBalanceShare(overview.employeeConfidentialBalance, overview.employeeTotalReceived)
   const employeeWithdraw = useEmployeePayrollWithdraw({
+    decryptedBalanceAmount: overview.employeeConfidentialBalance,
     encryptedBalanceHandle: overview.employeeBalanceHandle,
     onWithdrawnAction: overview.refetchBalanceHandle,
     payoutWallet: overview.currentEmployee?.payoutWallet,
@@ -97,7 +98,7 @@ export function PayrollEmployeeView({ overview, selectedCompany }: PayrollEmploy
               <div className="relative z-10 mt-auto flex flex-col gap-4 sm:flex-row">
                 <Button
                   className="h-12 rounded bg-primary px-8 text-xs font-bold uppercase tracking-wide text-on-primary shadow-none hover:bg-primary-fixed hover:shadow-[0_0_20px_rgba(192,193,255,0.3)]"
-                  disabled={employeeWithdraw.isWithdrawingEncryptedSalary || !overview.employeeBalanceHandle || !employeeWithdraw.canUsePayoutWallet}
+                  disabled={employeeWithdraw.isWithdrawingEncryptedSalary || !employeeWithdraw.canWithdrawEncryptedSalary}
                   onClick={() => {
                     void employeeWithdraw.withdrawEncryptedSalary()
                   }}

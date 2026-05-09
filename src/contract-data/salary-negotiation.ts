@@ -2,7 +2,7 @@ import type { Address } from 'viem'
 
 export const SalaryNegotiation = {
   addresses: {
-    31337: '0x6B5CF024365D5d5d0786673780CA7E3F07f85B63',
+    31337: '0x27f7785b17c6B4d034094a1B16Bc928bD697f386',
     11155111: '0x601ef962BA1f350E84E3898cd04ef585369374d9',
   } as Record<number, Address>,
   abi: [

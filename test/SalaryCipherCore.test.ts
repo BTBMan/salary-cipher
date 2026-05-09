@@ -474,7 +474,35 @@ for (const assetCase of assetCases) {
       expect(await companyRegistry.read.getRole([companyId, employee.account.address])).to.equal(RolesEnum.None)
       expect(await companyRegistry.read.getUserCompanies([employee.account.address])).to.deep.equal([])
       expect(await salaryCipherCore.read.startDate([companyId, employee.account.address])).to.equal(0n)
+      expect(await salaryCipherCore.read.salaryActive([companyId, employee.account.address])).to.equal(false)
       expect(await salaryCipherCore.read.lastPayrollTime([companyId])).to.equal(0n)
+
+      const [newSalaryHandle, newSalaryProof] = await encryptUint128(
+        salaryCipherCore.address,
+        owner.account.address,
+        450_000,
+      )
+      const reAddHash = await salaryCipherCore.write.addEmployeeWithSalary(
+        [
+          companyId,
+          employee.account.address,
+          RolesEnum.Employee,
+          'Alice',
+          newSalaryHandle,
+          newSalaryProof,
+        ],
+        { account: owner.account },
+      )
+      await publicClient.waitForTransactionReceipt({ hash: reAddHash })
+
+      const storedNewSalaryHandle = await salaryCipherCore.read.monthlySalary([
+        companyId,
+        employee.account.address,
+      ]) as string
+
+      expect(await salaryCipherCore.read.salaryActive([companyId, employee.account.address])).to.equal(true)
+      expect(await companyRegistry.read.getRole([companyId, employee.account.address])).to.equal(RolesEnum.Employee)
+      expect(await decryptUint128(storedNewSalaryHandle, salaryCipherCore.address, owner)).to.equal(450_000n)
     })
   })
 }
