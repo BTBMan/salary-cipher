@@ -14,6 +14,11 @@ The main weakness of traditional on-chain payment systems is excessive transpare
 
 The current version is designed to demonstrate a complete, realistic, and scalable confidential payroll workflow for multiple companies: company creation, asset selection, treasury creation, employee onboarding, encrypted salary storage, funding and wrapping, confidential payroll execution, encrypted balance viewing, employee unwrap withdrawals, payroll history indexing, and encrypted salary negotiation.
 
+> **Important Demo Constraint**
+> SalaryCipher enforces payroll timing strictly on-chain. To make the demo work reliably, set the system time to the previous month before adding an employee, then move it back after the employee has been created.
+>
+> When creating a company, make sure the selected payroll day is not earlier than the current day of the month. If the configured payroll day is already behind the current date, the current payroll period is still considered open, and `Run Payroll Now` will be blocked until that period ends.
+
 ## 3. Problems This Project Solves
 
 ### 3.1 Employee Salaries Leak on Public Chains
@@ -102,11 +107,11 @@ SalaryCipher addresses this by:
 
 ### 4.4 Multi-Role Permissions
 
-| Role | Permissions |
-| --- | --- |
-| Owner | Create companies, manage employees, configure payroll day, execute payroll, manage treasury, view company-level history, participate in salary negotiation, and run company compliance audits |
-| HR | Manage employees, view people and salary-related data, perform selected payroll management actions, run company compliance audits, and generate their own salary proofs |
-| Employee | View personal salary, balance, and history, initiate personal salary negotiation, generate personal salary proofs, and unwrap already paid salaries |
+| Role     | Permissions                                                                                                                                                                                   |
+| -------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Owner    | Create companies, manage employees, configure payroll day, execute payroll, manage treasury, view company-level history, participate in salary negotiation, and run company compliance audits |
+| HR       | Manage employees, view people and salary-related data, perform selected payroll management actions, run company compliance audits, and generate their own salary proofs                       |
+| Employee | View personal salary, balance, and history, initiate personal salary negotiation, generate personal salary proofs, and unwrap already paid salaries                                           |
 
 ### 4.5 People Management
 
@@ -193,16 +198,16 @@ Salary Proofs currently supports three fixed proof types: monthly salary greater
 
 SalaryCipher is not merely storing encrypted data on-chain. It uses FHE as part of a real payroll workflow.
 
-| Scenario | Problem Without FHE | Outcome With FHE |
-| --- | --- | --- |
-| Monthly salary | Plaintext on-chain data leaks income | Monthly salary is stored in encrypted form and decrypted only by authorized parties |
-| Payroll amount | Transfer amounts are public | Confidential tokens are used for encrypted transfers |
-| Treasury balance | External parties can analyze company cash flow | Wrapped balance is shown in encrypted form |
-| Termination settlement | Salary must be computed in public | The contract computes payable amounts under encryption |
-| Encrypted bidding / salary negotiation | Both sides' offers are exposed | Offers are encrypted, and only the match result is public |
-| Salary audit | Audits would expose personal salary details | Only the audit conclusion is decrypted |
-| Income proof | Proofs often reveal the actual salary | Only the qualifying condition is proven |
-| Multi-tenant payroll platform | Shared systems can easily mix permissions and assets | `companyId` isolates data and separate vaults isolate assets |
+| Scenario                               | Problem Without FHE                                  | Outcome With FHE                                                                    |
+| -------------------------------------- | ---------------------------------------------------- | ----------------------------------------------------------------------------------- |
+| Monthly salary                         | Plaintext on-chain data leaks income                 | Monthly salary is stored in encrypted form and decrypted only by authorized parties |
+| Payroll amount                         | Transfer amounts are public                          | Confidential tokens are used for encrypted transfers                                |
+| Treasury balance                       | External parties can analyze company cash flow       | Wrapped balance is shown in encrypted form                                          |
+| Termination settlement                 | Salary must be computed in public                    | The contract computes payable amounts under encryption                              |
+| Encrypted bidding / salary negotiation | Both sides' offers are exposed                       | Offers are encrypted, and only the match result is public                           |
+| Salary audit                           | Audits would expose personal salary details          | Only the audit conclusion is decrypted                                              |
+| Income proof                           | Proofs often reveal the actual salary                | Only the qualifying condition is proven                                             |
+| Multi-tenant payroll platform          | Shared systems can easily mix permissions and assets | `companyId` isolates data and separate vaults isolate assets                        |
 
 The value of FHE lies in the fact that contracts can perform addition, multiplication, division, comparison, and conditional selection on encrypted data. The business rules remain enforceable on-chain, while observers still cannot read the original values.
 
@@ -254,15 +259,15 @@ The contract receives `externalEuint128` and `inputProof`, then converts them in
 
 Core encrypted fields include:
 
-| Field | Type | Contract |
-| --- | --- | --- |
-| Employee monthly salary | `euint128` | `SalaryCipherCore` |
-| Payroll amount | `euint64` / `euint128` | `SalaryCipherCore` + `CompanyTreasuryVault` |
-| Treasury wrapped balance | `euint64` | ERC7984 wrapper |
-| Salary negotiation quote | `euint128` | `SalaryNegotiation` |
-| Negotiation match result | `ebool` | `SalaryNegotiation` |
-| Audit total amount | `euint128` | `SalaryCipherCore` |
-| Audit conclusion | `ebool` | `SalaryCipherCore` |
+| Field                    | Type                   | Contract                                    |
+| ------------------------ | ---------------------- | ------------------------------------------- |
+| Employee monthly salary  | `euint128`             | `SalaryCipherCore`                          |
+| Payroll amount           | `euint64` / `euint128` | `SalaryCipherCore` + `CompanyTreasuryVault` |
+| Treasury wrapped balance | `euint64`              | ERC7984 wrapper                             |
+| Salary negotiation quote | `euint128`             | `SalaryNegotiation`                         |
+| Negotiation match result | `ebool`                | `SalaryNegotiation`                         |
+| Audit total amount       | `euint128`             | `SalaryCipherCore`                          |
+| Audit conclusion         | `ebool`                | `SalaryCipherCore`                          |
 
 ### 7.3 FHE Permission Control in a Multi-Tenant Setting
 
@@ -385,15 +390,15 @@ flowchart TB
 
 ### 9.2 Contract Responsibilities
 
-| Contract | Responsibility |
-| --- | --- |
-| `CompanyRegistry` | Company metadata, employees, roles, payroll day, settlement assets, treasury address, and access control center |
-| `SalaryCipherFactory` | Multi-tenant entry point that creates a company and deploys that company's dedicated treasury vault |
-| `SalaryCipherCore` | Manages encrypted monthly salaries, payroll computation, termination settlement, audits, and salary proof comparisons by `companyId` |
-| `CompanyTreasuryVault` | Single-company treasury that custody funds, wraps underlying tokens, executes confidential transfers, and handles refunds |
-| `SalaryNegotiation` | Manages encrypted salary negotiations by `companyId + employee`, confidential matching, and application of the final salary |
-| `SalaryProof` | Generates income proofs, stores encrypted verification results, and controls authorization, revocation, and NFT minting |
-| `ProofNFT` | Mints the income proof as an RWA NFT and stores the proofId and tokenURI |
+| Contract               | Responsibility                                                                                                                       |
+| ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| `CompanyRegistry`      | Company metadata, employees, roles, payroll day, settlement assets, treasury address, and access control center                      |
+| `SalaryCipherFactory`  | Multi-tenant entry point that creates a company and deploys that company's dedicated treasury vault                                  |
+| `SalaryCipherCore`     | Manages encrypted monthly salaries, payroll computation, termination settlement, audits, and salary proof comparisons by `companyId` |
+| `CompanyTreasuryVault` | Single-company treasury that custody funds, wraps underlying tokens, executes confidential transfers, and handles refunds            |
+| `SalaryNegotiation`    | Manages encrypted salary negotiations by `companyId + employee`, confidential matching, and application of the final salary          |
+| `SalaryProof`          | Generates income proofs, stores encrypted verification results, and controls authorization, revocation, and NFT minting              |
+| `ProofNFT`             | Mints the income proof as an RWA NFT and stores the proofId and tokenURI                                                             |
 
 ### 9.3 Multi-Tenant Data Isolation Model
 
@@ -507,18 +512,18 @@ flowchart TB
 
 ### 10.2 Core Frontend Modules
 
-| Module | Responsibility |
-| --- | --- |
-| `StoreProvider` | Wallet-level company list, company selection, settlement asset lookup, and company creation |
-| `AccessGuardProvider` | Login state, company state, and role-based route permissions |
-| `FHEProvider` | Initializes the FHE instance and decryption capabilities |
-| `useCompanyEmployees` | Employee list, add employee, edit employee base info, delete employee, encrypted initial salary storage, and salary decryption |
-| `useFinanceVault` | Treasury balance, deposit and wrap, refund unwrap, and finance events |
-| `useOverviewChainData` | Overview data, payroll history, employee balance, and salary decryption |
-| `usePayrollActions` | Update payroll day and execute payroll immediately |
-| `useSalaryNegotiations` | Salary negotiation history, creation, quoting, matching, and application |
-| `EncryptedField` | Encrypted field display, single-field decryption, and re-hiding |
-| `OnchainTransactionLink` | Block explorer links that adapt to the current network |
+| Module                   | Responsibility                                                                                                                 |
+| ------------------------ | ------------------------------------------------------------------------------------------------------------------------------ |
+| `StoreProvider`          | Wallet-level company list, company selection, settlement asset lookup, and company creation                                    |
+| `AccessGuardProvider`    | Login state, company state, and role-based route permissions                                                                   |
+| `FHEProvider`            | Initializes the FHE instance and decryption capabilities                                                                       |
+| `useCompanyEmployees`    | Employee list, add employee, edit employee base info, delete employee, encrypted initial salary storage, and salary decryption |
+| `useFinanceVault`        | Treasury balance, deposit and wrap, refund unwrap, and finance events                                                          |
+| `useOverviewChainData`   | Overview data, payroll history, employee balance, and salary decryption                                                        |
+| `usePayrollActions`      | Update payroll day and execute payroll immediately                                                                             |
+| `useSalaryNegotiations`  | Salary negotiation history, creation, quoting, matching, and application                                                       |
+| `EncryptedField`         | Encrypted field display, single-field decryption, and re-hiding                                                                |
+| `OnchainTransactionLink` | Block explorer links that adapt to the current network                                                                         |
 
 ## 11. Complete Frontend and Contract Flow
 
@@ -693,10 +698,10 @@ sequenceDiagram
 
 Use the already deployed Zama testnet addresses ([Sepolia Contract Addresses](https://docs.zama.org/protocol/protocol-apps/addresses/testnet/sepolia)):
 
-| Asset | Address |
-| --- | --- |
-| USDC | `0x7c5BF43B851c1dff1a4feE8dB225b87f2C223639` |
-| USDT | `0x4E7B06D78965594eB5EF5414c357ca21E1554491` |
+| Asset | Address                                      |
+| ----- | -------------------------------------------- |
+| USDC  | `0x7c5BF43B851c1dff1a4feE8dB225b87f2C223639` |
+| USDT  | `0x4E7B06D78965594eB5EF5414c357ca21E1554491` |
 | cUSDC | `0x9b5Cd13b8eFbB58Dc25A05CF411D8056058aDFfF` |
 | cUSDT | `0xa7dA08FafDC9097Cc0E7D4f113A61e31d7e8e9b0` |
 

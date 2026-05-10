@@ -5,6 +5,7 @@ import { createSalaryCipherCompanyFixture } from './fixtures'
 import {
   computeFollowingMonthlyPayrollTimestamp,
   computeNextMonthlyPayrollTimestamp,
+  computePayrollTimestamp,
   customErrorPattern,
   decryptUint64,
   decryptUint128,
@@ -20,6 +21,16 @@ const assetCases = [
 ] as const
 
 const DAY_SECONDS = 24n * 60n * 60n
+
+function computeNextMayTenthTimestamp(referenceTimestamp: bigint) {
+  const reference = new Date(Number(referenceTimestamp) * 1000)
+  const sameYearMayTenth = computePayrollTimestamp(reference.getUTCFullYear(), 4, 10)
+  if (sameYearMayTenth > referenceTimestamp) {
+    return sameYearMayTenth
+  }
+
+  return computePayrollTimestamp(reference.getUTCFullYear() + 1, 4, 10)
+}
 
 for (const assetCase of assetCases) {
   describe(`salaryCipherCore (${assetCase.label})`, () => {
@@ -247,6 +258,45 @@ for (const assetCase of assetCases) {
       await publicClient.waitForTransactionReceipt({ hash: executeHash })
 
       expect(await salaryCipherCore.read.lastPayrollTime([companyId])).to.equal(nextPayrollTime)
+
+      await expect(
+        salaryCipherCore.write.executePayrollNow([companyId], {
+          account: owner.account,
+        }),
+      ).to.be.rejectedWith(customErrorPattern('SalaryCipherCore__PayrollNotDue'))
+    })
+
+    it('rejects immediate payroll when the company is created after the configured payroll day', async () => {
+      const companyStartTime = computeNextMayTenthTimestamp(BigInt(await time.latest()))
+      await time.increaseTo(companyStartTime)
+
+      const { companyRegistry, salaryCipherCore, companyTreasuryVault, owner, employee, publicClient, companyId, underlyingToken }
+        = await createSalaryCipherCompanyFixture({ asset: assetCase.asset, payrollDay: 5 })
+
+      const addEmployeeHash = await companyRegistry.write.addEmployee(
+        [companyId, employee.account.address, RolesEnum.Employee, 'Alice'],
+        { account: owner.account },
+      )
+      await publicClient.waitForTransactionReceipt({ hash: addEmployeeHash })
+
+      await fundVault({
+        underlyingToken,
+        companyTreasuryVault,
+        owner,
+        publicClient,
+        amount: 1_000_000n,
+      })
+
+      const [salaryHandle, salaryProof] = await encryptUint128(
+        salaryCipherCore.address,
+        owner.account.address,
+        500_000,
+      )
+      const setSalaryHash = await salaryCipherCore.write.setSalary(
+        [companyId, employee.account.address, salaryHandle, salaryProof],
+        { account: owner.account },
+      )
+      await publicClient.waitForTransactionReceipt({ hash: setSalaryHash })
 
       await expect(
         salaryCipherCore.write.executePayrollNow([companyId], {
