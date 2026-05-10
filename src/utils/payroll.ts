@@ -12,6 +12,11 @@ export interface PayrollSchedule {
   periodProgress: number
 }
 
+export interface PayrollPeriod {
+  periodEnd: number
+  periodStart: number
+}
+
 function getPayrollDateForMonth(reference: dayjs.Dayjs, dayOfMonth: number) {
   const monthStart = reference.utc().date(1).startOf('day')
   const clampedDay = Math.min(dayOfMonth, monthStart.daysInMonth())
@@ -24,6 +29,22 @@ function getPreviousPayrollDate(payrollDate: dayjs.Dayjs, dayOfMonth: number) {
 
 function getNextPayrollDate(payrollDate: dayjs.Dayjs, dayOfMonth: number) {
   return getPayrollDateForMonth(payrollDate.add(1, 'month'), dayOfMonth)
+}
+
+export function floorUtcDayTimestamp(timestamp: number) {
+  return dayjs.unix(timestamp).utc().startOf('day').unix()
+}
+
+export function getPayrollSettlementPeriod(payrollTimestamp: number): PayrollPeriod {
+  const payrollDate = dayjs.unix(payrollTimestamp).utc()
+  const previousMonth = payrollDate.subtract(1, 'month')
+  const periodStart = previousMonth.date(1).startOf('day')
+  const periodEnd = previousMonth.date(previousMonth.daysInMonth()).startOf('day')
+
+  return {
+    periodEnd: periodEnd.unix(),
+    periodStart: periodStart.unix(),
+  }
 }
 
 export function getPayrollSchedule(
