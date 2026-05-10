@@ -225,7 +225,7 @@ export default function FinancePage() {
                   <Button
                     className="primary-gradient flex-1 text-on-primary-container h-12 rounded-sm text-sm flex items-center justify-center gap-2 hover:brightness-110 active:scale-95 transition-all border-none shadow-lg shadow-primary/20"
                     disabled={!finance.treasuryVaultConfigured || finance.isDepositing}
-                    onClick={() => setIsDepositDialogOpen(true)}
+                    onClick={async () => setIsDepositDialogOpen(true)}
                   >
                     {finance.isDepositing ? <AutorenewIcon className="size-5 animate-spin" /> : <AddCircleIcon className="size-5" />}
                     Deposit
@@ -233,7 +233,7 @@ export default function FinancePage() {
                   <Button
                     variant="outline"
                     className="flex-1 border-white/10 hover:bg-surface-container h-12 rounded-sm text-sm flex items-center justify-center gap-2 active:scale-95 transition-all"
-                    disabled={!finance.treasuryVaultConfigured || !hasWrappedBalance || finance.isWithdrawingWrapped}
+                    disabled={!finance.treasuryVaultConfigured || (!finance.pendingRefundUnwrapRequestId && !hasWrappedBalance) || finance.isWithdrawingWrapped}
                     onClick={() => setIsWithdrawDialogOpen(true)}
                   >
                     {finance.isWithdrawingWrapped ? <AutorenewIcon className="size-5 animate-spin" /> : <ArrowUpwardIcon className="size-5" />}

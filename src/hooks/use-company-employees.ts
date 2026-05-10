@@ -367,28 +367,36 @@ export function useCompanyEmployees(selectedCompany: CompanySummary | null) {
     setDeletingEmployee(employeeAccount)
 
     try {
-      const hash = await mutateAsync({
-        abi: SalaryCipherCore.abi,
-        address: salaryCipherCoreAddress,
-        functionName: 'terminateEmployee',
-        args: [companyId, employeeAccount],
-        account: address,
-      })
-      await waitForReceipt(hash)
+      try {
+        const hash = await mutateAsync({
+          abi: SalaryCipherCore.abi,
+          address: salaryCipherCoreAddress,
+          functionName: 'terminateEmployee',
+          args: [companyId, employeeAccount],
+          account: address,
+        })
+        await waitForReceipt(hash)
+      }
+      catch (error) {
+        console.error(error)
+        toast.error('Failed to remove employee.')
+        return false
+      }
 
-      await Promise.all([refetchEmployees(), refreshCompanies()])
+      try {
+        await Promise.all([refetchEmployees(), refreshCompanies()])
+      }
+      catch (refreshError) {
+        console.error(refreshError)
+      }
+
       toast.success('Employee terminated and final salary settled.')
       return true
-    }
-    catch (error) {
-      console.error(error)
-      toast.error('Failed to remove employee.')
-      return false
     }
     finally {
       setDeletingEmployee(null)
     }
-  }, [address, companyId, refetchEmployees, refreshCompanies, mutateAsync, salaryCipherCoreAddress, waitForReceipt])
+  }, [address, companyId, mutateAsync, refetchEmployees, refreshCompanies, salaryCipherCoreAddress, waitForReceipt])
 
   const updateEmployee = useCallback(async (input: UpdateCompanyEmployeeInput) => {
     if (!address || !companyId || !companyRegistryAddress) {

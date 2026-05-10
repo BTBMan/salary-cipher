@@ -45,6 +45,10 @@ contract SalaryCipherCore is ISalaryCipherCore, ZamaEthereumConfig {
     // Encrypted monthly salary stored per company member.
     mapping(uint256 companyId => mapping(address account => euint128 salary))
         public monthlySalary;
+    // Business-level salary state. FHE handles can stay initialized after deletion,
+    // so this flag owns active salary validity.
+    mapping(uint256 companyId => mapping(address account => bool active))
+        public salaryActive;
     // Last payroll execution timestamp for a company.
     mapping(uint256 companyId => uint64 paidAt) public lastPayrollTime;
     // Employment start date used for payroll and termination settlement.
@@ -309,10 +313,10 @@ contract SalaryCipherCore is ISalaryCipherCore, ZamaEthereumConfig {
         uint8 dayOfMonth,
         PayrollExecutionPlan memory plan
     ) private returns (bool) {
-        // Only HR and employees with initialized salaries are eligible for payroll.
+        // Only active HR and employee salary records are eligible for payroll.
         if (
             !_isPayrollEligible(companyId, employee) ||
-            !FHE.isInitialized(monthlySalary[companyId][employee])
+            !salaryActive[companyId][employee]
         ) {
             return false;
         }
@@ -335,7 +339,7 @@ contract SalaryCipherCore is ISalaryCipherCore, ZamaEthereumConfig {
         address employee
     ) external onlyOwnerOrHR(companyId) {
         _requireActiveEmployee(companyId, employee);
-        if (!FHE.isInitialized(monthlySalary[companyId][employee])) {
+        if (!salaryActive[companyId][employee]) {
             revert SalaryCipherCore__SalaryNotSet();
         }
 
@@ -361,6 +365,7 @@ contract SalaryCipherCore is ISalaryCipherCore, ZamaEthereumConfig {
         _transferPayroll(companyId, treasuryVault, employee, terminationPayout);
 
         monthlySalary[companyId][employee] = FHE.asEuint128(0);
+        salaryActive[companyId][employee] = false;
         startDate[companyId][employee] = 0;
 
         _grantSalaryAccess(companyId, employee);
@@ -386,8 +391,11 @@ contract SalaryCipherCore is ISalaryCipherCore, ZamaEthereumConfig {
         // Pagination is intentionally skipped for now; the full active member set is scanned.
         for (uint256 i = 0; i < employees.length; i++) {
             address employee = employees[i];
-            // Only HR and employees are eligible for audit.
-            if (!_isPayrollEligible(companyId, employee)) {
+            // Only active HR and employee salary records are eligible for audit.
+            if (
+                !_isPayrollEligible(companyId, employee) ||
+                !salaryActive[companyId][employee]
+            ) {
                 continue;
             }
 
@@ -486,7 +494,7 @@ contract SalaryCipherCore is ISalaryCipherCore, ZamaEthereumConfig {
         euint128 threshold
     ) external onlySalaryProof returns (ebool) {
         _requireActiveEmployee(companyId, employee);
-        if (!FHE.isInitialized(monthlySalary[companyId][employee])) {
+        if (!salaryActive[companyId][employee]) {
             revert SalaryCipherCore__SalaryNotSet();
         }
 
@@ -789,7 +797,7 @@ contract SalaryCipherCore is ISalaryCipherCore, ZamaEthereumConfig {
         externalEuint128 encryptedSalary,
         bytes calldata inputProof
     ) private {
-        if (FHE.isInitialized(monthlySalary[companyId][employee])) {
+        if (salaryActive[companyId][employee]) {
             revert SalaryCipherCore__SalaryAlreadySet();
         }
 
@@ -797,6 +805,7 @@ contract SalaryCipherCore is ISalaryCipherCore, ZamaEthereumConfig {
         // must pass through SalaryNegotiation so both sides agree on-chain.
         euint128 salary = FHE.fromExternal(encryptedSalary, inputProof);
         monthlySalary[companyId][employee] = salary;
+        salaryActive[companyId][employee] = true;
 
         if (startDate[companyId][employee] == 0) {
             // Payroll eligibility starts from the employee's registry join time,
@@ -837,7 +846,7 @@ contract SalaryCipherCore is ISalaryCipherCore, ZamaEthereumConfig {
         address[] memory employees = companyRegistry.getEmployees(companyId);
         for (uint256 i = 0; i < employees.length; i++) {
             euint128 salary = monthlySalary[companyId][employees[i]];
-            if (FHE.isInitialized(salary)) {
+            if (salaryActive[companyId][employees[i]]) {
                 FHE.allow(salary, manager);
             }
         }

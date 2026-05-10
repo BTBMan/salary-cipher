@@ -2,8 +2,8 @@ import type { Address } from 'viem'
 
 export const SalaryCipherCore = {
   addresses: {
-    31337: '0xAaC7D4A36DAb95955ef3c641c23F1fA46416CF71',
-    11155111: '0xA80846B0D2875B8a96928bD62Ca935abf9C85c01',
+    31337: '0x4826533B4897376654Bb4d4AD88B7faFD0C98528',
+    11155111: '0x80E852dfF0124930E8870EE9B62762d022F40994',
   } as Record<number, Address>,
   abi: [
     {
@@ -496,6 +496,30 @@ export const SalaryCipherCore = {
       "name": "refreshManagerSalaryAccess",
       "outputs": [],
       "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "companyId",
+          "type": "uint256"
+        },
+        {
+          "internalType": "address",
+          "name": "account",
+          "type": "address"
+        }
+      ],
+      "name": "salaryActive",
+      "outputs": [
+        {
+          "internalType": "bool",
+          "name": "active",
+          "type": "bool"
+        }
+      ],
+      "stateMutability": "view",
       "type": "function"
     },
     {

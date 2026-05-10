@@ -61,6 +61,8 @@ export interface FinanceTransactionRow {
 }
 
 const DECIMAL_STRING_REGEX = /^\d+$/
+const PUBLIC_DECRYPT_RETRY_COUNT = 15
+const PUBLIC_DECRYPT_RETRY_INTERVAL_MS = 2_000
 
 function toTokenAmount(value: bigint | string | boolean | undefined, decimals: number) {
   if (typeof value === 'bigint') {
@@ -107,6 +109,32 @@ function getPublicDecryptClearValue(clearValues: Record<string, unknown>, handle
 
 function getDecryptedValue(results: Record<string, string | bigint | boolean>, handle: Hex) {
   return results[handle] ?? results[handle.toLowerCase()] ?? results[handle.toUpperCase()]
+}
+
+function wait(ms: number) {
+  return new Promise(resolve => setTimeout(resolve, ms))
+}
+
+async function publicDecryptWithRetry(
+  instance: { publicDecrypt: (handles: Hex[]) => Promise<{ clearValues: Record<string, unknown>, decryptionProof: Hex }> },
+  handles: Hex[],
+) {
+  let lastError: unknown
+
+  for (let index = 0; index < PUBLIC_DECRYPT_RETRY_COUNT; index++) {
+    try {
+      return await instance.publicDecrypt(handles)
+    }
+    catch (error) {
+      lastError = error
+
+      if (index < PUBLIC_DECRYPT_RETRY_COUNT - 1) {
+        await wait(PUBLIC_DECRYPT_RETRY_INTERVAL_MS)
+      }
+    }
+  }
+
+  throw lastError
 }
 
 function getTransferKey(transactionHash: string, recipient: Address) {
@@ -703,7 +731,7 @@ export function useFinanceVault(selectedCompany: CompanySummary | null) {
         throw new Error('Unable to locate unwrap request data.')
       }
 
-      const decrypted = await instance.publicDecrypt([unwrapAmountHandle])
+      const decrypted = await publicDecryptWithRetry(instance, [unwrapAmountHandle])
       const clearAmount = toUint64Amount(getPublicDecryptClearValue(decrypted.clearValues, unwrapAmountHandle))
       if (clearAmount === null) {
         throw new Error('Unable to decrypt unwrap amount.')
@@ -788,5 +816,6 @@ export function useFinanceVault(selectedCompany: CompanySummary | null) {
     vaultUnusedUnderlyingBalance,
     depositAndWrap,
     withdrawWrappedBalance,
+    pendingRefundUnwrapRequestId,
   } as const
 }

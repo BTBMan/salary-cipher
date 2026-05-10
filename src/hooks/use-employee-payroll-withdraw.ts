@@ -32,6 +32,11 @@ function isDecimalValue(value: unknown): value is string {
   return typeof value === 'string' && DECIMAL_STRING_REGEX.test(value)
 }
 
+function hasPositiveTokenAmount(value: string | null | undefined) {
+  const amount = Number(value)
+  return Number.isFinite(amount) && amount > 0
+}
+
 function toUint64Amount(value: unknown) {
   if (typeof value === 'bigint') {
     return value
@@ -85,12 +90,14 @@ function getUnwrapRequestData(receipt: TransactionReceipt, settlementToken: Addr
 }
 
 export function useEmployeePayrollWithdraw({
+  decryptedBalanceAmount,
   encryptedBalanceHandle,
   onWithdrawnAction,
   payoutWallet,
   selectedCompany,
   selectedSettlementAsset,
 }: {
+  decryptedBalanceAmount: string | null
   encryptedBalanceHandle: Hex | null
   onWithdrawnAction?: () => Promise<any>
   payoutWallet: Address | null | undefined
@@ -105,6 +112,11 @@ export function useEmployeePayrollWithdraw({
   const [isWithdrawingEncryptedSalary, setIsWithdrawingEncryptedSalary] = useState(false)
   const canUsePayoutWallet = Boolean(
     address && payoutWallet && payoutWallet.toLowerCase() === address.toLowerCase(),
+  )
+  const canWithdrawEncryptedSalary = Boolean(
+    encryptedBalanceHandle
+    && canUsePayoutWallet
+    && hasPositiveTokenAmount(decryptedBalanceAmount),
   )
 
   const receiptQuery = useWaitForTransactionReceipt({
@@ -192,6 +204,14 @@ export function useEmployeePayrollWithdraw({
       toast.error('FHEVM is not ready.')
       return false
     }
+    if (!decryptedBalanceAmount) {
+      toast.error('Please decrypt your encrypted salary balance before withdrawing.')
+      return false
+    }
+    if (!hasPositiveTokenAmount(decryptedBalanceAmount)) {
+      toast.error('No encrypted salary available to withdraw.')
+      return false
+    }
 
     setIsWithdrawingEncryptedSalary(true)
 
@@ -246,6 +266,7 @@ export function useEmployeePayrollWithdraw({
   }, [
     address,
     canUsePayoutWallet,
+    decryptedBalanceAmount,
     encryptedBalanceHandle,
     instance,
     mutateAsync,
@@ -258,6 +279,7 @@ export function useEmployeePayrollWithdraw({
   ])
 
   return {
+    canWithdrawEncryptedSalary,
     canUsePayoutWallet,
     isWithdrawingEncryptedSalary,
     underlyingBalance,
