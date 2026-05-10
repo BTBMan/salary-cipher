@@ -14,6 +14,8 @@ import {
 } from '@/components/ui/dialog'
 
 interface ExecutePayrollDialogProps {
+  disabledReason: string | null | undefined
+  isDisabled: boolean
   isEarlyPayroll: boolean
   isExecuting: boolean
   nextPayrollDate: string | null | undefined
@@ -23,6 +25,8 @@ interface ExecutePayrollDialogProps {
 }
 
 export function ExecutePayrollDialog({
+  disabledReason,
+  isDisabled,
   isEarlyPayroll,
   isExecuting,
   nextPayrollDate,
@@ -46,6 +50,11 @@ export function ExecutePayrollDialog({
             <p className="text-[10px] font-black uppercase tracking-[0.2em] text-outline">Current next payday</p>
             <p className="mt-2 font-mono text-lg font-black text-on-surface">{nextPayrollDate ?? '-'}</p>
           </div>
+          {isDisabled && (
+            <p className="rounded-lg border border-destructive/20 bg-destructive/5 px-4 py-3 text-xs font-medium leading-relaxed text-destructive">
+              {disabledReason ?? 'This payroll cannot be executed yet.'}
+            </p>
+          )}
           <p className="text-xs font-medium leading-relaxed text-on-surface-variant">
             Payroll transfers are confidential token transfers. The amount remains encrypted, but recipient addresses and execution events are visible on-chain.
           </p>
@@ -60,7 +69,7 @@ export function ExecutePayrollDialog({
           </Button>
           <Button
             className="primary-gradient border-none text-on-primary-container"
-            disabled={isExecuting}
+            disabled={isExecuting || isDisabled}
             onClick={onConfirm}
           >
             {isExecuting && <AutorenewIcon className="size-4 animate-spin" />}

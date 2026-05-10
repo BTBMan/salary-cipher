@@ -9,6 +9,7 @@ interface DeploymentOptions {
 
 interface CompanyFixtureOptions extends DeploymentOptions {
   asset?: SettlementAssetEnum
+  payrollDay?: number
 }
 
 function resolveAssetContracts<T extends Pick<Awaited<ReturnType<typeof deployCompanyRegistryFixture>>, 'usdc' | 'usdt' | 'cUsdc' | 'cUsdt'>>(deployment: T, asset: SettlementAssetEnum) {
@@ -69,8 +70,9 @@ export async function createDefaultCompanyFixture(options: CompanyFixtureOptions
   const fixture = await deployCompanyRegistryFixture()
   const { companyRegistry, owner, publicClient } = fixture
   const asset = options.asset ?? SettlementAssetEnum.USDC
+  const payrollDay = options.payrollDay ?? 15
 
-  const hash = await companyRegistry.write.createCompany(['Acme', 15, asset], {
+  const hash = await companyRegistry.write.createCompany(['Acme', payrollDay, asset], {
     account: owner.account,
   })
   await publicClient.waitForTransactionReceipt({ hash })
@@ -85,8 +87,9 @@ export async function createSalaryCipherCompanyFixture(options: CompanyFixtureOp
   const fixture = await deploySalaryCipherCoreFixture()
   const { companyRegistry, salaryCipherFactory, owner, publicClient } = fixture
   const asset = options.asset ?? SettlementAssetEnum.USDC
+  const payrollDay = options.payrollDay ?? 15
 
-  const createCompanyHash = await salaryCipherFactory.write.createCompany(['Acme', 15, asset], {
+  const createCompanyHash = await salaryCipherFactory.write.createCompany(['Acme', payrollDay, asset], {
     account: owner.account,
   })
   await publicClient.waitForTransactionReceipt({ hash: createCompanyHash })

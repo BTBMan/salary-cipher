@@ -52,6 +52,7 @@ export function PayrollManagerView({ overview, selectedCompany }: PayrollManager
   const payrollConfigError = isPayrollConfigDraftCurrent ? payrollConfigDraft.error : null
   const [isExecuteDialogOpen, setIsExecuteDialogOpen] = useState(false)
   const isEarlyPayroll = (overview.payrollSchedule?.daysLeft ?? 0) > 1
+  const canExecutePayrollNow = overview.payrollSchedule?.canExecuteNow ?? false
   const historyRows = useMemo(() => {
     return overview.companyPayrollHistory.map(row => ({
       amount: row.amount,
@@ -203,7 +204,7 @@ export function PayrollManagerView({ overview, selectedCompany }: PayrollManager
                   <div className="mt-6 space-y-2">
                     <Button
                       className="primary-gradient h-12 w-full rounded border-none text-sm font-black tracking-wide text-on-primary-container shadow-none hover:shadow-[0_0_20px_rgba(192,193,255,0.3)]"
-                      disabled={payrollActions.isExecutingPayroll || !overview.treasuryVaultConfigured}
+                      disabled={payrollActions.isExecutingPayroll || !overview.treasuryVaultConfigured || !canExecutePayrollNow}
                       onClick={() => setIsExecuteDialogOpen(true)}
                     >
                       {payrollActions.isExecutingPayroll ? <AutorenewIcon className="size-4 animate-spin" /> : <RocketLaunchIcon className="size-4" />}
@@ -211,6 +212,11 @@ export function PayrollManagerView({ overview, selectedCompany }: PayrollManager
                     </Button>
                     {!overview.treasuryVaultConfigured && (
                       <p className="text-[10px] font-bold uppercase tracking-widest text-destructive">Treasury vault missing</p>
+                    )}
+                    {overview.treasuryVaultConfigured && !canExecutePayrollNow && (
+                      <p className="text-[10px] font-bold uppercase tracking-widest text-destructive">
+                        {overview.payrollSchedule?.executeNowBlockedReason ?? 'Payroll is not ready to run yet.'}
+                      </p>
                     )}
                   </div>
                 </div>
@@ -242,6 +248,8 @@ export function PayrollManagerView({ overview, selectedCompany }: PayrollManager
       </div>
 
       <ExecutePayrollDialog
+        disabledReason={overview.payrollSchedule?.executeNowBlockedReason}
+        isDisabled={!canExecutePayrollNow}
         isEarlyPayroll={isEarlyPayroll}
         isExecuting={payrollActions.isExecutingPayroll}
         nextPayrollDate={overview.payrollSchedule?.nextPayrollDate}

@@ -4,7 +4,7 @@ import type { CompanySummary } from '@/contexts'
 import type { Address, Hex } from 'viem'
 import { useCallback, useMemo } from 'react'
 import { formatUnits, isAddress, zeroAddress, zeroHash } from 'viem'
-import { useConnection, useContractEvents, useReadContracts, useWatchContractEvent } from 'wagmi'
+import { useBlock, useConnection, useContractEvents, useReadContracts, useWatchContractEvent } from 'wagmi'
 import { CompanyRegistry } from '@/contract-data/company-registry'
 import { CompanyTreasuryVault } from '@/contract-data/company-treasury-vault'
 import { IERC7984ERC20WrapperInternal as ERC7984Wrapper } from '@/contract-data/ierc7984-erc20-wrapper-internal'
@@ -98,6 +98,9 @@ export function useOverviewChainData(
   options: UseOverviewChainDataOptions = {},
 ) {
   const { address, chainId } = useConnection()
+  const { data: latestBlock } = useBlock({
+    watch: true,
+  })
   const companyRegistryAddress = getContractAddress(CompanyRegistry, chainId)
   const salaryCipherCoreAddress = getContractAddress(SalaryCipherCore, chainId)
   const companyCreatedBlockNumber = selectedCompany?.createdBlockNumber ?? 0n
@@ -642,8 +645,9 @@ export function useOverviewChainData(
       selectedCompany?.payrollDayOfMonth ?? 0,
       lastPayrollTime,
       selectedCompany?.createdAt ?? 0,
+      typeof latestBlock?.timestamp === 'bigint' ? Number(latestBlock.timestamp) : undefined,
     )
-  }, [lastPayrollTime, selectedCompany?.createdAt, selectedCompany?.payrollDayOfMonth])
+  }, [lastPayrollTime, latestBlock?.timestamp, selectedCompany?.createdAt, selectedCompany?.payrollDayOfMonth])
   const employeeStartDate = useMemo(() => {
     const result = overviewResults?.[3]
     return result?.status === 'success' ? Number(result.result) : 0
