@@ -23,7 +23,7 @@ interface CompanySelectorDialogProps {
  */
 export function CompanySelectorDialog({ open, onOpenChange }: CompanySelectorDialogProps) {
   const router = useRouter()
-  const { companies, selectCompany } = useStoreContext()
+  const { companies, selectCompany, selectedCompanyId } = useStoreContext()
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -38,6 +38,7 @@ export function CompanySelectorDialog({ open, onOpenChange }: CompanySelectorDia
         <div className="px-6 py-2">
           <CompanyList
             companies={companies}
+            selectedCompanyId={selectedCompanyId}
             onSelect={(companyId) => {
               selectCompany(companyId)
               onOpenChange(false)
