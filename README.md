@@ -7,3 +7,9 @@ Salary Cipher is a platform for managing employee salaries and related financial
 ## Introduction
 
 More information about Salary Cipher can be found [Here](./docs/INTRODUCTION.md).
+
+## Video demo
+
+A video demo of Salary Cipher can be found [Here](https://x.com/BTBMannn/status/2053319932520333544).
+
+![Video demo](./screenshots/video-demo.png)
