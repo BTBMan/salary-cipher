@@ -22,6 +22,7 @@ export interface EmployeePayrollHistoryItem {
 }
 
 export interface CompanyPayrollHistoryItem {
+  amount: string | null
   amountHandle: Hex | null
   executedAt: number
   recipient: Address
@@ -53,7 +54,7 @@ interface UseOverviewChainDataOptions {
 }
 
 function isActiveSalaryHandle(handle: unknown): handle is Hex {
-  return typeof handle === 'string' && handle !== zeroAddress && handle !== zeroHash
+  return typeof handle === 'string' && handle !== '0x' && handle !== zeroAddress && handle !== zeroHash
 }
 
 function toTokenAmount(value: string | bigint | boolean | undefined, decimals: number) {
@@ -74,6 +75,10 @@ function toBigIntAmount(value: string | bigint | boolean | undefined) {
     return BigInt(value)
   }
   return 0n
+}
+
+function getDecryptedValue(results: Record<string, string | bigint | boolean>, handle: Hex) {
+  return results[handle] ?? results[handle.toLowerCase()] ?? results[handle.toUpperCase()]
 }
 
 function getTransferKey(transactionHash: string, recipient: Address) {
@@ -355,8 +360,11 @@ export function useOverviewChainData(
     ])
   }, [canReadCompanyPayrollHistory, refetchCompanyPayrollEventLogs, refetchCompanyTransferEventLogs])
   const refetchOverviewData = useCallback(async () => {
-    await refetchOverview()
-  }, [refetchOverview])
+    await Promise.all([
+      refetchOverview(),
+      refetchBalanceHandle(),
+    ])
+  }, [refetchBalanceHandle, refetchOverview])
 
   useWatchContractEvent({
     abi: CompanyTreasuryVault.abi,
@@ -409,6 +417,7 @@ export function useOverviewChainData(
       void refetchOverviewData()
       void refetchCompanyPayrollHistory()
       void refetchEmployeePayrollHistory()
+      void refetchBalanceHandle()
     },
   })
 
@@ -472,6 +481,7 @@ export function useOverviewChainData(
           : null
 
         return {
+          amount: null,
           amountHandle,
           executedAt: Number(payrollLog.args.executedAt ?? 0),
           recipient,
@@ -524,6 +534,14 @@ export function useOverviewChainData(
             contractAddress: SalaryCipherCore.address,
           }
         : null)
+      .concat(
+        companyPayrollHistory.map(item => item.amountHandle && selectedSettlementAsset?.settlementToken
+          ? {
+              handle: item.amountHandle,
+              contractAddress: selectedSettlementAsset.settlementToken as Address,
+            }
+          : null),
+      )
       .filter((request): request is { handle: Hex, contractAddress: Address } => Boolean(request))
 
     return requests.length > 0 ? requests : undefined
@@ -534,6 +552,7 @@ export function useOverviewChainData(
     salaryHandles,
     selectedCompany?.role,
     selectedSettlementAsset?.settlementToken,
+    companyPayrollHistory,
   ])
   const salaryDecrypt = useFHEDecrypt({
     requests: decryptRequests,
@@ -544,8 +563,8 @@ export function useOverviewChainData(
     return salaryHandles.map(({ employee, handle }) => ({
       employee,
       handle,
-      amount: handle ? toTokenAmount(decryptedSalaryByHandle[handle], decimals) : null,
-      rawAmount: handle ? toBigIntAmount(decryptedSalaryByHandle[handle]) : 0n,
+      amount: handle ? toTokenAmount(getDecryptedValue(decryptedSalaryByHandle, handle), decimals) : null,
+      rawAmount: handle ? toBigIntAmount(getDecryptedValue(decryptedSalaryByHandle, handle)) : 0n,
     }))
   }, [decryptedSalaryByHandle, salaryHandles, selectedSettlementAsset?.decimals])
   const totalMonthlyPayroll = useMemo(() => {
@@ -561,35 +580,38 @@ export function useOverviewChainData(
       return null
     }
 
-    return toTokenAmount(decryptedSalaryByHandle[employeeSalaryHandle], selectedSettlementAsset?.decimals ?? 6)
+    return toTokenAmount(getDecryptedValue(decryptedSalaryByHandle, employeeSalaryHandle), selectedSettlementAsset?.decimals ?? 6)
   }, [decryptedSalaryByHandle, employeeSalaryHandle, selectedSettlementAsset?.decimals])
   const employeeConfidentialBalance = useMemo(() => {
     if (!employeeBalanceHandle) {
       return null
     }
 
-    return toTokenAmount(decryptedSalaryByHandle[employeeBalanceHandle], selectedSettlementAsset?.decimals ?? 6)
+    return toTokenAmount(getDecryptedValue(decryptedSalaryByHandle, employeeBalanceHandle), selectedSettlementAsset?.decimals ?? 6)
   }, [decryptedSalaryByHandle, employeeBalanceHandle, selectedSettlementAsset?.decimals])
   const employeePayrollHistoryWithAmounts = useMemo(() => {
     const decimals = selectedSettlementAsset?.decimals ?? 6
     const rows = employeePayrollHistory.map(item => ({
       ...item,
-      amount: item.amountHandle ? toTokenAmount(decryptedSalaryByHandle[item.amountHandle], decimals) : null,
+      amount: item.amountHandle ? toTokenAmount(getDecryptedValue(decryptedSalaryByHandle, item.amountHandle), decimals) : null,
     }))
     return payrollHistoryLimit === null ? rows : rows.slice(0, payrollHistoryLimit)
   }, [decryptedSalaryByHandle, employeePayrollHistory, payrollHistoryLimit, selectedSettlementAsset?.decimals])
   const displayedCompanyPayrollHistory = useMemo(() => {
-    return payrollHistoryLimit === null
-      ? companyPayrollHistory
-      : companyPayrollHistory.slice(0, payrollHistoryLimit)
-  }, [companyPayrollHistory, payrollHistoryLimit])
+    const decimals = selectedSettlementAsset?.decimals ?? 6
+    const rows = companyPayrollHistory.map(item => ({
+      ...item,
+      amount: item.amountHandle ? toTokenAmount(getDecryptedValue(decryptedSalaryByHandle, item.amountHandle), decimals) : null,
+    }))
+    return payrollHistoryLimit === null ? rows : rows.slice(0, payrollHistoryLimit)
+  }, [companyPayrollHistory, decryptedSalaryByHandle, payrollHistoryLimit, selectedSettlementAsset?.decimals])
   const employeeTotalReceived = useMemo(() => {
     const total = employeePayrollHistory.reduce((sum, item) => {
       if (!item.amountHandle) {
         return sum
       }
 
-      return sum + toBigIntAmount(decryptedSalaryByHandle[item.amountHandle])
+      return sum + toBigIntAmount(getDecryptedValue(decryptedSalaryByHandle, item.amountHandle))
     }, 0n)
     if (total === 0n) {
       return null

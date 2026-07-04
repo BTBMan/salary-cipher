@@ -123,7 +123,8 @@ contract CompanyTreasuryVault is ICompanyTreasuryVault, ZamaEthereumConfig {
         }
 
         FHE.allow(amount, address(settlementToken));
-        settlementToken.confidentialTransfer(to, amount);
+        euint64 transferred = settlementToken.confidentialTransfer(to, amount);
+        _grantManagerAccess(transferred);
         _grantCurrentVaultBalanceAccess();
 
         emit PayrollTransferred(companyId, to, block.timestamp);

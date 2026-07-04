@@ -54,7 +54,7 @@ export function PayrollManagerView({ overview, selectedCompany }: PayrollManager
   const isEarlyPayroll = (overview.payrollSchedule?.daysLeft ?? 0) > 1
   const historyRows = useMemo(() => {
     return overview.companyPayrollHistory.map(row => ({
-      amount: null,
+      amount: row.amount,
       amountHandle: row.amountHandle,
       executedAt: row.executedAt,
       recipient: row.recipient,

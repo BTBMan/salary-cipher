@@ -24,7 +24,6 @@ contract SalaryCipherCore is ISalaryCipherCore, ZamaEthereumConfig {
 
     struct PayrollExecutionPlan {
         address treasuryVault;
-        uint64 previousPaidAt;
         uint64 nextPayrollDateToSettle;
         uint64 targetPayrollDate;
     }
@@ -116,7 +115,11 @@ contract SalaryCipherCore is ISalaryCipherCore, ZamaEthereumConfig {
         monthlySalary[companyId][employee] = salary;
 
         if (startDate[companyId][employee] == 0) {
-            startDate[companyId][employee] = _blockTimestamp();
+            // Payroll eligibility starts from the employee's registry join time,
+            // not from the moment their encrypted salary is configured.
+            startDate[companyId][employee] = companyRegistry
+                .getEmployee(companyId, employee)
+                .addedAt;
         }
 
         _grantSalaryAccess(companyId, employee);
@@ -194,17 +197,18 @@ contract SalaryCipherCore is ISalaryCipherCore, ZamaEthereumConfig {
                 currentMonthPayrollDate,
                 dayOfMonth
         );
-        plan.previousPaidAt = lastPayrollTime[companyId];
-        if (plan.previousPaidAt == 0) {
-            // The first payroll target cannot point to a payroll date before the company existed.
+        uint64 previousPaidAt = lastPayrollTime[companyId];
+        if (previousPaidAt == 0) {
+            // The first payroll target is the first configured payroll date on
+            // or after company creation, so late first execution can catch up
+            // every scheduled payroll instead of skipping old dates.
             plan.nextPayrollDateToSettle = _firstPayrollDateOnOrAfterCompanyStart(
                 companyId,
-                latestDuePayrollDate,
                 dayOfMonth
             );
         } else {
             plan.nextPayrollDateToSettle = _nextPayrollDate(
-                plan.previousPaidAt,
+                previousPaidAt,
                 dayOfMonth
             );
         }
@@ -215,16 +219,21 @@ contract SalaryCipherCore is ISalaryCipherCore, ZamaEthereumConfig {
                 revert SalaryCipherCore__PayrollNotDue();
             }
 
-            // Only the nearest upcoming unpaid payroll can be pulled forward.
-            // This prevents repeated clicks from pre-paying multiple future cycles.
+            // Manual early execution can only pull forward the nearest unpaid
+            // scheduled payroll date. The salary period still remains the
+            // previous complete calendar month for that scheduled date.
             uint64 earliestUpcomingPayrollDate = currentTimestamp <
                 currentMonthPayrollDate
                 ? currentMonthPayrollDate
-                : _nextPayrollDate(
-                    currentMonthPayrollDate,
-                    dayOfMonth
-                );
+                : _nextPayrollDate(currentMonthPayrollDate, dayOfMonth);
             if (plan.nextPayrollDateToSettle > earliestUpcomingPayrollDate) {
+                revert SalaryCipherCore__PayrollNotDue();
+            }
+
+            (, uint64 periodEnd) = _previousCalendarMonthRange(
+                plan.nextPayrollDateToSettle
+            );
+            if (_floorToDay(currentTimestamp) <= periodEnd) {
                 revert SalaryCipherCore__PayrollNotDue();
             }
 
@@ -232,20 +241,20 @@ contract SalaryCipherCore is ISalaryCipherCore, ZamaEthereumConfig {
         }
     }
 
-    /// @dev Moves the first payroll date forward when the company was created after the latest due date.
+    /// @dev Returns the first configured payroll date on or after the company creation day.
     function _firstPayrollDateOnOrAfterCompanyStart(
         uint256 companyId,
-        uint64 candidatePayrollDate,
         uint8 dayOfMonth
     ) private view returns (uint64) {
         uint64 companyStartDay = _floorToDay(
             companyRegistry.getCompany(companyId).createdAt
         );
-        while (candidatePayrollDate < companyStartDay) {
-            candidatePayrollDate = _nextPayrollDate(
-                candidatePayrollDate,
-                dayOfMonth
-            );
+        uint64 candidatePayrollDate = _payrollDateForReferenceMonth(
+            dayOfMonth,
+            companyStartDay
+        );
+        if (candidatePayrollDate < companyStartDay) {
+            return _nextPayrollDate(candidatePayrollDate, dayOfMonth);
         }
         return candidatePayrollDate;
     }
@@ -268,7 +277,6 @@ contract SalaryCipherCore is ISalaryCipherCore, ZamaEthereumConfig {
         euint128 payout = _calculatePayrollCatchUpPayout(
             companyId,
             employee,
-            plan.previousPaidAt,
             plan.nextPayrollDateToSettle,
             plan.targetPayrollDate,
             dayOfMonth
@@ -526,11 +534,10 @@ contract SalaryCipherCore is ISalaryCipherCore, ZamaEthereumConfig {
             role == ICompanyRegistry.Role.Employee;
     }
 
-    /// @dev Sums all due payroll periods from the next unsettled payroll date up to the latest due date.
+    /// @dev Sums all due scheduled payrolls, where each payroll date settles the previous complete calendar month.
     function _calculatePayrollCatchUpPayout(
         uint256 companyId,
         address employee,
-        uint64 previousPaidAt,
         uint64 nextPayrollDateToSettle,
         uint64 latestDuePayrollDate,
         uint8 dayOfMonth
@@ -539,11 +546,10 @@ contract SalaryCipherCore is ISalaryCipherCore, ZamaEthereumConfig {
 
         uint64 payrollDate = nextPayrollDateToSettle;
         while (payrollDate <= latestDuePayrollDate) {
-            uint64 periodStart = payrollDate == nextPayrollDateToSettle &&
-                previousPaidAt != 0
-                ? previousPaidAt
-                : _previousPayrollDate(payrollDate, dayOfMonth);
-            uint64 periodEnd = payrollDate - DAY_SECONDS;
+            // Example: a May 15 payroll settles Apr 1 through Apr 30.
+            (uint64 periodStart, uint64 periodEnd) = _previousCalendarMonthRange(
+                payrollDate
+            );
 
             totalPayout = FHE.add(
                 totalPayout,
@@ -798,6 +804,30 @@ contract SalaryCipherCore is ISalaryCipherCore, ZamaEthereumConfig {
             : dayOfMonth;
 
         return uint64(DateTimeLib.dateToTimestamp(year, month, targetDay));
+    }
+
+    /// @dev Returns the complete calendar month settled by a scheduled payroll date.
+    function _previousCalendarMonthRange(
+        uint64 payrollDate
+    ) private pure returns (uint64 periodStart, uint64 periodEnd) {
+        (uint256 year, uint256 month, , , , ) = DateTimeLib.timestampToDateTime(
+            payrollDate
+        );
+        if (month == 1) {
+            year -= 1;
+            month = 12;
+        } else {
+            month -= 1;
+        }
+
+        periodStart = uint64(DateTimeLib.dateToTimestamp(year, month, 1));
+        periodEnd = uint64(
+            DateTimeLib.dateToTimestamp(
+                year,
+                month,
+                DateTimeLib.daysInMonth(year, month)
+            )
+        );
     }
 
     /// @dev Returns the previous configured payroll day before the supplied payroll date.

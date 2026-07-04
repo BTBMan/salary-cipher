@@ -186,17 +186,20 @@ export default function DashboardPage() {
                               <TableCell className="px-6 py-5">
                                 <div className="flex items-center gap-2">
                                   <EncryptedField
+                                    canDecrypt={overview.canDecryptSalary}
                                     className="space-y-0"
-                                    isEncrypted={Boolean(row.amountHandle)}
-                                    value={row.amountHandle ? formatAddress(row.amountHandle) : 'Handle missing'}
+                                    isDecrypting={overview.isDecryptingSalary}
+                                    isEncrypted={!row.amount && Boolean(row.amountHandle)}
+                                    value={row.amount ? formatTokenAmount(row.amount) : row.amountHandle ? formatAddress(row.amountHandle) : 'Handle missing'}
                                     valueClassName="font-mono text-sm text-on-surface-variant font-bold"
+                                    onDecrypt={overview.decryptSalary}
                                   />
                                   <span className="text-[10px] font-black text-outline tracking-tighter">{confidentialTokenSymbol}</span>
                                 </div>
                               </TableCell>
                               <TableCell className="px-6 py-5 text-right">
                                 <span className="px-2.5 py-1 bg-primary/10 text-primary text-[9px] font-black rounded-sm border border-primary/20 uppercase tracking-widest">
-                                  {row.amountHandle ? 'Encrypted' : 'Pending'}
+                                  {row.amount ? 'Decrypted' : row.amountHandle ? 'Encrypted' : 'Pending'}
                                 </span>
                               </TableCell>
                             </TableRow>

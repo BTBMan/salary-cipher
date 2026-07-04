@@ -80,6 +80,9 @@ for (const assetCase of assetCases) {
         throw new Error(`Fork test requires at least 1 ${assetCase.label} on owner account; current balance is ${ownerUnderlyingBalance}`)
       }
 
+      const employeeStartTime = computeNextMonthlyPayrollTimestamp(BigInt(await time.latest()), 1)
+      await time.increaseTo(employeeStartTime)
+
       const addEmployeeHash = await companyRegistry.write.addEmployee(
         [companyId, employee.account.address, RolesEnum.Employee, 'Fork Alice'],
         { account: owner.account },
@@ -105,8 +108,7 @@ for (const assetCase of assetCases) {
       )
       await publicClient.waitForTransactionReceipt({ hash: setSalaryHash })
 
-      const latestBlock = await publicClient.getBlock()
-      const nextPayrollTime = computeNextMonthlyPayrollTimestamp(latestBlock.timestamp, 15)
+      const nextPayrollTime = computeNextMonthlyPayrollTimestamp(employeeStartTime, 15)
       const payrollTime = computeFollowingMonthlyPayrollTimestamp(nextPayrollTime, 15)
 
       await time.increaseTo(payrollTime)

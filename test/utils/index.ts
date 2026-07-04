@@ -132,3 +132,10 @@ export function computeFollowingMonthlyPayrollTimestamp(payrollTimestamp: bigint
   const currentPayroll = dayjs.unix(Number(payrollTimestamp)).utc().add(1, 'month')
   return computePayrollTimestamp(currentPayroll.year(), currentPayroll.month(), dayOfMonth)
 }
+
+/**
+ * Returns the number of days in the UTC month containing the supplied timestamp.
+ */
+export function getUtcDaysInMonth(timestamp: bigint) {
+  return dayjs.unix(Number(timestamp)).utc().daysInMonth()
+}
